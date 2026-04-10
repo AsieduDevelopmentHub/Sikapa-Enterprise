@@ -82,17 +82,16 @@ def configure_openapi():
 
     openapi_schema = _original_openapi()
 
-    # Add JWT Bearer authentication to global security
-    openapi_schema["components"]["securitySchemes"] = {
-        "BearerAuth": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
-            "description": "Enter JWT token obtained from /api/v1/auth/login"
-        }
+    # Add JWT Bearer authentication to the OpenAPI security schemes without replacing existing definitions.
+    security_schemes = openapi_schema["components"].get("securitySchemes", {})
+    security_schemes["BearerAuth"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter JWT token obtained from /api/v1/auth/login"
     }
+    openapi_schema["components"]["securitySchemes"] = security_schemes
 
-    # Do not apply bearer auth globally so public endpoints like login/register/products remain accessible.
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
