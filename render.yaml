@@ -11,3 +11,5 @@ services:
       - key: SECRET_KEY
       - key: CORS_ORIGINS
       - key: CORS_ALLOW_CREDENTIALS
+      - key: HTTPS_ENABLED
+        value: false
