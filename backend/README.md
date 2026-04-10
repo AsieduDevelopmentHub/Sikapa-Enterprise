@@ -15,9 +15,16 @@ backend/
 │   ├── models.py     # SQLModel definitions
 │   └── main.py       # FastAPI app entry point
 ├── alembic/          # Database migrations configuration
+├── certs/            # SSL certificates for HTTPS
 ├── dbschemas/        # SQL schema files
 ├── db/               # Database files (SQLite)
+├── docs/             # Documentation
+│   ├── migration/    # Migration documentation
+│   └── tls/          # TLS/HTTPS documentation
 ├── migration/        # Python migration utilities and CLI
+├── tools/            # Utility scripts and tools
+│   ├── rls/          # Row Level Security utilities
+│   └── tls/          # TLS/HTTPS utilities
 └── tests/            # Unit and integration tests
 ```
 
