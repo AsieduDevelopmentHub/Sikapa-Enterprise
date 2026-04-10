@@ -220,12 +220,22 @@ class TestRateLimitingConfiguration:
 
     def test_limiter_instances_exist(self):
         """Test that limiter instances are properly defined."""
-        from app.api.v1.auth.routes import auth_limiter, login_limiter, password_limiter
+        from app.api.v1.auth.routes import (
+            auth_limiter,
+            login_limiter,
+            password_reset_request_limiter,
+            password_reset_confirm_limiter,
+            register_limiter,
+            token_refresh_limiter,
+        )
 
         # These should be Limiter instances
         assert hasattr(auth_limiter, 'limit')
         assert hasattr(login_limiter, 'limit')
-        assert hasattr(password_limiter, 'limit')
+        assert hasattr(password_reset_request_limiter, 'limit')
+        assert hasattr(password_reset_confirm_limiter, 'limit')
+        assert hasattr(register_limiter, 'limit')
+        assert hasattr(token_refresh_limiter, 'limit')
 
     @pytest.mark.asyncio
     async def test_health_endpoint_not_rate_limited(self, client: AsyncClient):

@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.main import app
-from app.db import get_session
 from app.models import User, OTPCode, TokenBlacklist, TwoFactorSecret, PasswordReset
 
 
@@ -15,19 +14,7 @@ from app.models import User, OTPCode, TokenBlacklist, TwoFactorSecret, PasswordR
 class TestAuthenticationE2E:
     """End-to-end tests for the complete authentication flow."""
 
-    @pytest.fixture
-    async def client(self):
-        """Test client fixture."""
-        async with AsyncClient(app=app, base_url="http://testserver") as client:
-            yield client
-
-    @pytest.fixture
-    async def db_session(self):
-        """Database session fixture."""
-        async for session in get_session():
-            yield session
-
-    async def test_complete_user_registration_flow(self, client: AsyncClient, db_session: AsyncSession):
+    async def test_complete_user_registration_flow(self, client: AsyncClient, test_session: AsyncSession):
         """Test complete user registration flow: register -> verify email -> login."""
         # 1. Register user
         register_data = {
@@ -45,7 +32,7 @@ class TestAuthenticationE2E:
 
         # 2. Get OTP code from database (in real scenario, this would be emailed)
         otp_query = select(OTPCode).where(OTPCode.user_id == user_data["id"])
-        result = await db_session.execute(otp_query)
+        result = await test_session.execute(otp_query)
         otp_record = result.scalar_one()
         otp_code = otp_record.code
 
@@ -77,7 +64,7 @@ class TestAuthenticationE2E:
         self.access_token = tokens["access_token"]
         self.refresh_token = tokens["refresh_token"]
 
-    async def test_password_reset_flow(self, client: AsyncClient, db_session: AsyncSession):
+    async def test_password_reset_flow(self, client: AsyncClient, test_session: AsyncSession):
         """Test password reset flow."""
         # 1. Request password reset
         reset_request = {"email": "test@example.com"}
@@ -87,7 +74,7 @@ class TestAuthenticationE2E:
 
         # 2. Get reset token from database
         reset_query = select(PasswordReset).join(User).where(User.email == "test@example.com")
-        result = await db_session.execute(reset_query)
+        result = await test_session.execute(reset_query)
         reset_record = result.scalar_one()
         reset_token = reset_record.token
 
@@ -132,7 +119,7 @@ class TestAuthenticationE2E:
         assert updated_profile["first_name"] == "Updated"
         assert updated_profile["phone"] == "+1234567890"
 
-    async def test_two_factor_authentication_flow(self, client: AsyncClient, db_session: AsyncSession):
+    async def test_two_factor_authentication_flow(self, client: AsyncClient, test_session: AsyncSession):
         """Test 2FA setup and usage."""
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
@@ -220,7 +207,7 @@ class TestAuthenticationE2E:
         response = await client.post("/api/v1/auth/login", json=login_data)
         assert response.status_code == 200
 
-    async def test_account_deletion(self, client: AsyncClient, db_session: AsyncSession):
+    async def test_account_deletion(self, client: AsyncClient, test_session: AsyncSession):
         """Test account deletion."""
         # Login first to get token
         login_data = {
@@ -243,7 +230,7 @@ class TestAuthenticationE2E:
 
         # Verify account is deactivated
         user_query = select(User).where(User.email == "test@example.com")
-        result = await db_session.execute(user_query)
+        result = await test_session.execute(user_query)
         user = result.scalar_one()
         assert user.is_active is False
 

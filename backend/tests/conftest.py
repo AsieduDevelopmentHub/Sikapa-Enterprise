@@ -68,7 +68,7 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 async def client(test_session) -> AsyncGenerator[AsyncClient, None]:
     """Create test client with database session override."""
 
-    async def override_get_session():
+    async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
         yield test_session
 
     app.dependency_overrides[get_session] = override_get_session
