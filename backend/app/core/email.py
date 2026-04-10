@@ -22,7 +22,7 @@ class EmailService:
         to_email: str,
         subject: str,
         html_content: str,
-        from_email: str = "Sikapa <noreply@sikapa.com>"
+        from_email: str = "Sikapa Enterprise <no-reply@sikapa.auralenx.com>"
     ) -> bool:
         """
         Send email using Resend API.
@@ -31,7 +31,7 @@ class EmailService:
             to_email: Recipient email address
             subject: Email subject
             html_content: HTML content of the email
-            from_email: Sender email (default: Sikapa <noreply@sikapa.com>)
+            from_email: Sender email (default: Sikapa Enterprise <no-reply@sikapa.auralenx.com>)
 
         Returns:
             bool: True if email sent successfully, False otherwise

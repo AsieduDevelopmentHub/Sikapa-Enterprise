@@ -1,8 +1,10 @@
 """
 Authentication API routes - all endpoints for user auth flows.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from sqlmodel import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.api.v1.auth.schemas import (
     RegisterRequest,
@@ -48,43 +50,61 @@ from app.models import User, UserRead
 
 router = APIRouter()
 
+# Rate limiters for different auth operations
+limiter = Limiter(key_func=get_remote_address)
+
+# Rate limiters for different endpoint types
+login_limiter = limiter.limit("10/minute")  # Login attempts
+register_limiter = limiter.limit("5/minute")  # Registration
+password_reset_limiter = limiter.limit("2/minute")  # Password reset
+auth_limiter = limiter.limit("10/minute")  # General auth operations
+password_reset_request_limiter = limiter.limit("3/minute")  # Password reset requests
+password_reset_confirm_limiter = limiter.limit("5/minute")  # Password reset confirmations
+token_refresh_limiter = limiter.limit("5/minute")  # Token refresh requests
+
 
 # ============ REGISTRATION & LOGIN ============
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@register_limiter
 def register_endpoint(
-    request: RegisterRequest,
+    request: Request,
+    payload: RegisterRequest,
     session: Session = Depends(get_session)
 ):
     """Register a new user account."""
     user = register_user(
         session=session,
-        email=request.email,
-        password=request.password,
-        first_name=request.first_name,
-        last_name=request.last_name,
+        email=payload.email,
+        password=payload.password,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
     )
     return user
 
 
 @router.post("/login", response_model=TokenResponse)
+@login_limiter
 def login_endpoint(
-    request: LoginRequest,
+    request: Request,
+    payload: LoginRequest,
     session: Session = Depends(get_session)
 ):
     """Login user and return access/refresh tokens."""
-    user = authenticate_user(session, request.email, request.password)
+    user = authenticate_user(session, payload.email, payload.password)
     tokens = create_user_tokens(user)
     return tokens
 
 
 @router.post("/login-2fa", response_model=TokenResponse)
+@login_limiter
 def login_with_2fa_endpoint(
-    request: LoginWithTwoFARequest,
+    request: Request,
+    payload: LoginWithTwoFARequest,
     session: Session = Depends(get_session)
 ):
     """Login with 2FA verification code."""
-    user = authenticate_user(session, request.email, request.password)
+    user = authenticate_user(session, payload.email, payload.password)
 
     if not user.two_fa_enabled:
         raise HTTPException(
@@ -93,7 +113,7 @@ def login_with_2fa_endpoint(
         )
 
     # Verify 2FA code
-    if not verify_two_fa_code(session, user.id, request.code):
+    if not verify_two_fa_code(session, user.id, payload.code):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid 2FA code"
@@ -125,12 +145,14 @@ def logout_endpoint(
 # ============ EMAIL VERIFICATION ============
 
 @router.post("/verify-email")
+@auth_limiter  # 10 verification attempts per minute per IP
 def verify_email_endpoint(
-    request: VerifyEmailRequest,
+    request: Request,
+    payload: VerifyEmailRequest,
     session: Session = Depends(get_session)
 ):
     """Verify email address using OTP code."""
-    user = verify_email(session, request.email, request.code)
+    user = verify_email(session, payload.email, payload.code)
     return {
         "message": "Email verified successfully",
         "email": user.email,
@@ -141,23 +163,27 @@ def verify_email_endpoint(
 # ============ PASSWORD RESET ============
 
 @router.post("/password-reset/request")
+@password_reset_request_limiter  # 3 password reset requests per minute per IP
 def request_password_reset_endpoint(
-    request: PasswordResetRequest,
+    request: Request,
+    payload: PasswordResetRequest,
     session: Session = Depends(get_session)
 ):
     """Request password reset - send token to email."""
-    request_password_reset(session, request.email)
+    request_password_reset(session, payload.email)
     # Always return success for security (don't leak email existence)
     return {"message": "If email exists, reset link has been sent"}
 
 
 @router.post("/password-reset/confirm")
+@password_reset_confirm_limiter  # 5 password reset confirmations per minute per IP
 def reset_password_endpoint(
-    request: PasswordResetConfirm,
+    request: Request,
+    payload: PasswordResetConfirm,
     session: Session = Depends(get_session)
 ):
     """Reset password using reset token."""
-    user = reset_password(session, request.token, request.new_password)
+    user = reset_password(session, payload.token, payload.new_password)
     return {
         "message": "Password reset successfully",
         "email": user.email
@@ -167,12 +193,14 @@ def reset_password_endpoint(
 # ============ TOKEN MANAGEMENT ============
 
 @router.post("/refresh", response_model=TokenResponse)
+@token_refresh_limiter  # 5 token refresh requests per minute per IP
 def refresh_token_endpoint(
-    request: dict,
+    request: Request,
+    payload: dict,
     session: Session = Depends(get_session)
 ):
     """Refresh access token using refresh token."""
-    refresh_token = request.get("refresh_token")
+    refresh_token = payload.get("refresh_token")
     if not refresh_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

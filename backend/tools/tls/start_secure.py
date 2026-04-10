@@ -37,7 +37,7 @@ def main():
             sys.exit(1)
 
     # Set default ports
-    port = args.port or (8000 if args.http else 8443)
+    port = args.port or (8000 if args.http else 8442)
 
     # Build uvicorn command
     venv_uvicorn = Path(__file__).parent / "venv" / "Scripts" / "uvicorn.exe"
