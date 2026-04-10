@@ -13,6 +13,11 @@ app.include_router(api_v1_router, prefix="/api/v1")
 
 @app.on_event("startup")
 def on_startup() -> None:
+    # Optional: Auto-run migrations on startup (uncomment if using Alembic)
+    # from migration.migrations import auto_upgrade_on_startup
+    # auto_upgrade_on_startup()
+    
+    # Create tables not covered by migrations
     create_db_and_tables()
 
 
