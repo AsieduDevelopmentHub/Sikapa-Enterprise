@@ -138,7 +138,7 @@ For production deployment:
 
 **Connection Issues**: Ensure firewall allows the configured port
 
-**Import Errors**: Activate virtual environment: `.\venv\Scripts\activate`
+**Import Errors**: Activate virtual environment: `.\venv\Scripts\activate` 
 
 ---
 
