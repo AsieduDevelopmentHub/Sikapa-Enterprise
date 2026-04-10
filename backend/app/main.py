@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.security import HTTPBearer
 from app.api.v1.routes import router as api_v1_router
 from app.db import create_db_and_tables
 import os
@@ -16,6 +17,25 @@ app = FastAPI(
     docs_url="/docs",  # Only available in development
     redoc_url="/redoc"  # Only available in development
 )
+
+# JWT Bearer token for Swagger UI authentication
+security = HTTPBearer()
+
+# Add security scheme to OpenAPI spec for Swagger UI
+app.openapi_components = app.openapi_components or {}
+app.openapi_components["securitySchemes"] = {
+    "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+    }
+}
+app.openapi_security = [{"BearerAuth": []}]
+
+# Security: HTTPS Redirect Middleware (only in production)
+https_enabled = os.getenv("HTTPS_ENABLED", "false").lower() == "true"
+if https_enabled and not os.getenv("DEBUG", "false").lower() == "true":
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 # Security: HTTPS Redirect Middleware (only in production)
 https_enabled = os.getenv("HTTPS_ENABLED", "false").lower() == "true"
