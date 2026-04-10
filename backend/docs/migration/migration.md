@@ -5,7 +5,7 @@
 ### Create Migrations
 ```bash
 # Auto-generate from model changes
-alembic revision --autogenerate -m "add_user_email_field"
+alembic revision --autogenerate -m "message"
 
 # Empty migration (for manual SQL)
 alembic revision -m "custom migration"
