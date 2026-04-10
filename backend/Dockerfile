@@ -7,10 +7,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN python -m pip install --upgrade pip
 
-# Install runtime dependencies from the project metadata
-COPY pyproject.toml .
-COPY README.md .
-RUN pip install --no-cache-dir .
+# Install runtime dependencies from requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the backend source after installation to preserve layer caching
 COPY . .
