@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session, select
 
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer(scheme_name="BearerAuth", auto_error=False)
 
 from app.core.security import decode_access_token
 from app.db import get_session
