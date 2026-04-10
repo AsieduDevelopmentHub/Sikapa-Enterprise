@@ -4,6 +4,7 @@ Authentication services - comprehensive business logic for all auth operations.
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 import os
 
 from app.core.security import (
@@ -19,6 +20,7 @@ from app.core.security import (
     verify_totp_code,
     get_totp_qr_code,
 )
+from app.core.email_service import email_service
 from app.models import (
     User,
     TokenBlacklist,
@@ -28,6 +30,11 @@ from app.models import (
     UserRead,
 )
 
+# Load environment variables
+load_dotenv()
+
+# Configuration
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # ============ User Registration ============
 def register_user(session: Session, email: str, password: str, first_name: str = None, last_name: str = None) -> User:
@@ -63,8 +70,15 @@ def register_user(session: Session, email: str, password: str, first_name: str =
     session.add(otp)
     session.commit()
 
-    # TODO: Send OTP to email via Resend
-    print(f"[DEBUG] OTP for {email}: {otp_code}")
+    # Send welcome email
+    welcome_sent = email_service.send_welcome_email(user.email, user.first_name)
+    if not welcome_sent:
+        print(f"⚠️  Warning: Failed to send welcome email to {user.email}")
+
+    # Send verification email
+    email_sent = email_service.send_email_verification(user.email, otp_code, user.first_name)
+    if not email_sent:
+        print(f"⚠️  Warning: Failed to send verification email to {user.email}")
 
     return user
 
@@ -183,6 +197,11 @@ def verify_email(session: Session, email: str, code: str) -> User:
     session.commit()
     session.refresh(user)
 
+    # Send welcome email
+    email_sent = email_service.send_welcome_email(user.email, user.first_name)
+    if not email_sent:
+        print(f"⚠️  Warning: Failed to send welcome email to {user.email}")
+
     return user
 
 
@@ -204,8 +223,13 @@ def request_password_reset(session: Session, email: str) -> None:
     session.add(password_reset)
     session.commit()
 
-    # TODO: Send reset link to email via Resend
-    print(f"[DEBUG] Password reset token for {email}: {reset_token}")
+    # Create reset link (frontend URL would be configured)
+    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+
+    # Send password reset email
+    email_sent = email_service.send_password_reset(user.email, reset_token, user.first_name)
+    if not email_sent:
+        print(f"⚠️  Warning: Failed to send password reset email to {user.email}")
 
 
 def reset_password(session: Session, token: str, new_password: str) -> User:
@@ -312,6 +336,11 @@ def delete_user_account(session: Session, user_id: int, password: str) -> None:
     session.add(user)
     session.commit()
 
+    # Send account deletion confirmation email
+    email_sent = email_service.send_account_deletion(user.email, user.first_name)
+    if not email_sent:
+        print(f"⚠️  Warning: Failed to send account deletion email to {user.email}")
+
 
 # ============ 2FA TOTP Setup ============
 def setup_two_fa_totp(session: Session, user_id: int) -> dict:
@@ -379,6 +408,11 @@ def enable_two_fa_totp(session: Session, user_id: int, secret: str, backup_codes
     session.add(user)
     session.commit()
     session.refresh(user)
+
+    # Send 2FA enabled notification email
+    email_sent = email_service.send_2fa_enabled(user.email, user.first_name)
+    if not email_sent:
+        print(f"⚠️  Warning: Failed to send 2FA enabled email to {user.email}")
 
     return user
 

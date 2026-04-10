@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-from fastapi.security import HTTPBearer
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.routes import router as api_v1_router
 from app.db import create_db_and_tables
 import os
@@ -18,24 +21,11 @@ app = FastAPI(
     redoc_url="/redoc"  # Only available in development
 )
 
-# JWT Bearer token for Swagger UI authentication
-security = HTTPBearer()
-
-# Add security scheme to OpenAPI spec for Swagger UI
-app.openapi_components = app.openapi_components or {}
-app.openapi_components["securitySchemes"] = {
-    "BearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-    }
-}
-app.openapi_security = [{"BearerAuth": []}]
-
-# Security: HTTPS Redirect Middleware (only in production)
-https_enabled = os.getenv("HTTPS_ENABLED", "false").lower() == "true"
-if https_enabled and not os.getenv("DEBUG", "false").lower() == "true":
-    app.add_middleware(HTTPSRedirectMiddleware)
+# Rate Limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Security: HTTPS Redirect Middleware (only in production)
 https_enabled = os.getenv("HTTPS_ENABLED", "false").lower() == "true"
@@ -55,19 +45,19 @@ app.add_middleware(
 )
 
 # Security Headers Middleware
-@app.middleware("http")
-async def add_security_headers(request, call_next):
-    response = await call_next(request)
+# @app.middleware("http")
+# async def add_security_headers(request, call_next):
+#     response = await call_next(request)
 
-    # Security headers for HTTPS
-    if https_enabled:
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+#     # Security headers for HTTPS
+#     if https_enabled:
+#         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+#         response.headers["X-Content-Type-Options"] = "nosniff"
+#         response.headers["X-Frame-Options"] = "DENY"
+#         response.headers["X-XSS-Protection"] = "1; mode=block"
+#         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-    return response
+#     return response
 
 app.include_router(api_v1_router, prefix="/api/v1")
 
@@ -80,6 +70,37 @@ def on_startup() -> None:
 
     # Create tables not covered by migrations
     create_db_and_tables()
+
+
+# Store the original openapi method before overriding
+_original_openapi = app.openapi
+
+# Configure OpenAPI security scheme for Swagger UI JWT authentication
+def configure_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = _original_openapi()
+
+    # Add JWT Bearer authentication to global security
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter JWT token obtained from /api/v1/auth/login"
+        }
+    }
+
+    # Do not apply bearer auth globally so public endpoints like login/register/products remain accessible.
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = configure_openapi
+
+@app.get("/test")
+def test_endpoint():
+    return {"message": "Test endpoint works"}
 
 
 @app.get("/")

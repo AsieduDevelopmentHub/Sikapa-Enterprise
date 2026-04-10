@@ -26,9 +26,15 @@ sqlmodel==0.0.21
 # -----------------------------
 python-jose[cryptography]==3.3.0  # JWT tokens
 passlib[bcrypt]==1.7.4            # Password hashing utilities
-bcrypt==4.2.0                     # Password hashing
+bcrypt==4.1.0                     # Password hashing (compatible with passlib[bcrypt]==1.7.4)
 pyotp==2.9.0                      # TOTP 2FA codes (Phase 3)
 qrcode[pil]==7.4.2                # QR codes for 2FA setup (Phase 3)
+slowapi==0.1.9                    # Rate limiting
+
+# -----------------------------
+# Email Service
+# -----------------------------
+resend==0.7.2                     # Email delivery service
 
 # -----------------------------
 # Development & Testing

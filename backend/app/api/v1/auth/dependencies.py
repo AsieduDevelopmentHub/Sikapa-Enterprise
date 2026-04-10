@@ -1,8 +1,11 @@
 """
 Authentication dependencies for FastAPI route protection and token validation.
 """
-from fastapi import Depends, HTTPException, status, Header
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session, select
+
+security = HTTPBearer(auto_error=False)
 
 from app.core.security import decode_access_token
 from app.db import get_session
@@ -10,18 +13,18 @@ from app.models import User, TokenBlacklist
 
 
 async def get_current_user(
-    authorization: str = Header(None),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     session: Session = Depends(get_session)
 ) -> User:
     """Validate JWT token and return current user."""
-    if not authorization or not authorization.startswith("Bearer "):
+    if not credentials or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid authorization header",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = authorization.replace("Bearer ", "")
+    token = credentials.credentials
 
     # Check if token is blacklisted
     blacklisted = session.exec(
