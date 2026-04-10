@@ -1,3 +1,6 @@
+# vscode
+/.vscode/
+
 # Node
 node_modules
 npm-debug.log*
@@ -9,6 +12,7 @@ __pycache__
 *.py[cod]
 /backend/venv
 /backend/.env
+/backend/.env.production
 .env
 *.sqlite
 
@@ -18,6 +22,13 @@ __pycache__
 /backend/db/sikapa.db-journal
 /backend/sikapa.db
 
+# TLS certificates
+/backend/certs/*.key
+/backend/certs/*.pem
+/backend/certs/*.crt
+
+# mcp
+/.vscode/mcp.json
 
 # macOS
 .DS_Store
