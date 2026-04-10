@@ -38,6 +38,18 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+## Deploy to Render
+
+This backend can be deployed to Render using the Dockerfile in `backend/Dockerfile`.
+The Render manifest is defined in `render.yaml` at the repo root.
+
+- Render environment: `Docker`
+- Dockerfile path: `backend/Dockerfile`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- TLS: handled by Render, so set `HTTPS_ENABLED=false`
+
+See `backend/docs/hosting/render.md` for more details.
+
 ## Database migrations
 
 ### Alembic CLI Commands
