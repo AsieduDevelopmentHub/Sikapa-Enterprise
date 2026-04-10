@@ -1,0 +1,29 @@
+# Node
+node_modules
+npm-debug.log*
+.next
+out
+
+# Python
+__pycache__
+*.py[cod]
+/backend/venv
+/backend/.env
+.env
+*.sqlite
+
+# Database
+*.db
+/backend/db/sikapa.db
+/backend/db/sikapa.db-journal
+/backend/sikapa.db
+
+
+# macOS
+.DS_Store
+
+# Android
+*.iml
+.gradle
+/local.properties
+/.idea
