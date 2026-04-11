@@ -1,29 +1,196 @@
-from typing import List
+"""
+Products business logic
+"""
+from typing import Optional
+from fastapi import HTTPException, status
+from sqlmodel import Session, select, func, and_, or_
 
-from fastapi import HTTPException
-from sqlmodel import Session, select
-
-from app.db import engine
-from app.models import Product
-
-
-def get_products() -> List[Product]:
-    with Session(engine) as session:
-        return session.exec(select(Product)).all()
+from app.models import Product, Category
+from app.api.v1.products.schemas import ProductSearchResponse
 
 
-def get_product_by_slug(slug: str) -> Product:
-    with Session(engine) as session:
-        product = session.exec(select(Product).where(Product.slug == slug)).first()
-        if not product:
-            raise HTTPException(status_code=404, detail="Product not found")
-        return product
+async def get_products_with_filters(
+    session: Session,
+    category_id: Optional[int] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    min_rating: Optional[float] = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    skip: int = 0,
+    limit: int = 20,
+) -> ProductSearchResponse:
+    """Get products with advanced filtering and sorting."""
+    
+    # Base query
+    query = select(Product).where(Product.is_active == True)
+    
+    # Apply filters
+    if category_id is not None:
+        query = query.where(Product.category_id == category_id)
+    
+    if min_price is not None:
+        query = query.where(Product.price >= min_price)
+    
+    if max_price is not None:
+        query = query.where(Product.price <= max_price)
+    
+    if min_rating is not None:
+        query = query.where(Product.avg_rating >= min_rating)
+    
+    # Get total count before pagination
+    count_query = select(func.count(Product.id)).select_from(
+        select(Product).where(Product.is_active == True)
+    )
+    
+    if category_id is not None:
+        count_query = count_query.where(Product.category_id == category_id)
+    if min_price is not None:
+        count_query = count_query.where(Product.price >= min_price)
+    if max_price is not None:
+        count_query = count_query.where(Product.price <= max_price)
+    if min_rating is not None:
+        count_query = count_query.where(Product.avg_rating >= min_rating)
+    
+    # Simple count approach
+    filtered_query = select(Product).where(Product.is_active == True)
+    if category_id is not None:
+        filtered_query = filtered_query.where(Product.category_id == category_id)
+    if min_price is not None:
+        filtered_query = filtered_query.where(Product.price >= min_price)
+    if max_price is not None:
+        filtered_query = filtered_query.where(Product.price <= max_price)
+    if min_rating is not None:
+        filtered_query = filtered_query.where(Product.avg_rating >= min_rating)
+    
+    total = len(session.exec(filtered_query).all())
+    
+    # Apply sorting
+    if sort_by == "price":
+        sort_col = Product.price
+    elif sort_by == "rating":
+        sort_col = Product.avg_rating
+    elif sort_by == "sales":
+        sort_col = Product.sales_count
+    else:  # "created_at" or default
+        sort_col = Product.created_at
+    
+    if sort_order.lower() == "asc":
+        query = query.order_by(sort_col.asc())
+    else:
+        query = query.order_by(sort_col.desc())
+    
+    # Apply pagination
+    query = query.offset(skip).limit(limit)
+    
+    products = session.exec(query).all()
+    
+    return ProductSearchResponse(
+        total=total,
+        skip=skip,
+        limit=limit,
+        items=products,
+    )
 
 
-def create_product(product_data) -> Product:
-    with Session(engine) as session:
-        db_product = Product.from_orm(product_data)
-        session.add(db_product)
-        session.commit()
-        session.refresh(db_product)
-        return db_product
+async def search_products(
+    session: Session,
+    search_query: str,
+    skip: int = 0,
+    limit: int = 20,
+) -> ProductSearchResponse:
+    """Search products by name, description, or SKU."""
+    
+    search_term = f"%{search_query}%"
+    
+    # Build search query
+    query = select(Product).where(
+        and_(
+            Product.is_active == True,
+            or_(
+                Product.name.ilike(search_term),
+                Product.description.ilike(search_term),
+                Product.sku.ilike(search_term) if Product.sku else False,
+            ),
+        )
+    )
+    
+    # Count total matches
+    filtered_query = select(Product).where(
+        and_(
+            Product.is_active == True,
+            or_(
+                Product.name.ilike(search_term),
+                Product.description.ilike(search_term),
+                Product.sku.ilike(search_term) if Product.sku else False,
+            ),
+        )
+    )
+    
+    total = len(session.exec(filtered_query).all())
+    
+    # Apply pagination
+    query = query.order_by(Product.created_at.desc()).offset(skip).limit(limit)
+    
+    products = session.exec(query).all()
+    
+    return ProductSearchResponse(
+        total=total,
+        skip=skip,
+        limit=limit,
+        items=products,
+    )
+
+
+async def get_product_by_id(session: Session, product_id: int):
+    """Get product by ID."""
+    product = session.exec(
+        select(Product).where(Product.id == product_id)
+    ).first()
+    
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+    
+    return product
+
+
+async def get_product_by_slug(session: Session, slug: str):
+    """Get product by slug."""
+    product = session.exec(
+        select(Product).where(Product.slug == slug)
+    ).first()
+    
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+    
+    return product
+
+
+async def get_all_categories(session: Session):
+    """Get all active categories."""
+    categories = session.exec(
+        select(Category).where(Category.is_active == True).order_by(Category.sort_order)
+    ).all()
+    
+    return categories
+
+
+async def get_category_by_id(session: Session, category_id: int):
+    """Get category by ID."""
+    category = session.exec(
+        select(Category).where(Category.id == category_id)
+    ).first()
+    
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found",
+        )
+    
+    return category

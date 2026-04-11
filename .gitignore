@@ -16,6 +16,12 @@ __pycache__
 .env
 *.sqlite
 
+# Pytest
+/backend/tests/__pycache__
+/backend/tests/*.log
+/backend/*.coverage
+/backend/htmlcov
+
 # Database
 *.db
 /backend/db/sikapa.db
