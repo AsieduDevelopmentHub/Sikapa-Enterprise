@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.routes import router as api_v1_router
 from app.db import create_db_and_tables
 import os
@@ -16,6 +21,12 @@ app = FastAPI(
     docs_url="/docs",  # Only available in development
     redoc_url="/redoc"  # Only available in development
 )
+
+# Rate Limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Security: HTTPS Redirect Middleware (only in production)
 https_enabled = os.getenv("HTTPS_ENABLED", "false").lower() == "true"
@@ -35,21 +46,25 @@ app.add_middleware(
 )
 
 # Security Headers Middleware
-@app.middleware("http")
-async def add_security_headers(request, call_next):
-    response = await call_next(request)
+# @app.middleware("http")
+# async def add_security_headers(request, call_next):
+#     response = await call_next(request)
 
-    # Security headers for HTTPS
-    if https_enabled:
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+#     # Security headers for HTTPS
+#     if https_enabled:
+#         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+#         response.headers["X-Content-Type-Options"] = "nosniff"
+#         response.headers["X-Frame-Options"] = "DENY"
+#         response.headers["X-XSS-Protection"] = "1; mode=block"
+#         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-    return response
+#     return response
 
 app.include_router(api_v1_router, prefix="/api/v1")
+# Ensure uploads directory exists
+uploads_dir = os.path.join(os.path.dirname(__file__), "..", "uploads")
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 
 @app.on_event("startup")
@@ -60,6 +75,36 @@ def on_startup() -> None:
 
     # Create tables not covered by migrations
     create_db_and_tables()
+
+
+# Store the original openapi method before overriding
+_original_openapi = app.openapi
+
+# Configure OpenAPI security scheme for Swagger UI JWT authentication
+def configure_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = _original_openapi()
+
+    # Add JWT Bearer authentication to the OpenAPI security schemes without replacing existing definitions.
+    security_schemes = openapi_schema["components"].get("securitySchemes", {})
+    security_schemes["BearerAuth"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter JWT token obtained from /api/v1/auth/login"
+    }
+    openapi_schema["components"]["securitySchemes"] = security_schemes
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = configure_openapi
+
+@app.get("/test")
+def test_endpoint():
+    return {"message": "Test endpoint works"}
 
 
 @app.get("/")
