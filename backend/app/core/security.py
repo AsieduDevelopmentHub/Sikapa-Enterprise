@@ -3,26 +3,57 @@ from datetime import datetime, timedelta
 import secrets
 import string
 
+import logging
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from passlib.exc import MissingBackendError, UnknownHashError
+
+logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt", "pbkdf2_sha256"],
+    deprecated="auto",
+    bcrypt__rounds=12,
+)
+
+legacy_context = CryptContext(
+    schemes=["pbkdf2_sha256", "sha256_crypt"],
+    deprecated="auto"
+)
+
+try:
+    # Validate backend availability without forcing a password hash on import.
+    pwd_context.handler("bcrypt")
+except Exception:
+    logger.warning(
+        "bcrypt backend unavailable: existing bcrypt-hashed passwords may not verify. "
+        "Install bcrypt in the active Python environment."
+    )
 
 
-# ============ Password Management ============
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify plain password against hashed password."""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except (MissingBackendError, UnknownHashError):
+        try:
+            return legacy_context.verify(plain_password, hashed_password)
+        except (MissingBackendError, UnknownHashError):
+            return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash password using bcrypt."""
-    return pwd_context.hash(password)
+    """Hash password using bcrypt when available, otherwise fallback to pbkdf2_sha256."""
+    try:
+        return pwd_context.hash(password)
+    except MissingBackendError:
+        fallback_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+        return fallback_context.hash(password)
 
 
 # ============ JWT Token Management ============

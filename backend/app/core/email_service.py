@@ -166,6 +166,109 @@ class EmailService:
         """
         return EmailService.send_email(email, subject, html_content) is not None
 
+    @staticmethod
+    def send_subscription_confirmation(email: str, verification_token: str) -> bool:
+        """Send newsletter subscription confirmation email."""
+        verify_url = f"{frontend_url}/api/v1/subscriptions/verify/{verification_token}"
+        subject = "Confirm Your Newsletter Subscription - Sikapa Enterprise"
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #333;">Confirm Your Subscription</h1>
+            <p>Thank you for subscribing to our newsletter!</p>
+            <p>Click the button below to confirm your subscription:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{verify_url}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Confirm Subscription</a>
+            </div>
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #666;">{verify_url}</p>
+            <p>You'll start receiving our latest updates and offers once you confirm.</p>
+            <br>
+            <p>Best regards,<br>The Sikapa Team</p>
+        </div>
+        """
+        return EmailService.send_email(email, subject, html_content) is not None
+
+    @staticmethod
+    def send_account_deactivated(email: str, first_name: str = None) -> bool:
+        """Send notification when account is deactivated by admin."""
+        name = first_name or "there"
+        subject = "Account Deactivated - Sikapa Enterprise"
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #333;">Account Deactivated</h1>
+            <p>Hello {name},</p>
+            <p>Your Sikapa Enterprise account has been deactivated by our admin team.</p>
+            <p>If you believe this is a mistake or would like to appeal, please contact our support team.</p>
+            <br>
+            <p>Best regards,<br>The Sikapa Team</p>
+        </div>
+        """
+        return EmailService.send_email(email, subject, html_content) is not None
+
+    @staticmethod
+    def send_account_reactivated(email: str, first_name: str = None) -> bool:
+        """Send notification when account is reactivated by admin."""
+        name = first_name or "there"
+        subject = "Account Reactivated - Sikapa Enterprise"
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #333;">Account Reactivated</h1>
+            <p>Hello {name},</p>
+            <p>Good news! Your Sikapa Enterprise account has been reactivated.</p>
+            <p>You can now log in and access all features again.</p>
+            <br>
+            <p>Best regards,<br>The Sikapa Team</p>
+        </div>
+        """
+        return EmailService.send_email(email, subject, html_content) is not None
+
+    @staticmethod
+    def send_order_confirmation(email: str, order_id: int, order_total: float, first_name: str = None) -> bool:
+        """Send order confirmation email."""
+        name = first_name or "Customer"
+        subject = f"Order Confirmation #{order_id} - Sikapa Enterprise"
+        order_url = f"{frontend_url}/orders/{order_id}"
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #333;">Order Confirmed!</h1>
+            <p>Hello {name},</p>
+            <p>Thank you for your order! We've received it and will process it shortly.</p>
+            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px;">
+                <h2 style="color: #333; margin: 0;">Order #{order_id}</h2>
+                <p style="color: #666; margin: 10px 0;">Total: ${order_total:.2f}</p>
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{order_url}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">View Order</a>
+            </div>
+            <p>We'll notify you as soon as your order ships!</p>
+            <br>
+            <p>Best regards,<br>The Sikapa Team</p>
+        </div>
+        """
+        return EmailService.send_email(email, subject, html_content) is not None
+
+    @staticmethod
+    def send_order_shipped(email: str, order_id: int, tracking_number: str = None, first_name: str = None) -> bool:
+        """Send order shipped notification."""
+        name = first_name or "Customer"
+        subject = f"Your Order #{order_id} Has Been Shipped!"
+        tracking_info = f"<p>Tracking Number: <strong>{tracking_number}</strong></p>" if tracking_number else ""
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #333;">Order Shipped!</h1>
+            <p>Hello {name},</p>
+            <p>Great news! Your order has been shipped.</p>
+            <div style="background-color: #f4f4f4; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                <h2 style="color: #333; margin: 0;">Order #{order_id}</h2>
+                {tracking_info}
+            </div>
+            <p>You can track your shipment using the tracking number above.</p>
+            <br>
+            <p>Best regards,<br>The Sikapa Team</p>
+        </div>
+        """
+        return EmailService.send_email(email, subject, html_content) is not None
+
 
 # Global email service instance
 email_service = EmailService()
