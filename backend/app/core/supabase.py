@@ -83,7 +83,9 @@ def get_public_url(path: str) -> str | None:
 
     try:
         response = client.storage.from_(SUPABASE_STORAGE_BUCKET).get_public_url(path)
-        if response and response.get("public_url"):
+        if isinstance(response, str) and response:
+            return response
+        if isinstance(response, dict) and response.get("public_url"):
             return response["public_url"]
     except Exception as e:
         logger.error(f"Error getting public URL for {path}: {e}")

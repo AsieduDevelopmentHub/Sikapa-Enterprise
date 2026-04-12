@@ -41,8 +41,8 @@ class UserManagementResponse(BaseModel):
     last_name: Optional[str]
     is_active: bool
     is_admin: bool
-    created_at: str
-    
+    created_at: datetime
+
     class Config:
         from_attributes = True
 
@@ -65,8 +65,8 @@ class OrderManagementRead(BaseModel):
     user_id: int
     total_price: float
     status: str
-    created_at: str
-    
+    created_at: datetime
+
     class Config:
         from_attributes = True
 
