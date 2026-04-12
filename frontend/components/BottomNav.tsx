@@ -16,7 +16,7 @@ const tabs = [
     href: "/shop",
     label: "Shop",
     Icon: FaShop,
-    match: (p: string) => p.startsWith("/shop"),
+    match: (p: string) => p.startsWith("/shop") || p.startsWith("/product"),
   },
   {
     href: "/cart",

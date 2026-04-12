@@ -8,7 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { MOCK_PRODUCTS, formatGhs, type MockProduct } from "@/lib/mock-data";
+import { useCatalog } from "@/context/CatalogContext";
+import { formatGhs, type MockProduct } from "@/lib/mock-data";
 
 export type CartLine = {
   product: MockProduct;
@@ -31,24 +32,28 @@ const CartContext = createContext<CartContextValue | null>(null);
 const SHIPPING_FLAT = 25;
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { getProduct } = useCatalog();
   const [lines, setLines] = useState<CartLine[]>([]);
 
-  const addProduct = useCallback((productId: string, qty = 1) => {
-    const product = MOCK_PRODUCTS.find((p) => p.id === productId);
-    if (!product) return;
-    setLines((prev) => {
-      const i = prev.findIndex((l) => l.product.id === productId);
-      if (i >= 0) {
-        const next = [...prev];
-        next[i] = {
-          ...next[i],
-          quantity: next[i].quantity + qty,
-        };
-        return next;
-      }
-      return [...prev, { product, quantity: qty }];
-    });
-  }, []);
+  const addProduct = useCallback(
+    (productId: string, qty = 1) => {
+      const product = getProduct(productId);
+      if (!product) return;
+      setLines((prev) => {
+        const i = prev.findIndex((l) => l.product.id === productId);
+        if (i >= 0) {
+          const next = [...prev];
+          next[i] = {
+            ...next[i],
+            quantity: next[i].quantity + qty,
+          };
+          return next;
+        }
+        return [...prev, { product, quantity: qty }];
+      });
+    },
+    [getProduct]
+  );
 
   const setQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity < 1) {
@@ -56,9 +61,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     setLines((prev) =>
-      prev.map((l) =>
-        l.product.id === productId ? { ...l, quantity } : l
-      )
+      prev.map((l) => (l.product.id === productId ? { ...l, quantity } : l))
     );
   }, []);
 
@@ -67,8 +70,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const subtotal = useMemo(
-    () =>
-      lines.reduce((s, l) => s + l.product.price * l.quantity, 0),
+    () => lines.reduce((s, l) => s + l.product.price * l.quantity, 0),
     [lines]
   );
 
@@ -89,9 +91,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [lines, addProduct, setQuantity, removeLine, subtotal, shipping, total]
   );
 
-  return (
-    <CartContext.Provider value={value}>{children}</CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
