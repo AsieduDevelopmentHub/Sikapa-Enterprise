@@ -160,15 +160,12 @@ async def get_all_products_admin(
     session: Session,
     skip: int = 0,
     limit: int = 50,
-    is_active: Optional[bool] = None,
-    category_id: Optional[int] = None,
+    category: Optional[str] = None,
 ) -> List[Product]:
     """Get all products for admin management."""
     filters = {}
-    if is_active is not None:
-        filters["is_active"] = is_active
-    if category_id is not None:
-        filters["category_id"] = category_id
+    if category is not None:
+        filters["category"] = str(category)
     
     return await get_entities_paginated(
         session,

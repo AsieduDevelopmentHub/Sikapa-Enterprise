@@ -3,7 +3,7 @@ Admin endpoint schemas
 """
 from typing import Dict, List, Optional
 from pydantic import BaseModel
-from datetime import date
+from datetime import date, datetime
 
 
 class TopProduct(BaseModel):
@@ -54,7 +54,7 @@ class ProductManagementRead(BaseModel):
     price: float
     in_stock: int
     is_active: bool
-    created_at: str
+    created_at: datetime
     
     class Config:
         from_attributes = True
