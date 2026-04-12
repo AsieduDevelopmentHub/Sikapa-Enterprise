@@ -9,7 +9,6 @@ from sqlmodel import Session, select
 
 from app.models import User, Product, Order, Category, AdminAuditLog
 from app.core.email_service import EmailService
-from app.core.supabase import get_supabase_client, SUPABASE_STORAGE_BUCKET
 from app.api.v1.admin.crud_helpers import (
     get_entity_or_404,
     create_entity_with_slug,
@@ -234,7 +233,11 @@ async def upload_product_image(
 ) -> str:
     """Upload product image to Supabase Storage or local fallback."""
     import uuid
+    import logging
     from pathlib import Path
+    from app.core.supabase import upload_file
+
+    logger = logging.getLogger(__name__)
 
     valid_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
     if file.content_type not in valid_types:
@@ -249,29 +252,16 @@ async def upload_product_image(
     storage_path = f"{folder}/{filename}"
 
     file_bytes = await file.read()
-    supabase = get_supabase_client()
 
-    if supabase:
-        bucket = SUPABASE_STORAGE_BUCKET
-        try:
-            response = supabase.storage.from_(bucket).upload(
-                storage_path,
-                file_bytes,
-                {
-                    "content-type": file.content_type,
-                },
-            )
-            if response.error:
-                error_message = getattr(response.error, "message", str(response.error))
-                print(f"Supabase upload error: {error_message}, falling back to local storage")
-            else:
-                public_url = supabase.storage.from_(bucket).get_public_url(storage_path)
-                if public_url and public_url.get("public_url"):
-                    return public_url["public_url"]
-        except Exception as e:
-            print(f"Supabase upload exception: {e}, falling back to local storage")
+    # Try Supabase upload first
+    public_url = upload_file(storage_path, file_bytes)
+    
+    if public_url:
+        logger.info(f"Successfully uploaded product image to Supabase: {storage_path}")
+        return public_url
 
     # Fallback to local storage
+    logger.warning(f"Supabase upload failed for {storage_path}, falling back to local storage")
     upload_dir = os.path.join("uploads", folder)
     os.makedirs(upload_dir, exist_ok=True)
     upload_path = os.path.join(upload_dir, filename)
@@ -279,6 +269,7 @@ async def upload_product_image(
     with open(upload_path, "wb") as f:
         f.write(file_bytes)
 
+    logger.info(f"Uploaded product image to local storage: {upload_path}")
     return f"/uploads/{folder}/{filename}"
 
 
