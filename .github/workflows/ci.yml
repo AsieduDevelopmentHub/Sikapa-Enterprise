@@ -103,5 +103,5 @@ jobs:
 
       - name: Run frontend tests
         working-directory: frontend
-        # package.json uses vitest run; do not pass Jest-only flags (--watchAll)
+        # vitest.config.ts sets passWithNoTests; smoke test lives in __tests__/
         run: npm test
