@@ -1,11 +1,15 @@
 # Pings the Render backend so a free-tier instance stays warm (optional).
-# Scheduled workflows only run from the repository DEFAULT branch — merge this file
-# to main (or rename your default branch in GitHub Settings → General) or you will
-# not see scheduled runs. You can always run it manually: Actions → this workflow → Run workflow.
 #
-# If the workflow does not appear under the Actions tab, ensure:
-# - This file lives at .github/workflows/render-keepalive.yml on the default branch
-# - Actions are enabled for the repo (Settings → Actions → General)
+# Why you might see "0 workflow runs":
+#   - schedule (cron) only creates a run at the next tick (e.g. up to 5 min after merge),
+#     and history stays empty until then.
+#   - workflow_dispatch only appears after you click "Run workflow" once.
+#
+# This file also triggers on push when THIS workflow changes on the default branch,
+# so merging an update gives you an immediate run in the Actions tab.
+#
+# Scheduled workflows only run from the repository DEFAULT branch (Settings → General).
+# Actions must be enabled: Settings → Actions → General.
 
 name: Render keepalive
 
@@ -16,6 +20,14 @@ on:
     # Every 5 minutes UTC (adjust to reduce noise)
     - cron: "*/5 * * * *"
   workflow_dispatch:
+  # Immediate run when this workflow file is updated on main integration branches
+  push:
+    branches:
+      - main
+      - frontend
+      - backend
+    paths:
+      - ".github/workflows/render-keepalive.yml"
 
 permissions:
   contents: read
