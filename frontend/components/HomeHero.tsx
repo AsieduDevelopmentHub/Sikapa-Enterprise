@@ -3,12 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
-/**
- * Warm, editorial portrait — skin tones align with crimson / deep-wine hero gradient.
- * Unsplash: replace URL if you host your own shoot.
- */
-const HERO_MODEL_SRC =
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=900&h=1200&fit=crop&q=85";
+/** Hero portrait from `public/assets/icons/hero.jpeg`. */
+const HERO_MODEL_SRC = "/assets/icons/hero.jpeg";
 
 export function HomeHero() {
   return (
