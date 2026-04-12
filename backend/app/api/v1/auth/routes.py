@@ -212,7 +212,7 @@ def get_profile_endpoint(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get current user profile."""
-    return UserProfileResponse.from_orm(current_user)
+    return UserProfileResponse.model_validate(current_user)
 
 
 @router.put("/profile", response_model=UserProfileResponse)
@@ -229,7 +229,7 @@ def update_profile_endpoint(
         last_name=request.last_name,
         phone=request.phone,
     )
-    return UserProfileResponse.from_orm(updated_user)
+    return UserProfileResponse.model_validate(updated_user)
 
 
 # ============ PASSWORD MANAGEMENT ============
