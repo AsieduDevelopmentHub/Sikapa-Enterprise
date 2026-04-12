@@ -11,8 +11,12 @@ class ProductBase(SQLModel):
     price: float
     image_url: Optional[str] = None
     category: Optional[str] = Field(default=None, sa_column=Column("category", String, nullable=True))
+    sku: Optional[str] = Field(default=None, index=True)
+    weight: Optional[float] = None
     in_stock: int = 0
     is_active: bool = True
+    sales_count: int = Field(default=0, ge=0)
+    avg_rating: float = Field(default=0.0, ge=0, le=5)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

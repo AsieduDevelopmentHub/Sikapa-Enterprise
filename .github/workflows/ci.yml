@@ -48,8 +48,8 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         env:
-          # Use SQLite for CI tests (faster, no external dependencies)
-          DATABASE_URL: sqlite:///./db/sikapa_ci.db
+          # In-memory SQLite (no db directory required on the runner)
+          DATABASE_URL: sqlite:///:memory:
           SECRET_KEY: ci-secret-key-for-testing-only
           JWT_SECRET_KEY: ci-jwt-secret-for-testing
           JWT_REFRESH_SECRET_KEY: ci-jwt-refresh-secret
