@@ -1,227 +1,402 @@
 """
-Invoice generation service using ReportLab for PDF creation
+Invoice generation using ReportLab — Sikapa Enterprise branded PDFs with line items,
+product names, SKUs, and thumbnails when images can be resolved.
 """
+from __future__ import annotations
+
 import io
+import logging
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-)
+from xml.sax.saxutils import escape
+
+import httpx
 from reportlab.lib import colors
-from reportlab.pdfgen import canvas
-from sqlmodel import Session
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.lib.utils import ImageReader
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.models import Invoice, Order, OrderItem, Product, User
 
+logger = logging.getLogger(__name__)
+
+BACKEND_ROOT = Path(__file__).resolve().parent.parent
+THUMB_MAX = 0.52 * inch
+BRAND_PRIMARY = colors.HexColor("#0f172a")
+BRAND_ACCENT = colors.HexColor("#2563eb")
+TEXT_MUTED = colors.HexColor("#64748b")
+TEXT_BODY = colors.HexColor("#334155")
+
+
+def _fmt_money(amount: float, currency_code: str) -> str:
+    return f"{currency_code} {amount:,.2f}"
+
+
+def _status_display(status: str) -> str:
+    return status.replace("_", " ").title()
+
+
+def _load_product_image_bytes(image_url: Optional[str]) -> Optional[bytes]:
+    """Load raw image bytes from HTTPS URL or local `/uploads/...` path."""
+    if not image_url or not str(image_url).strip():
+        return None
+    u = str(image_url).strip()
+    try:
+        if u.startswith(("http://", "https://")):
+            with httpx.Client(timeout=12.0, follow_redirects=True) as client:
+                r = client.get(u)
+                if r.status_code == 200 and r.content:
+                    return r.content
+            return None
+        if u.startswith("/uploads/"):
+            rel = u.lstrip("/")
+            path = BACKEND_ROOT / rel
+            if path.is_file():
+                return path.read_bytes()
+    except Exception as exc:
+        logger.warning("Invoice image load failed for %s: %s", u, exc)
+    return None
+
+
+def _thumbnail_flowable(image_url: Optional[str]) -> Paragraph | Image:
+    """Small square thumbnail or a minimal placeholder."""
+    data = _load_product_image_bytes(image_url)
+    if not data:
+        ph = ParagraphStyle(
+            "ImgPh",
+            parent=getSampleStyleSheet()["Normal"],
+            fontSize=8,
+            textColor=TEXT_MUTED,
+            alignment=1,
+        )
+        return Paragraph("—", ph)
+
+    try:
+        ir = ImageReader(io.BytesIO(data))
+        iw, ih = ir.getSize()
+        if iw <= 0 or ih <= 0:
+            raise ValueError("invalid image dimensions")
+        scale = min(THUMB_MAX / iw, THUMB_MAX / ih)
+        w, h = iw * scale, ih * scale
+        return Image(ImageReader(io.BytesIO(data)), width=w, height=h, mask="auto")
+    except Exception as exc:
+        logger.warning("Invoice thumbnail build failed: %s", exc)
+        ph = ParagraphStyle(
+            "ImgPh",
+            parent=getSampleStyleSheet()["Normal"],
+            fontSize=8,
+            textColor=TEXT_MUTED,
+            alignment=1,
+        )
+        return Paragraph("—", ph)
+
 
 class InvoiceService:
-    """Service for generating and managing invoices"""
-    
+    """Generate Sikapa Enterprise PDF invoices."""
+
     @staticmethod
     def generate_invoice_pdf(
         invoice: Invoice,
         order: Order,
         user: User,
         order_items: list[OrderItem],
-        company_name: str = "Sikapa Store"
+        products_by_id: Optional[dict[int, Product]] = None,
+        company_name: str = "Sikapa Enterprise",
+        currency_code: str | None = None,
     ) -> bytes:
         """
-        Generate a professional PDF invoice
-        
+        Build a branded PDF invoice with product names, SKUs, and images.
+
         Args:
-            invoice: Invoice model instance
-            order: Associated order
-            user: Customer information
-            order_items: List of items in the order
-            company_name: Company name for header
-            
-        Returns:
-            bytes: PDF content as bytes
+            invoice: Invoice row
+            order: Order row
+            user: Billing customer
+            order_items: Line items
+            products_by_id: Map of product id -> Product (for names, SKU, images)
+            company_name: Header brand (default Sikapa Enterprise)
+            currency_code: ISO currency for amounts (default PAYSTACK_CURRENCY or GHS)
         """
-        # Create a BytesIO buffer to store PDF
+        cur = (currency_code or os.getenv("PAYSTACK_CURRENCY", "GHS")).strip().upper()
+        products_by_id = products_by_id or {}
+        items_sorted = sorted(order_items, key=lambda x: (x.id or 0))
+
         buffer = io.BytesIO()
-        
-        # Create PDF document
         doc = SimpleDocTemplate(
             buffer,
             pagesize=letter,
-            rightMargin=0.5*inch,
-            leftMargin=0.5*inch,
-            topMargin=0.5*inch,
-            bottomMargin=0.5*inch
+            rightMargin=0.55 * inch,
+            leftMargin=0.55 * inch,
+            topMargin=0.5 * inch,
+            bottomMargin=0.55 * inch,
+            title=f"Invoice {invoice.invoice_number}",
         )
-        
-        # Container for PDF elements
-        elements = []
-        
-        # Define styles
+
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=24,
-            textColor=colors.HexColor('#1f2937'),
-            spaceAfter=12,
-            alignment=1  # Center
+        brand_sub = ParagraphStyle(
+            "BrandSub",
+            parent=styles["Normal"],
+            fontSize=9,
+            textColor=colors.HexColor("#94a3b8"),
+            leading=12,
         )
-        heading_style = ParagraphStyle(
-            'CustomHeading',
-            parent=styles['Heading2'],
-            fontSize=12,
-            textColor=colors.HexColor('#374151'),
-            spaceAfter=6
+        h_section = ParagraphStyle(
+            "HSection",
+            parent=styles["Heading2"],
+            fontSize=11,
+            textColor=BRAND_PRIMARY,
+            spaceBefore=10,
+            spaceAfter=6,
+            fontName="Helvetica-Bold",
         )
-        normal_style = ParagraphStyle(
-            'CustomNormal',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.HexColor('#4b5563')
+        body = ParagraphStyle(
+            "Body",
+            parent=styles["Normal"],
+            fontSize=9.5,
+            textColor=TEXT_BODY,
+            leading=13,
         )
-        
-        # Header - Company name and Invoice title
-        elements.append(Paragraph(f"<b>{company_name}</b>", title_style))
-        elements.append(Paragraph("INVOICE", heading_style))
-        elements.append(Spacer(1, 0.2*inch))
-        
-        # Invoice details
-        invoice_details_data = [
-            ["Invoice Number:", invoice.invoice_number, "Invoice Date:", invoice.issued_at.strftime("%Y-%m-%d")],
-            ["Order Number:", f"ORD-{order.id}", "Due Date:", 
-             invoice.due_at.strftime("%Y-%m-%d") if invoice.due_at else "Upon Receipt"],
-            ["Payment Status:", invoice.status.capitalize(), "Payment Method:", order.payment_method or "Not specified"]
+        small = ParagraphStyle(
+            "Small",
+            parent=styles["Normal"],
+            fontSize=8,
+            textColor=TEXT_MUTED,
+            leading=11,
+        )
+        product_title = ParagraphStyle(
+            "ProdTitle",
+            parent=styles["Normal"],
+            fontSize=9.5,
+            textColor=TEXT_BODY,
+            leading=12,
+            fontName="Helvetica-Bold",
+        )
+
+        elements: list = []
+
+        # --- Header band ---
+        issued = invoice.issued_at.strftime("%Y-%m-%d") if invoice.issued_at else "—"
+        left_block = (
+            f"<b><font size='20' color='white'>{escape(company_name)}</font></b><br/>"
+            f"<font size='9' color='#94a3b8'>Official tax invoice · {escape(issued)}</font>"
+        )
+        right_block = (
+            f"<para alignment='right'>"
+            f"<font size='22' color='white'>INVOICE</font><br/>"
+            f"<font size='9' color='#94a3b8'>{escape(invoice.invoice_number)}</font><br/>"
+            f"<font size='9' color='#94a3b8'>Order ORD-{order.id}</font>"
+            f"</para>"
+        )
+        header_tbl = Table(
+            [[Paragraph(left_block, brand_sub), Paragraph(right_block, brand_sub)]],
+            colWidths=[4.15 * inch, 3.35 * inch],
+        )
+        header_tbl.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), BRAND_PRIMARY),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 16),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 16),
+                    ("TOPPADDING", (0, 0), (-1, -1), 20),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 20),
+                    ("LINEABOVE", (0, 0), (-1, 0), 3, BRAND_ACCENT),
+                ]
+            )
+        )
+        elements.append(header_tbl)
+        elements.append(Spacer(1, 0.28 * inch))
+
+        # --- Meta grid ---
+        due = (
+            invoice.due_at.strftime("%Y-%m-%d")
+            if invoice.due_at
+            else "Upon receipt"
+        )
+        meta = [
+            ["Invoice date", issued, "Due date", due],
+            [
+                "Payment status",
+                _status_display(invoice.status),
+                "Payment method",
+                (order.payment_method or "—").replace("_", " ").title(),
+            ],
         ]
-        
-        details_table = Table(invoice_details_data, colWidths=[1.2*inch, 1.5*inch, 1.2*inch, 1.5*inch])
-        details_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#4b5563')),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 3),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
-        ]))
-        elements.append(details_table)
-        elements.append(Spacer(1, 0.3*inch))
-        
-        # Customer info
-        elements.append(Paragraph("<b>Bill To:</b>", heading_style))
-        customer_info = f"""
-        {user.first_name or ''} {user.last_name or ''}<br/>
-        {user.email}<br/>
-        {user.phone or 'N/A'}
-        """
-        elements.append(Paragraph(customer_info, normal_style))
-        
+        meta_tbl = Table(meta, colWidths=[1.15 * inch, 2.05 * inch, 1.15 * inch, 2.05 * inch])
+        meta_tbl.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
+                    ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+                    ("FONTNAME", (3, 0), (3, -1), "Helvetica"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (0, -1), TEXT_MUTED),
+                    ("TEXTCOLOR", (2, 0), (2, -1), TEXT_MUTED),
+                    ("TEXTCOLOR", (1, 0), (1, -1), TEXT_BODY),
+                    ("TEXTCOLOR", (3, 0), (3, -1), TEXT_BODY),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 2),
+                    ("LINEBELOW", (0, -1), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                ]
+            )
+        )
+        elements.append(meta_tbl)
+        elements.append(Spacer(1, 0.22 * inch))
+
+        # --- Bill to / Ship to ---
+        elements.append(Paragraph("Bill to", h_section))
+        name = escape(
+            f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip()
+            or (user.email or "Customer")
+        )
+        bill_lines = f"<b>{name}</b><br/>{escape(user.email or '')}"
+        if user.phone:
+            bill_lines += f"<br/>{escape(user.phone)}"
+        elements.append(Paragraph(bill_lines, body))
+
         if order.shipping_address:
-            elements.append(Paragraph("<b>Ship To:</b>", heading_style))
-            elements.append(Paragraph(order.shipping_address, normal_style))
-        
-        elements.append(Spacer(1, 0.2*inch))
-        
-        # Order items table
-        items_data = [["Item", "SKU", "Qty", "Unit Price", "Total"]]
-        
-        for item in order_items:
-            product = None
-            # Try to get product details if available
-            try:
-                # Note: Product info should be passed in or fetched separately
-                item_name = f"Product ID: {item.product_id}"
-                sku = "N/A"
-            except:
-                item_name = f"Product ID: {item.product_id}"
-                sku = "N/A"
-            
-            total = float(item.quantity * item.price_at_purchase)
-            items_data.append([
-                item_name,
-                sku,
-                str(item.quantity),
-                f"${item.price_at_purchase:.2f}",
-                f"${total:.2f}"
-            ])
-        
-        items_table = Table(items_data, colWidths=[2.5*inch, 0.8*inch, 0.6*inch, 1*inch, 1*inch])
-        items_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e5e7eb')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1f2937')),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#d1d5db')),
-            ('FONTSIZE', (0, 1), (-1, -1), 9),
-            ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
-            ('ALIGN', (0, 1), (1, -1), 'LEFT'),
-        ]))
-        elements.append(items_table)
-        elements.append(Spacer(1, 0.2*inch))
-        
-        # Totals
-        totals_data = [
-            ["Subtotal:", f"${invoice.subtotal:.2f}"],
-            ["Tax:", f"${invoice.tax:.2f}"],
-            ["Shipping:", f"${invoice.shipping:.2f}"],
-            ["TOTAL:", f"${invoice.total:.2f}"]
+            elements.append(Paragraph("Ship to", h_section))
+            elements.append(Paragraph(escape(order.shipping_address), body))
+
+        elements.append(Spacer(1, 0.2 * inch))
+        elements.append(Paragraph("Line items", h_section))
+
+        # --- Line items (image + product + sku + qty + unit + line total) ---
+        hdr = [
+            "",
+            "Product",
+            "SKU",
+            "Qty",
+            f"Unit ({cur})",
+            f"Line ({cur})",
         ]
-        
-        totals_table = Table(totals_data, colWidths=[4*inch, 1.5*inch])
-        totals_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-            ('FONTNAME', (0, 0), (-1, -2), 'Helvetica'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -2), 10),
-            ('FONTSIZE', (0, -1), (-1, -1), 12),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e5e7eb')),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        elements.append(totals_table)
-        
-        # Tracking information if available
+        rows: list[list] = [hdr]
+        col_w = [0.62 * inch, 2.35 * inch, 0.82 * inch, 0.42 * inch, 0.92 * inch, 0.92 * inch]
+
+        for item in items_sorted:
+            prod = products_by_id.get(item.product_id)
+            pname = (
+                (prod.name if prod else None)
+                or f"Product #{item.product_id}"
+            )
+            sku = (prod.sku if prod and prod.sku else "—")
+            img_url = prod.image_url if prod else None
+            thumb = _thumbnail_flowable(img_url)
+            desc_bits = f"<b>{escape(pname)}</b>"
+            if prod and prod.description:
+                desc_short = prod.description.strip()
+                if len(desc_short) > 120:
+                    desc_short = desc_short[:117] + "…"
+                desc_bits += f"<br/><font size='8' color='#64748b'>{escape(desc_short)}</font>"
+            desc = Paragraph(desc_bits, product_title)
+            line_total = float(item.quantity * item.price_at_purchase)
+            rows.append(
+                [
+                    thumb,
+                    desc,
+                    Paragraph(f"<para alignment='center'>{escape(sku)}</para>", small),
+                    Paragraph(f"<para alignment='center'>{item.quantity}</para>", body),
+                    Paragraph(
+                        f"<para alignment='right'>{_fmt_money(float(item.price_at_purchase), cur)}</para>",
+                        body,
+                    ),
+                    Paragraph(
+                        f"<para alignment='right'><b>{_fmt_money(line_total, cur)}</b></para>",
+                        body,
+                    ),
+                ]
+            )
+
+        items_tbl = Table(rows, colWidths=col_w, repeatRows=1)
+        items_tbl.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f1f5f9")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), BRAND_PRIMARY),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 9),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+                    ("TOPPADDING", (0, 0), (-1, 0), 10),
+                    ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                    ("ALIGN", (0, 1), (0, -1), "CENTER"),
+                    ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
+                    ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 1), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 1), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
+                ]
+            )
+        )
+        elements.append(items_tbl)
+        elements.append(Spacer(1, 0.18 * inch))
+
+        # --- Totals ---
+        totals = Table(
+            [
+                ["Subtotal", _fmt_money(float(invoice.subtotal), cur)],
+                ["Tax", _fmt_money(float(invoice.tax), cur)],
+                ["Shipping", _fmt_money(float(invoice.shipping), cur)],
+                ["Total due", _fmt_money(float(invoice.total), cur)],
+            ],
+            colWidths=[4.85 * inch, 2.65 * inch],
+        )
+        totals.setStyle(
+            TableStyle(
+                [
+                    ("ALIGN", (0, 0), (0, -1), "RIGHT"),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                    ("FONTNAME", (0, 0), (0, -2), "Helvetica"),
+                    ("FONTNAME", (1, 0), (1, -2), "Helvetica"),
+                    ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -2), 10),
+                    ("FONTSIZE", (0, -1), (-1, -1), 12),
+                    ("TEXTCOLOR", (0, -1), (-1, -1), BRAND_PRIMARY),
+                    ("LINEABOVE", (0, -1), (-1, -1), 1, BRAND_ACCENT),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ]
+            )
+        )
+        elements.append(totals)
+
         if order.tracking_number or order.shipping_provider:
-            elements.append(Spacer(1, 0.3*inch))
-            elements.append(Paragraph("<b>Shipping Information:</b>", heading_style))
-            tracking_info = ""
+            elements.append(Spacer(1, 0.22 * inch))
+            elements.append(Paragraph("Shipping", h_section))
+            ship_parts = []
             if order.shipping_provider:
-                tracking_info += f"Provider: {order.shipping_provider}<br/>"
+                ship_parts.append(f"Provider: {escape(order.shipping_provider)}")
             if order.tracking_number:
-                tracking_info += f"Tracking Number: {order.tracking_number}<br/>"
+                ship_parts.append(f"Tracking: {escape(order.tracking_number)}")
             if order.estimated_delivery:
-                tracking_info += f"Estimated Delivery: {order.estimated_delivery.strftime('%Y-%m-%d')}"
-            elements.append(Paragraph(tracking_info, normal_style))
-        
-        # Footer
-        elements.append(Spacer(1, 0.3*inch))
-        elements.append(Paragraph(
-            f"<i>Invoice generated on {invoice.issued_at.strftime('%Y-%m-%d %H:%M:%S')}</i>",
-            ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey)
-        ))
-        
-        # Build PDF
+                ship_parts.append(
+                    f"Est. delivery: {order.estimated_delivery.strftime('%Y-%m-%d')}"
+                )
+            elements.append(Paragraph("<br/>".join(ship_parts), body))
+
+        # --- Footer ---
+        elements.append(Spacer(1, 0.35 * inch))
+        year = datetime.utcnow().year
+        footer_txt = (
+            f"<para alignment='center'><font size='8' color='#94a3b8'>"
+            f"Thank you for shopping with {escape(company_name)}.<br/>"
+            f"This document was generated electronically and is valid without signature.<br/>"
+            f"© {year} {escape(company_name)} · Invoice {escape(invoice.invoice_number)}"
+            f"</font></para>"
+        )
+        elements.append(Paragraph(footer_txt, small))
+
         doc.build(elements)
-        
-        # Get PDF bytes
         buffer.seek(0)
         return buffer.getvalue()
-    
+
     @staticmethod
     def generate_invoice_number(order_id: int, invoice_id: int) -> str:
-        """
-        Generate a unique invoice number
-        
-        Args:
-            order_id: Associated order ID
-            invoice_id: Invoice ID
-            
-        Returns:
-            str: Formatted invoice number
-        """
         timestamp = datetime.utcnow().strftime("%Y%m")
         return f"INV-{timestamp}-{invoice_id:05d}"
