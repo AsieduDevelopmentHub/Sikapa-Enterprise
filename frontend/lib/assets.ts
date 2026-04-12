@@ -7,6 +7,3 @@ export const LOGOS = {
   navigation: "/assets/logos/navigation.png",
   primary: "/assets/logos/primary.png",
 } as const;
-
-/** Transparent PNG — Sikapa product trio for home hero (`public/assets/icons/heroimg.png`). */
-export const HERO_PRODUCT_IMAGE = "/assets/icons/heroimg.png";
