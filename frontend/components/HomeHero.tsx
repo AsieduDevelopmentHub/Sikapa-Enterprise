@@ -1,21 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { HERO_PRODUCT_IMAGE } from "@/lib/assets";
+
+/**
+ * Warm, editorial portrait — skin tones align with crimson / deep-wine hero gradient.
+ * Unsplash: replace URL if you host your own shoot.
+ */
+const HERO_MODEL_SRC =
+  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=900&h=1200&fit=crop&q=85";
 
 export function HomeHero() {
   return (
     <section
-      className="relative min-h-[min(58vh,460px)] overflow-hidden bg-[#7A1419]"
+      className="relative min-h-[min(58vh,460px)] overflow-hidden"
+      style={{ background: "var(--sikapa-hero-gradient)" }}
       aria-labelledby="hero-heading"
     >
-      <div
-        className="absolute inset-0 animate-hero-fade opacity-0"
-        style={{
-          background: "var(--sikapa-hero-gradient)",
-        }}
-      />
-
+      {/* Gradient is on the section itself — no solid crimson fallback layer on top. */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-black/50 via-black/18 to-transparent"
         aria-hidden
@@ -29,37 +30,47 @@ export function HomeHero() {
         style={{ boxShadow: "inset 0 0 100px rgba(0,0,0,0.38)" }}
       />
 
-      <div className="relative z-[1] mx-auto flex min-h-[min(58vh,460px)] max-w-mobile items-stretch gap-2 px-4 pb-6 pt-9 sm:gap-3 sm:px-5 sm:pt-10">
-        <div className="flex w-[min(32%,128px)] shrink-0 flex-col justify-center pr-0.5 opacity-0 animate-hero-text sm:w-[min(34%,140px)]">
+      {/* Model: right-weighted, feathered into gradient (no separate “flat crimson” strip). */}
+      <div className="pointer-events-none absolute bottom-0 right-[-8%] top-[6%] z-0 w-[78%] max-w-[300px] opacity-0 animate-hero-model sm:right-[-4%] sm:max-w-[320px]">
+        <div
+          className="relative h-full w-full"
+          style={{
+            maskImage: "linear-gradient(to right, transparent 0%, black 38%, black 100%)",
+            WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 38%, black 100%)",
+          }}
+        >
+          <Image
+            src={HERO_MODEL_SRC}
+            alt=""
+            fill
+            className="object-cover object-[center_12%]"
+            sizes="(max-width:430px) 78vw, 320px"
+            priority
+          />
+          <div
+            className="absolute inset-0 bg-gradient-to-r from-[#5c2520]/55 via-transparent to-transparent mix-blend-soft-light"
+            aria-hidden
+          />
+        </div>
+      </div>
+
+      <div className="relative z-[1] mx-auto flex min-h-[min(58vh,460px)] max-w-mobile items-stretch px-4 pb-6 pt-9 sm:px-5 sm:pt-10">
+        <div className="flex max-w-[min(46%,200px)] shrink-0 flex-col justify-center pr-2 opacity-0 animate-hero-text sm:max-w-[220px]">
           <h1
             id="hero-heading"
             className="font-serif font-semibold tracking-[0.02em] text-white"
           >
-            <span className="block text-[2.75rem] leading-[1.05] sm:text-[2.125rem]">
-              Luxury
-            </span>
-            <span className="block text-[2.75rem] leading-[1.05] sm:text-[2.125rem]">
+            <span className="block text-[1.95rem] leading-[1.06] sm:text-[2.2rem]">Luxury</span>
+            <span className="mt-1.5 block text-[1.95rem] leading-[1.06] sm:text-[2.2rem]">
               Beauty
             </span>
-            <span className="block text-[2.75rem] font-medium leading-[1.1] tracking-[0.06em] text-sikapa-hero-subtext sm:text-[1.9rem]">
+            <span className="mt-2.5 block text-[1.3rem] font-medium leading-[1.15] tracking-[0.08em] text-sikapa-hero-subtext sm:text-[1.5rem]">
               For All
             </span>
           </h1>
         </div>
-
-        <div className="relative flex min-h-[220px] min-w-0 flex-1 items-end justify-center pb-1 opacity-0 animate-hero-model sm:min-h-[268px]">
-          <div className="relative h-[min(268px,44vh)] w-full max-w-[min(100%,288px)] sm:h-[min(300px,48vh)]">
-            <Image
-              src={HERO_PRODUCT_IMAGE}
-              alt=""
-              fill
-              unoptimized
-              className="object-contain object-bottom drop-shadow-[0_24px_48px_rgba(0,0,0,0.4)]"
-              sizes="(max-width:430px) 72vw, 288px"
-              priority
-            />
-          </div>
-        </div>
+        {/* Spacer so headline clears the masked model on small screens */}
+        <div className="min-w-0 flex-1" aria-hidden />
       </div>
     </section>
   );
