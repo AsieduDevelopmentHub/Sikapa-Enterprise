@@ -82,6 +82,22 @@ def test_session(test_engine) -> Generator[Session, None, None]:
         session.rollback()
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Clear SlowAPI counters between tests so limits do not leak across tests."""
+    from app.core.rate_limit import limiter
+
+    try:
+        limiter.reset()
+    except Exception:
+        pass
+    yield
+    try:
+        limiter.reset()
+    except Exception:
+        pass
+
+
 @pytest.fixture(scope="function")
 async def client(test_session) -> Generator[AsyncClient, None, None]:
     """Create test client with database session override."""

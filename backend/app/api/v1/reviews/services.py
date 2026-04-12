@@ -2,7 +2,7 @@
 Reviews business logic
 """
 from fastapi import HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 
 from app.models import Review, Product
 from app.api.v1.reviews.schemas import ReviewCreateSchema
@@ -49,6 +49,15 @@ async def create_review(
     session.add(review)
     session.commit()
     session.refresh(review)
+
+    raw = session.exec(
+        select(func.avg(Review.rating)).where(Review.product_id == product.id)
+    ).first()
+    avg_val = float(raw) if raw is not None else 0.0
+    product.avg_rating = round(avg_val, 2)
+    session.add(product)
+    session.commit()
+
     return review
 
 

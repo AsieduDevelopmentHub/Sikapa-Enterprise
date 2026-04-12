@@ -3,9 +3,6 @@ Authentication API routes - all endpoints for user auth flows.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from sqlmodel import Session
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-import os
 
 from app.api.v1.auth.schemas import (
     RegisterRequest,
@@ -48,24 +45,17 @@ from app.api.v1.auth.dependencies import (
 )
 from app.db import get_session
 from app.models import User, UserRead
+from app.core.rate_limit import (
+    auth_limiter,
+    login_limiter,
+    password_reset_confirm_limiter,
+    password_reset_limiter,
+    password_reset_request_limiter,
+    register_limiter,
+    token_refresh_limiter,
+)
 
 router = APIRouter()
-
-# Enable higher auth limits during tests, while preserving production limits.
-testing = os.getenv("TESTING", "false").lower() == "true"
-
-# Rate limiters for different auth operations
-limiter = Limiter(key_func=get_remote_address)
-
-# Rate limiters for different endpoint types
-login_limiter = limiter.limit("10/minute")  # Login attempts
-register_limiter = limiter.limit("1000/minute" if testing else "5/minute")  # Registration
-password_reset_limiter = limiter.limit("1000/minute" if testing else "2/minute")  # Password reset
-auth_limiter = limiter.limit("10/minute")  # General auth operations
-password_reset_request_limiter = limiter.limit("1000/minute" if testing else "3/minute")  # Password reset requests
-password_reset_confirm_limiter = limiter.limit("1000/minute" if testing else "5/minute")  # Password reset confirmations
-token_refresh_limiter = limiter.limit("1000/minute" if testing else "5/minute")  # Token refresh requests
-
 
 # ============ REGISTRATION & LOGIN ============
 
