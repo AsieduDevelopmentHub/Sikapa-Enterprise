@@ -49,7 +49,7 @@ jobs:
         working-directory: backend
         env:
           # In-memory SQLite (no db directory required on the runner)
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
           SECRET_KEY: ci-secret-key-for-testing-only
           JWT_SECRET_KEY: ci-jwt-secret-for-testing
           JWT_REFRESH_SECRET_KEY: ci-jwt-refresh-secret
