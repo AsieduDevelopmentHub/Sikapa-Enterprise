@@ -9,8 +9,10 @@ import {
   faCircleCheck,
   faClipboardList,
   faFilter,
+  faHeadset,
   faHeart as faHeartSolid,
   faHouse,
+  faLocationDot,
   faLock,
   faMagnifyingGlass,
   faStore,
@@ -84,4 +86,12 @@ export function FaTrustLock({ className = "" }: IconProps) {
 
 export function FaTrustAuthentic({ className = "" }: IconProps) {
   return <FontAwesomeIcon icon={faCircleCheck} className={`${md} ${className}`} />;
+}
+
+export function FaLocationPin({ className = "" }: IconProps) {
+  return <FontAwesomeIcon icon={faLocationDot} className={`${md} ${className}`} />;
+}
+
+export function FaHeadset({ className = "" }: IconProps) {
+  return <FontAwesomeIcon icon={faHeadset} className={`${md} ${className}`} />;
 }
