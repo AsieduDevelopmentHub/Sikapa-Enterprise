@@ -10,7 +10,11 @@ export function FeaturedProducts() {
   const { addProduct } = useCart();
 
   return (
-    <section className="bg-sikapa-cream py-4 pb-6" aria-labelledby="featured-title">
+    <section
+      id="featured"
+      className="scroll-mt-20 bg-sikapa-cream py-4 pb-6"
+      aria-labelledby="featured-title"
+    >
       <div className="mb-3 flex items-center justify-between px-4">
         <h2
           id="featured-title"
