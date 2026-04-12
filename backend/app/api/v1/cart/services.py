@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.models import CartItem
 from app.api.v1.cart.schemas import CartItemCreateSchema, CartItemUpdateSchema
+from app.api.v1.wishlist.services import list_wishlist
 
 
 async def get_user_cart(session: Session, user_id: int) -> list[CartItem]:
@@ -15,6 +16,13 @@ async def get_user_cart(session: Session, user_id: int) -> list[CartItem]:
         select(CartItem).where(CartItem.user_id == user_id)
     ).all()
     return items
+
+
+async def get_cart_with_wishlist(session: Session, user_id: int):
+    """Cart lines and wishlist for one call (e.g. cart page)."""
+    cart = await get_user_cart(session, user_id)
+    wishlist = await list_wishlist(session, user_id)
+    return {"cart": cart, "wishlist": wishlist}
 
 
 async def add_to_cart(session: Session, user_id: int, item: CartItemCreateSchema) -> CartItem:

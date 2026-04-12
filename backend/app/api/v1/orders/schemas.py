@@ -3,7 +3,9 @@ Orders schemas
 """
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text
 
 
 class OrderItemSchema(BaseModel):
@@ -50,6 +52,8 @@ class OrderSchema(BaseModel):
     cancel_reason: Optional[str] = None
     payment_method: Optional[str] = None
     notes: Optional[str] = None
+    paystack_reference: Optional[str] = None
+    payment_status: str = "pending"
     created_at: datetime
     updated_at: datetime
 
@@ -65,4 +69,14 @@ class OrderDetailSchema(OrderSchema):
 class OrderCreateSchema(BaseModel):
     shipping_address: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("shipping_address", mode="before")
+    @classmethod
+    def _sanitize_address(cls, v):
+        return sanitize_multiline_text(v, max_length=2000)
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _sanitize_notes(cls, v):
+        return sanitize_multiline_text(v, max_length=2000)
 

@@ -2,7 +2,11 @@
 Cart schemas
 """
 from datetime import datetime
+from typing import List
+
 from pydantic import BaseModel, Field
+
+from app.api.v1.wishlist.schemas import WishlistItemRead
 
 
 class CartItemSchema(BaseModel):
@@ -24,3 +28,10 @@ class CartItemCreateSchema(BaseModel):
 
 class CartItemUpdateSchema(BaseModel):
     quantity: int = Field(gt=0)
+
+
+class CartWithWishlistSchema(BaseModel):
+    """Single response for cart page: line items plus saved wishlist."""
+
+    cart: List[CartItemSchema]
+    wishlist: List[WishlistItemRead]

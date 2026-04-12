@@ -2,8 +2,10 @@
 Admin endpoint schemas
 """
 from typing import Dict, List, Optional
-from pydantic import BaseModel
-from datetime import date
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text, sanitize_slug
+from datetime import date, datetime
 
 
 class TopProduct(BaseModel):
@@ -41,8 +43,8 @@ class UserManagementResponse(BaseModel):
     last_name: Optional[str]
     is_active: bool
     is_admin: bool
-    created_at: str
-    
+    created_at: datetime
+
     class Config:
         from_attributes = True
 
@@ -54,7 +56,7 @@ class ProductManagementRead(BaseModel):
     price: float
     in_stock: int
     is_active: bool
-    created_at: str
+    created_at: datetime
     
     class Config:
         from_attributes = True
@@ -65,8 +67,8 @@ class OrderManagementRead(BaseModel):
     user_id: int
     total_price: float
     status: str
-    created_at: str
-    
+    created_at: datetime
+
     class Config:
         from_attributes = True
 
@@ -85,12 +87,27 @@ class CategoryAdminRead(BaseModel):
 
 
 class CategoryAdminCreate(BaseModel):
-    name: str
-    slug: str
+    name: str = Field(..., min_length=1, max_length=200)
+    slug: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
     image_url: Optional[str] = None
     is_active: bool = True
     sort_order: int = 0
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _name(cls, v):
+        return sanitize_plain_text(v, max_length=200, single_line=True) or ""
+
+    @field_validator("slug", mode="before")
+    @classmethod
+    def _slug(cls, v):
+        return sanitize_slug(v or "")
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def _desc(cls, v):
+        return sanitize_multiline_text(v, max_length=5000)
 
 
 class CategoryAdminUpdate(BaseModel):
@@ -100,3 +117,18 @@ class CategoryAdminUpdate(BaseModel):
     image_url: Optional[str] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _name(cls, v):
+        return sanitize_plain_text(v, max_length=200, single_line=True)
+
+    @field_validator("slug", mode="before")
+    @classmethod
+    def _slug(cls, v):
+        return sanitize_slug(v) if v is not None else None
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def _desc(cls, v):
+        return sanitize_multiline_text(v, max_length=5000)
