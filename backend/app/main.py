@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+import logging
+import time
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +16,11 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 app = FastAPI(
     title="Sikapa Enterprise API",
@@ -33,7 +41,7 @@ if https_enabled and not os.getenv("DEBUG", "false").lower() == "true":
     app.add_middleware(HTTPSRedirectMiddleware)
 
 # CORS Middleware for frontend integration
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://localhost:3000").split(",")
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://localhost:3000,http://192.168.1.202:3000").split(",")
 cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
 
 app.add_middleware(
@@ -43,6 +51,19 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+_request_log = logging.getLogger("sikapa.request")
+
+
+@app.middleware("http")
+async def log_incoming_requests(request: Request, call_next):
+    """Log each request so local dev can confirm the frontend hit the API."""
+    path = request.url.path
+    start = time.perf_counter()
+    response = await call_next(request)
+    ms = (time.perf_counter() - start) * 1000
+    _request_log.info("%s %s -> %s (%.2fms)", request.method, path, response.status_code, ms)
+    return response
 
 # Security Headers Middleware
 # @app.middleware("http")
