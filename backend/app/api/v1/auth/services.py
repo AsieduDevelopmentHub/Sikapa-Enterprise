@@ -72,11 +72,6 @@ def register_user(session: Session, email: str, password: str, first_name: str =
     session.add(otp)
     session.commit()
 
-    # Send welcome email
-    welcome_sent = email_service.send_welcome_email(user.email, user.first_name)
-    if not welcome_sent:
-        print(f"⚠️  Warning: Failed to send welcome email to {user.email}")
-
     # Send verification email
     email_sent = email_service.send_email_verification(user.email, otp_code, user.first_name)
     if not email_sent:
@@ -137,9 +132,11 @@ def refresh_access_token(session: Session, refresh_token: str) -> dict:
         )
 
     new_access_token = create_access_token({"sub": user.email})
+    new_refresh_token = create_refresh_token({"sub": user.email})
 
     return {
         "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
         "token_type": "bearer",
         "expires_in": 900,
     }
