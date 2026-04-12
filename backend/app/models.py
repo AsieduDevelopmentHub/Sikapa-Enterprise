@@ -150,6 +150,11 @@ class Order(SQLModel, table=True):
     cancel_reason: Optional[str] = None
     payment_method: Optional[str] = None
     notes: Optional[str] = None
+    # Paystack (and other gateways): reference + lifecycle separate from order.status
+    paystack_reference: Optional[str] = Field(default=None, index=True)
+    payment_status: str = Field(
+        default="pending"
+    )  # pending | paid | failed | abandoned | refunded | partially_refunded
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -216,6 +221,21 @@ class EmailSubscription(SQLModel, table=True):
 
 # ============ INVOICES ============
 
+class PaystackInitIdempotency(SQLModel, table=True):
+    """Replay-safe Paystack /initialize when client sends Idempotency-Key."""
+
+    __tablename__ = "paystack_init_idempotency"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    idempotency_key: str = Field(max_length=128, unique=True, index=True)
+    order_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    reference: str = Field(max_length=128)
+    authorization_url: str
+    access_code: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Invoice(SQLModel, table=True):
     """Order invoices"""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -226,7 +246,7 @@ class Invoice(SQLModel, table=True):
     shipping: float = Field(default=0, ge=0)
     total: float = Field(ge=0)
     payment_method: Optional[str] = None
-    status: str = Field(default="pending")  # "pending", "paid", "overdue", "cancelled"
+    status: str = Field(default="pending")  # pending, paid, overdue, cancelled, refunded
     issued_at: datetime = Field(default_factory=datetime.utcnow)
     due_at: Optional[datetime] = None
     paid_at: Optional[datetime] = None

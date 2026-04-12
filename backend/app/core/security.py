@@ -51,7 +51,7 @@ def get_password_hash(password: str) -> str:
     """Hash password using bcrypt when available, otherwise fallback to pbkdf2_sha256."""
     try:
         return pwd_context.hash(password)
-    except MissingBackendError:
+    except (MissingBackendError, ValueError, TypeError):
         fallback_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
         return fallback_context.hash(password)
 
