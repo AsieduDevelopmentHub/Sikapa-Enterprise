@@ -54,8 +54,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         /* Backend limits `limit` to max 100 — higher values return 422 and force mock fallback. */
         const [apiCats, apiItems] = await Promise.all([fetchCategories(), fetchProducts(100)]);
         if (cancelled) return;
-        const byId = new Map(apiCats.map((c) => [c.id, c]));
-        const mapped = apiItems.map((row) => mapApiProductToMock(row, byId));
+        const mapped = apiItems.map((row) => mapApiProductToMock(row, apiCats));
         const displayCats = mapApiCategoriesToDisplay(apiCats);
         setProducts(mapped);
         setCategories(displayCats);
@@ -95,8 +94,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       try {
         const row = await fetchProductById(num);
         const cats = await fetchCategories();
-        const byId = new Map(cats.map((c) => [c.id, c]));
-        const p = mapApiProductToMock(row, byId);
+        const p = mapApiProductToMock(row, cats);
         setProducts((prev) => {
           const i = prev.findIndex((x) => x.id === p.id);
           if (i < 0) return [...prev, p];

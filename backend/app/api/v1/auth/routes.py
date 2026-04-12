@@ -86,6 +86,11 @@ def login_endpoint(
 ):
     """Login user and return access/refresh tokens."""
     user = authenticate_user(session, payload.email, payload.password)
+    if user.two_fa_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="two_factor_required",
+        )
     tokens = create_user_tokens(user)
     return tokens
 

@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
 
 
@@ -32,6 +32,10 @@ class ProductCreate(ProductBase):
 
 class ProductRead(ProductBase):
     id: int
+    category: Optional[str] = Field(
+        default=None,
+        description="Product row string: usually category id as text; admin may store slug.",
+    )
     category_id: Optional[int] = None
     in_stock: int
     sku: Optional[str] = None
@@ -41,6 +45,17 @@ class ProductRead(ProductBase):
     sales_count: int = 0
     is_active: bool = True
     created_at: datetime
+
+    @model_validator(mode="after")
+    def derive_category_id_from_string(self) -> "ProductRead":
+        if self.category_id is not None:
+            return self
+        if self.category is None:
+            return self
+        s = str(self.category).strip()
+        if s.isdigit():
+            return self.model_copy(update={"category_id": int(s)})
+        return self
 
     class Config:
         from_attributes = True

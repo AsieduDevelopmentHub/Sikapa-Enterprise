@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { FaBag, FaCart } from "@/components/FaIcons";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
+import { ProductReviewsSection } from "@/components/product/ProductReviewsSection";
 import { StarRating } from "@/components/StarRating";
 import { useCart } from "@/context/CartContext";
 import { useCatalog } from "@/context/CatalogContext";
@@ -76,6 +77,10 @@ export function ProductDetailScreen({ product: p }: Props) {
           <h2 className="text-small font-semibold text-sikapa-text-primary">About this product</h2>
           <p className="mt-2 text-body leading-relaxed text-sikapa-text-secondary">{p.description}</p>
         </div>
+
+        {Number.isFinite(Number.parseInt(p.id, 10)) && (
+          <ProductReviewsSection productId={Number.parseInt(p.id, 10)} />
+        )}
 
         <div className="mt-8 flex flex-col gap-2.5 sm:flex-row">
           <button

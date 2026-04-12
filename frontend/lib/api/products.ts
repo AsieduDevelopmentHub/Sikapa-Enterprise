@@ -84,10 +84,8 @@ function resolveImageUrl(path: string | null | undefined): string {
   return `${origin}${trimmed.startsWith("/") ? trimmed : `/${trimmed}`}`;
 }
 
-function categoryMeta(
-  row: ApiProductRow,
-  byId: Map<number, ApiCategoryRow>
-): { slug: string; label: string } {
+function categoryMeta(row: ApiProductRow, categories: ApiCategoryRow[]): { slug: string; label: string } {
+  const byId = new Map(categories.map((c) => [c.id, c]));
   const rawId =
     row.category_id != null
       ? row.category_id
@@ -98,11 +96,18 @@ function categoryMeta(
     const c = byId.get(rawId);
     if (c) return { slug: c.slug, label: c.name };
   }
+  const raw = row.category?.trim();
+  if (raw) {
+    const bySlug = categories.find(
+      (c) => c.slug === raw || c.slug.toLowerCase() === raw.toLowerCase()
+    );
+    if (bySlug) return { slug: bySlug.slug, label: bySlug.name };
+  }
   return { slug: "uncategorized", label: "Products" };
 }
 
-export function mapApiProductToMock(row: ApiProductRow, byId: Map<number, ApiCategoryRow>): MockProduct {
-  const { slug, label } = categoryMeta(row, byId);
+export function mapApiProductToMock(row: ApiProductRow, categories: ApiCategoryRow[]): MockProduct {
+  const { slug, label } = categoryMeta(row, categories);
   const rating = typeof row.avg_rating === "number" ? row.avg_rating : 0;
   return {
     id: String(row.id),
