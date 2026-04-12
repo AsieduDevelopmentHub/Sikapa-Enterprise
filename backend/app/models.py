@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, UniqueConstraint
 
 
 class ProductBase(SQLModel):
@@ -136,6 +136,19 @@ class CartItem(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class WishlistItem(SQLModel, table=True):
+    """Saved products per user (no quantity)."""
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "product_id", name="uq_wishlistitem_user_product"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    product_id: int = Field(foreign_key="product.id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Order(SQLModel, table=True):
     """Customer orders"""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -234,6 +247,32 @@ class PaystackInitIdempotency(SQLModel, table=True):
     authorization_url: str
     access_code: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PaystackTransaction(SQLModel, table=True):
+    """
+    One row per Paystack payment reference for auditing and payment-state tracking
+    (pending / success / failed / refunded / partially_refunded / abandoned).
+    """
+
+    __tablename__ = "paystack_transaction"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    order_id: int = Field(foreign_key="order.id", index=True)
+    user_id: int = Field(index=True)
+    reference: str = Field(max_length=128, unique=True, index=True)
+    status: str = Field(default="pending")
+    amount_subunit: int = Field(default=0, ge=0)
+    currency: str = Field(default="GHS", max_length=8)
+    paystack_transaction_id: Optional[str] = Field(default=None, max_length=64)
+    channel: Optional[str] = Field(default=None, max_length=64)
+    customer_email: Optional[str] = Field(default=None, max_length=255)
+    gateway_message: Optional[str] = Field(default=None)
+    raw_last_event: Optional[str] = Field(default=None)
+    paid_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Invoice(SQLModel, table=True):

@@ -1,5 +1,7 @@
 from typing import Any, Optional
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
+
+from app.core.sanitization import sanitize_multiline_text
 
 
 class PaystackInitializeRequest(BaseModel):
@@ -38,6 +40,11 @@ class PaystackRefundRequestBody(BaseModel):
     )
     customer_note: Optional[str] = None
     merchant_note: Optional[str] = None
+
+    @field_validator("customer_note", "merchant_note", mode="before")
+    @classmethod
+    def _sanitize_notes(cls, v):
+        return sanitize_multiline_text(v, max_length=2000)
 
 
 class PaystackRefundResponse(BaseModel):

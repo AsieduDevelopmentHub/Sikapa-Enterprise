@@ -14,13 +14,79 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app.models import Order, Invoice, PaystackInitIdempotency
+from sqlalchemy import text
+
+from app.db import DATABASE_URL, apply_postgres_session_user
+from app.models import Order, Invoice, PaystackInitIdempotency, PaystackTransaction
 from app.core import paystack_client
 
 logger = logging.getLogger(__name__)
 
 # Allowed mismatch between Paystack subunits and float-derived order total (rounding).
 _AMOUNT_SUBUNIT_TOLERANCE = 1
+
+
+def _upsert_paystack_transaction(
+    session: Session,
+    order: Order,
+    reference: str,
+    *,
+    status: str,
+    amount_subunit: int | None = None,
+    currency: str | None = None,
+    paystack_transaction_id: str | None = None,
+    channel: str | None = None,
+    customer_email: str | None = None,
+    gateway_message: str | None = None,
+    raw_last_event: str | None = None,
+    paid_at: datetime | None = None,
+    failed_at: datetime | None = None,
+) -> PaystackTransaction:
+    row = session.exec(
+        select(PaystackTransaction).where(PaystackTransaction.reference == reference)
+    ).first()
+    now = datetime.utcnow()
+    amt = amount_subunit if amount_subunit is not None else paystack_client.money_to_subunit(order.total_price)
+    cur = (currency or _currency()).upper()[:8]
+    if row is None:
+        row = PaystackTransaction(
+            order_id=order.id,
+            user_id=order.user_id,
+            reference=reference,
+            status=status,
+            amount_subunit=amt,
+            currency=cur,
+            paystack_transaction_id=paystack_transaction_id,
+            channel=channel,
+            customer_email=customer_email,
+            gateway_message=gateway_message,
+            raw_last_event=raw_last_event,
+            paid_at=paid_at,
+            failed_at=failed_at,
+            created_at=now,
+            updated_at=now,
+        )
+    else:
+        row.status = status
+        row.amount_subunit = amt
+        row.currency = cur
+        if paystack_transaction_id is not None:
+            row.paystack_transaction_id = paystack_transaction_id
+        if channel is not None:
+            row.channel = channel
+        if customer_email is not None:
+            row.customer_email = customer_email
+        if gateway_message is not None:
+            row.gateway_message = gateway_message
+        if raw_last_event is not None:
+            row.raw_last_event = raw_last_event
+        if paid_at is not None:
+            row.paid_at = paid_at
+        if failed_at is not None:
+            row.failed_at = failed_at
+        row.updated_at = now
+    session.add(row)
+    return row
 
 
 def _currency() -> str:
@@ -177,6 +243,14 @@ def initialize_paystack_for_order(
     order.paystack_reference = reference
     order.payment_method = "paystack"
     session.add(order)
+    ref_final = str(data.get("reference", reference))
+    _upsert_paystack_transaction(
+        session,
+        order,
+        ref_final,
+        status="pending",
+        gateway_message=str(resp.get("message", ""))[:2000] or None,
+    )
 
     if idem:
         row = PaystackInitIdempotency(
@@ -285,6 +359,19 @@ def verify_paystack_reference(
     if pdata.get("status") != "success":
         order.payment_status = "failed"
         session.add(order)
+        _upsert_paystack_transaction(
+            session,
+            order,
+            reference,
+            status="failed",
+            amount_subunit=int(pdata.get("amount") or 0) or None,
+            currency=str(pdata.get("currency") or "") or None,
+            paystack_transaction_id=str(pdata.get("id") or "") or None,
+            channel=str(pdata.get("channel") or "") or None,
+            gateway_message=str(pdata.get("gateway_response") or pdata.get("message") or "")[:2000]
+            or None,
+            failed_at=datetime.utcnow(),
+        )
         session.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -300,6 +387,20 @@ def verify_paystack_reference(
     )
 
     paid_at = pdata.get("paid_at")
+    cust = pdata.get("customer")
+    cust_email = cust.get("email") if isinstance(cust, dict) else None
+    _upsert_paystack_transaction(
+        session,
+        order,
+        reference,
+        status="success",
+        amount_subunit=paid_sub,
+        currency=str(pdata.get("currency", _currency())),
+        paystack_transaction_id=str(pdata.get("id") or "") or None,
+        channel=str(pdata.get("channel") or "") or None,
+        customer_email=cust_email,
+        paid_at=datetime.utcnow(),
+    )
     _apply_successful_payment(session, order, reference)
     return _serialize_verify(
         order,
@@ -367,6 +468,13 @@ def handle_paystack_webhook(session: Session, payload: bytes) -> bool:
         return False
 
     if event == "charge.success":
+        if DATABASE_URL.startswith("postgresql"):
+            row_uid = session.connection().execute(
+                text("SELECT app.get_order_user_for_paystack(:r)"),
+                {"r": str(reference)},
+            ).scalar()
+            if row_uid is not None:
+                apply_postgres_session_user(session, int(row_uid))
         order = session.exec(
             select(Order).where(Order.paystack_reference == reference)
         ).first()
@@ -392,6 +500,19 @@ def handle_paystack_webhook(session: Session, payload: bytes) -> bool:
                 getattr(e, "detail", e),
             )
             return True
+        raw_ev = json.dumps({"event": event, "data": data})[:8000]
+        _upsert_paystack_transaction(
+            session,
+            order,
+            reference,
+            status="success",
+            amount_subunit=paid_sub,
+            currency=str(data.get("currency", _currency())),
+            paystack_transaction_id=str(data.get("id") or "") or None,
+            channel=str(data.get("channel") or "") or None,
+            raw_last_event=raw_ev,
+            paid_at=datetime.utcnow(),
+        )
         _apply_successful_payment(session, order, reference)
         return True
 
@@ -483,6 +604,17 @@ def admin_refund_paystack_order(
     if inv and full:
         inv.status = "refunded"
         session.add(inv)
+
+    pst = session.exec(
+        select(PaystackTransaction).where(
+            PaystackTransaction.reference == order.paystack_reference
+        )
+    ).first()
+    if pst:
+        pst.status = order.payment_status
+        pst.gateway_message = str(resp.get("message", ""))[:2000] or pst.gateway_message
+        pst.updated_at = datetime.utcnow()
+        session.add(pst)
 
     session.commit()
     session.refresh(order)

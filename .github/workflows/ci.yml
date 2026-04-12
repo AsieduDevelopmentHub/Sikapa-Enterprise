@@ -103,4 +103,5 @@ jobs:
 
       - name: Run frontend tests
         working-directory: frontend
-        run: npm test -- --watchAll=false --passWithNoTests
+        # package.json uses vitest run; do not pass Jest-only flags (--watchAll)
+        run: npm test

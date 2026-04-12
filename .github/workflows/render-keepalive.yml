@@ -1,12 +1,24 @@
-# This workflow hits /health (falls back to /) every 5 minutes.
+# Pings the Render backend so a free-tier instance stays warm (optional).
+# Scheduled workflows only run from the repository DEFAULT branch — merge this file
+# to main (or rename your default branch in GitHub Settings → General) or you will
+# not see scheduled runs. You can always run it manually: Actions → this workflow → Run workflow.
+#
+# If the workflow does not appear under the Actions tab, ensure:
+# - This file lives at .github/workflows/render-keepalive.yml on the default branch
+# - Actions are enabled for the repo (Settings → Actions → General)
 
 name: Render keepalive
 
+run-name: "Render keepalive (${{ github.event_name }})"
+
 on:
   schedule:
-    # Every 5 minutes (UTC). Adjust if you want fewer pings.
+    # Every 5 minutes UTC (adjust to reduce noise)
     - cron: "*/5 * * * *"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: render-keepalive

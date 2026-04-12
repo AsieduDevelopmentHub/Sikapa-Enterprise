@@ -1,8 +1,10 @@
 """
 Reviews schemas
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+
+from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text
 
 
 class ReviewCreateSchema(BaseModel):
@@ -11,6 +13,16 @@ class ReviewCreateSchema(BaseModel):
     rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5")
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1, max_length=5000)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def _sanitize_title(cls, v):
+        return sanitize_plain_text(v, max_length=200, single_line=True)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def _sanitize_content(cls, v):
+        return sanitize_multiline_text(v, max_length=5000)
 
 
 class ReviewSchema(BaseModel):

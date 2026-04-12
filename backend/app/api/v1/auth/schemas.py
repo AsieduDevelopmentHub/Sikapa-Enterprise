@@ -1,6 +1,8 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime
+
+from app.core.sanitization import sanitize_phone, sanitize_plain_text
 
 
 # ============ Registration & Login ============
@@ -9,6 +11,11 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8)
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+
+    @field_validator("first_name", "last_name", mode="before")
+    @classmethod
+    def _strip_names(cls, v):
+        return sanitize_plain_text(v, max_length=120, single_line=True)
 
 
 class LoginRequest(BaseModel):
@@ -44,6 +51,16 @@ class UserProfileUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
+
+    @field_validator("first_name", "last_name", mode="before")
+    @classmethod
+    def _strip_names(cls, v):
+        return sanitize_plain_text(v, max_length=120, single_line=True)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def _strip_phone(cls, v):
+        return sanitize_phone(v)
 
 
 class UserProfileResponse(BaseModel):
