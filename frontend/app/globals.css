@@ -27,6 +27,70 @@
     );
 }
 
+/* Splash screen — shifting multi-stop gradient + soft moving highlights */
+@keyframes sikapa-splash-gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes sikapa-splash-sheen {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.08) translate(3%, -2%);
+  }
+}
+
+.sikapa-splash-gradient-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    #3b2a25,
+    #5c1f24,
+    #941a20,
+    #a82830,
+    #c8a96a,
+    #8b5a45,
+    #7a1419,
+    #d4b87a,
+    #4a1818,
+    #941a20
+  );
+  background-size: 480% 480%;
+  animation: sikapa-splash-gradient-flow 16s ease-in-out infinite;
+}
+
+.sikapa-splash-gradient-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      ellipse 75% 65% at 25% 25%,
+      rgba(255, 232, 210, 0.28) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 70% 60% at 88% 75%,
+      rgba(59, 42, 37, 0.5) 0%,
+      transparent 50%
+    );
+  animation: sikapa-splash-sheen 9s ease-in-out infinite;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+}
+
 html {
   scroll-behavior: smooth;
 }

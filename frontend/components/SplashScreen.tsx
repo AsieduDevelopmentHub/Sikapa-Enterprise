@@ -1,63 +1,85 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { SikapaLogo } from "@/components/SikapaLogo";
 
 const STORAGE_KEY = "sikapa_splash_seen";
-const DISPLAY_MS = 1500;
+/** Time logo stays readable after entrance bounce (ms). */
+const HOLD_MS = 2600;
+/** Must match `splash-dissolve-out` duration in tailwind.config.js */
+const EXIT_ANIM_MS = 780;
 
 /**
- * Dismiss logic runs in a single `useLayoutEffect` so React Strict Mode’s
- * double-mount doesn’t leave the app stuck: first timer is cleared on the
- * strict unmount, the second subscription always schedules a fresh timeout.
+ * Animated brand gradient, elastic logo entrance, blur/scale dissolve on exit.
  */
 export function SplashScreen() {
-  const [visible, setVisible] = useState(true);
+  const [show, setShow] = useState(true);
+  const [exiting, setExiting] = useState(false);
 
   useLayoutEffect(() => {
-    let timeoutId: number | undefined;
+    let displayTimer: number | undefined;
 
     try {
       if (sessionStorage.getItem(STORAGE_KEY)) {
-        setVisible(false);
+        setShow(false);
         return;
       }
     } catch {
-      /* private mode / blocked storage — still show timed splash */
+      /* still show splash */
     }
 
-    timeoutId = window.setTimeout(() => {
+    displayTimer = window.setTimeout(() => {
+      setExiting(true);
+    }, HOLD_MS);
+
+    return () => {
+      if (displayTimer !== undefined) {
+        window.clearTimeout(displayTimer);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!exiting) return;
+
+    const exitTimer = window.setTimeout(() => {
       try {
         sessionStorage.setItem(STORAGE_KEY, "1");
       } catch {
         /* ignore */
       }
-      setVisible(false);
-    }, DISPLAY_MS);
+      setShow(false);
+    }, EXIT_ANIM_MS);
 
-    return () => {
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, []);
+    return () => window.clearTimeout(exitTimer);
+  }, [exiting]);
 
-  if (!visible) {
+  if (!show) {
     return null;
   }
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-sikapa-cream"
+      className={`fixed inset-0 z-[70] flex items-center justify-center ${exiting ? "animate-splash-dissolve-out" : ""}`}
       aria-hidden
     >
-      <div className="animate-splash-in px-8">
-        <SikapaLogo
-          asset="primary"
-          alt=""
-          priority
-          imageClassName="h-auto max-h-[min(340px,52vh)] w-[min(260px,78vw)] object-contain"
-        />
+      <div className="sikapa-splash-gradient-bg" />
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/30"
+        aria-hidden
+      />
+
+      <div className="relative z-[1] flex items-center justify-center px-8">
+        <div className="animate-splash-logo-bounce">
+          <div className="animate-splash-logo-glow">
+            <SikapaLogo
+              asset="primary"
+              alt=""
+              priority
+              imageClassName="h-auto max-h-[min(340px,52vh)] w-[min(260px,78vw)] object-contain"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
