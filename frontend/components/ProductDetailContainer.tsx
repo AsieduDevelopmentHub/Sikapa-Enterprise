@@ -6,7 +6,7 @@ import { getProductById, type MockProduct } from "@/lib/mock-data";
 import { ProductDetailScreen } from "@/components/ProductDetailScreen";
 
 export function ProductDetailContainer({ id }: { id: string }) {
-  const { products, loading, getProduct, refreshProduct } = useCatalog();
+  const { loading, getProduct, refreshProduct } = useCatalog();
   const fromCatalog = useMemo(() => getProduct(id), [getProduct, id]);
   const [resolved, setResolved] = useState<MockProduct | undefined>(() => fromCatalog ?? getProductById(id));
 

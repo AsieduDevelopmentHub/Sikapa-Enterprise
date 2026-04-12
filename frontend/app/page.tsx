@@ -9,7 +9,6 @@ import { HomeHowItWorks } from "@/components/home/HomeHowItWorks";
 import { HomeTrustAndLogistics } from "@/components/home/HomeTrustAndLogistics";
 import { HomeHero } from "@/components/HomeHero";
 
-/** Home: hero → optional WhatsApp strip → shop → trust + delivery (one block) → how-to → help → footer. */
 export default function HomePage() {
   return (
     <main className="bg-sikapa-cream">

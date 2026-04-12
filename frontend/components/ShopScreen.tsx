@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useCatalog } from "@/context/CatalogContext";
 import { useCart } from "@/context/CartContext";
+import { wishlistAdd, wishlistList, wishlistRemove } from "@/lib/api/wishlist";
 import { FaBag, FaHeartOutline, FaHeartSolid } from "@/components/FaIcons";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
 import { StarRating } from "@/components/StarRating";
@@ -72,6 +74,7 @@ export function ShopScreen() {
   const catParam = searchParams.get("cat");
   const { products, categories, source } = useCatalog();
   const { addProduct } = useCart();
+  const { accessToken } = useAuth();
 
   const [view, setViewState] = useState<ViewMode>("grid");
   const [hydrated, setHydrated] = useState(false);
@@ -117,7 +120,44 @@ export function ShopScreen() {
 
   const [query, setQuery] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [wishIds, setWishIds] = useState<Set<string>>(() => new Set());
+  const [guestWishIds, setGuestWishIds] = useState<Set<string>>(() => new Set());
+  const [serverWishProductIds, setServerWishProductIds] = useState<Set<string>>(() => new Set());
+  const [wishItemIdByProductId, setWishItemIdByProductId] = useState<Map<string, number>>(() => new Map());
+  const [wishErr, setWishErr] = useState<string | null>(null);
+
+  const effectiveWishIds = useMemo(() => {
+    if (accessToken) return serverWishProductIds;
+    return guestWishIds;
+  }, [accessToken, serverWishProductIds, guestWishIds]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      setServerWishProductIds(new Set());
+      setWishItemIdByProductId(new Map());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const items = await wishlistList(accessToken);
+        if (cancelled) return;
+        const ids = new Set<string>();
+        const map = new Map<string, number>();
+        for (const it of items) {
+          ids.add(String(it.product_id));
+          map.set(String(it.product_id), it.id);
+        }
+        setServerWishProductIds(ids);
+        setWishItemIdByProductId(map);
+        setWishErr(null);
+      } catch {
+        if (!cancelled) setWishErr("Could not load your wishlist.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -127,15 +167,51 @@ export function ShopScreen() {
     return list;
   }, [tab, query, products]);
 
-  function toggleWish(e: React.MouseEvent, id: string) {
+  async function toggleWish(e: React.MouseEvent, id: string) {
     e.preventDefault();
     e.stopPropagation();
-    setWishIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setWishErr(null);
+    if (!accessToken) {
+      setGuestWishIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      return;
+    }
+    try {
+      if (serverWishProductIds.has(id)) {
+        let itemId = wishItemIdByProductId.get(id);
+        if (itemId == null) {
+          const items = await wishlistList(accessToken);
+          const row = items.find((x) => String(x.product_id) === id);
+          itemId = row?.id;
+          if (row) {
+            setWishItemIdByProductId((m) => new Map(m).set(id, row.id));
+          }
+        }
+        if (itemId != null) {
+          await wishlistRemove(accessToken, itemId);
+        }
+        setServerWishProductIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        setWishItemIdByProductId((prev) => {
+          const next = new Map(prev);
+          next.delete(id);
+          return next;
+        });
+      } else {
+        const row = await wishlistAdd(accessToken, Number(id));
+        setServerWishProductIds((prev) => new Set(prev).add(id));
+        setWishItemIdByProductId((prev) => new Map(prev).set(id, row.id));
+      }
+    } catch {
+      setWishErr("Wishlist could not be updated. Try again.");
+    }
   }
 
   function addToCartClick(e: React.MouseEvent, id: string) {
@@ -181,6 +257,9 @@ export function ShopScreen() {
             ? "Filters use your live catalog from the Sikapa API."
             : "Showing demo catalog (backend unreachable). Start the API to load live products."}
         </p>
+      )}
+      {wishErr && (
+        <p className="mt-2 rounded-[10px] bg-red-50 px-3 py-2 text-small text-red-800 ring-1 ring-red-100">{wishErr}</p>
       )}
 
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -235,12 +314,12 @@ export function ShopScreen() {
                 <button
                   type="button"
                   className={`sikapa-tap flex h-10 w-10 items-center justify-center rounded-full text-sikapa-text-primary ${
-                    wishIds.has(p.id) ? "text-sikapa-crimson" : ""
+                    effectiveWishIds.has(p.id) ? "text-sikapa-crimson" : ""
                   }`}
-                  aria-label={wishIds.has(p.id) ? "Remove from wishlist" : "Add to wishlist"}
-                  onClick={(e) => toggleWish(e, p.id)}
+                  aria-label={effectiveWishIds.has(p.id) ? "Remove from wishlist" : "Add to wishlist"}
+                  onClick={(e) => void toggleWish(e, p.id)}
                 >
-                  {wishIds.has(p.id) ? (
+                  {effectiveWishIds.has(p.id) ? (
                     <FaHeartSolid className="!h-[1.125rem] !w-[1.125rem]" />
                   ) : (
                     <FaHeartOutline className="!h-[1.125rem] !w-[1.125rem]" />
@@ -286,12 +365,12 @@ export function ShopScreen() {
               <button
                 type="button"
                 className={`sikapa-tap absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-sikapa-text-primary shadow-sm ring-1 ring-black/[0.06] ${
-                  wishIds.has(p.id) ? "text-sikapa-crimson" : ""
+                  effectiveWishIds.has(p.id) ? "text-sikapa-crimson" : ""
                 }`}
-                aria-label={wishIds.has(p.id) ? "Remove from wishlist" : "Add to wishlist"}
-                onClick={(e) => toggleWish(e, p.id)}
+                aria-label={effectiveWishIds.has(p.id) ? "Remove from wishlist" : "Add to wishlist"}
+                onClick={(e) => void toggleWish(e, p.id)}
               >
-                {wishIds.has(p.id) ? (
+                {effectiveWishIds.has(p.id) ? (
                   <FaHeartSolid className="!h-[1.125rem] !w-[1.125rem]" />
                 ) : (
                   <FaHeartOutline className="!h-[1.125rem] !w-[1.125rem]" />

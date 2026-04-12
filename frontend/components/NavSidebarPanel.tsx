@@ -14,6 +14,7 @@ const LINKS: { href: string; label: string; description: string }[] = [
   { href: "/cart", label: "Cart", description: "Review items and proceed when you are ready." },
   { href: "/orders", label: "Orders", description: "Track purchases and delivery status." },
   { href: "/account", label: "Account", description: "Sign in, profile, and preferences." },
+  { href: "/admin", label: "Admin", description: "Store metrics and analytics for team accounts." },
   { href: "/#delivery", label: "Delivery & visit", description: "Pickup, nationwide shipping, and our location." },
   { href: "/#trust", label: "Why Sikapa", description: "Quality, secure checkout, and how we help." },
   { href: "/#need-help", label: "Need help?", description: "WhatsApp (if configured) and support links." },

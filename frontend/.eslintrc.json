@@ -1,6 +1,5 @@
 {
-  "extends": ["next/core-web-vitals"],
-  "rules": {
-    "@next/next/no-html-link-for-pages": "off"
-  }
+  "root": true,
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "ignorePatterns": ["node_modules/", ".next/", "out/", "coverage/", "next-env.d.ts"]
 }

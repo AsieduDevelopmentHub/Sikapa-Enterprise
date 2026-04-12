@@ -12,8 +12,11 @@ import {
 import {
   authFetchProfile,
   authLogin,
+  authLoginWith2FA,
   authLogout,
   authRegister,
+  TwoFactorRequiredError,
+  type TokenResponse,
   type UserProfile,
 } from "@/lib/api/auth";
 
@@ -27,6 +30,7 @@ type AuthContextValue = {
   authError: string | null;
   clearAuthError: () => void;
   login: (email: string, password: string) => Promise<void>;
+  loginWithTotp: (email: string, password: string, code: string) => Promise<void>;
   register: (
     email: string,
     password: string,
@@ -78,6 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const applySession = useCallback(async (tokens: TokenResponse) => {
+    persistTokens(tokens.access_token, tokens.refresh_token ?? undefined);
+    const profile = await authFetchProfile(tokens.access_token);
+    setUser({
+      ...profile,
+      is_admin: Boolean(profile.is_admin),
+    });
+  }, [persistTokens]);
+
   const refreshProfile = useCallback(async () => {
     const token = readStoredAccess();
     if (!token) {
@@ -88,11 +101,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(token);
     try {
       const profile = await authFetchProfile(token);
-      setUser(profile);
+      setUser({
+        ...profile,
+        is_admin: Boolean(profile.is_admin),
+      });
     } catch {
       clearTokens();
     }
   }, [clearTokens]);
+
+  useEffect(() => {
+    const onRefreshed = (ev: Event) => {
+      const t = (ev as CustomEvent<string>).detail;
+      if (t) setAccessToken(t);
+    };
+    window.addEventListener("sikapa-auth-refreshed", onRefreshed as EventListener);
+    return () => window.removeEventListener("sikapa-auth-refreshed", onRefreshed as EventListener);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,7 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profile = await authFetchProfile(token);
         if (!cancelled) {
           setAccessToken(token);
-          setUser(profile);
+          setUser({
+            ...profile,
+            is_admin: Boolean(profile.is_admin),
+          });
         }
       } catch {
         if (!cancelled) clearTokens();
@@ -122,11 +150,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithCredentials = useCallback(
     async (email: string, password: string) => {
       const tokens = await authLogin(email, password);
-      persistTokens(tokens.access_token, tokens.refresh_token ?? undefined);
-      const profile = await authFetchProfile(tokens.access_token);
-      setUser(profile);
+      await applySession(tokens);
     },
-    [persistTokens]
+    [applySession]
+  );
+
+  const loginWithTotp = useCallback(
+    async (email: string, password: string, code: string) => {
+      setAuthError(null);
+      try {
+        const tokens = await authLoginWith2FA(email, password, code);
+        await applySession(tokens);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Sign-in failed";
+        setAuthError(msg);
+        throw e;
+      }
+    },
+    [applySession]
   );
 
   const login = useCallback(
@@ -135,6 +176,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await loginWithCredentials(email, password);
       } catch (e) {
+        if (e instanceof TwoFactorRequiredError) {
+          throw e;
+        }
         const msg = e instanceof Error ? e.message : "Sign-in failed";
         setAuthError(msg);
         throw e;
@@ -178,11 +222,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authError,
       clearAuthError,
       login,
+      loginWithTotp,
       register,
       logout,
       refreshProfile,
     }),
-    [user, accessToken, loading, authError, clearAuthError, login, register, logout, refreshProfile]
+    [user, accessToken, loading, authError, clearAuthError, login, loginWithTotp, register, logout, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
