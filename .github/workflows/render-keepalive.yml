@@ -1,0 +1,47 @@
+# Pings the Render backend so a free-tier instance stays warm (optional).
+# Scheduled workflows only run from the repository DEFAULT branch — merge this file
+# to main (or rename your default branch in GitHub Settings → General) or you will
+# not see scheduled runs. You can always run it manually: Actions → this workflow → Run workflow.
+#
+# If the workflow does not appear under the Actions tab, ensure:
+# - This file lives at .github/workflows/render-keepalive.yml on the default branch
+# - Actions are enabled for the repo (Settings → Actions → General)
+
+name: Render keepalive
+
+run-name: "Render keepalive (${{ github.event_name }})"
+
+on:
+  schedule:
+    # Every 5 minutes UTC (adjust to reduce noise)
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping Sikapa backend on Render
+        env:
+          BACKEND_URL: https://sikapa-backend.onrender.com
+        run: |
+          set -e
+          for path in /health /; do
+            if curl -fsS -o /dev/null \
+              --connect-timeout 25 \
+              --max-time 55 \
+              "${BACKEND_URL}${path}"; then
+              echo "OK: ${BACKEND_URL}${path}"
+              exit 0
+            fi
+          done
+          echo "Ping failed for both /health and /"
+          exit 1

@@ -12,6 +12,7 @@ pydantic[email]==2.10.6
 pydantic-settings==2.5.2
 email-validator==2.2.0
 python-dotenv==1.0.1
+bleach==6.2.0
 
 # -----------------------------
 # Database & Supabase
@@ -26,7 +27,7 @@ sqlmodel==0.0.21
 # -----------------------------
 python-jose[cryptography]==3.3.0  # JWT tokens
 passlib[bcrypt]==1.7.4            # Password hashing utilities
-bcrypt==4.1.0                     # Password hashing (compatible with passlib[bcrypt]==1.7.4)
+bcrypt==4.0.1                     # Pin for passlib 1.7.4 (4.1+ breaks hashing on some Linux runners)
 pyotp==2.9.0                      # TOTP 2FA codes (Phase 3)
 qrcode[pil]==7.4.2                # QR codes for 2FA setup (Phase 3)
 slowapi==0.1.9                    # Rate limiting

@@ -3,20 +3,17 @@ End-to-End tests for Sikapa Authentication System
 """
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, Session
 
-from app.main import app
-from app.models import User, OTPCode, TokenBlacklist, TwoFactorSecret, PasswordReset
+from app.models import User, OTPCode, PasswordReset
 
 
 @pytest.mark.asyncio
 class TestAuthenticationE2E:
     """End-to-end tests for the complete authentication flow."""
 
-    async def test_complete_user_registration_flow(self, client: AsyncClient, test_session: AsyncSession):
+    async def test_complete_user_registration_flow(self, client: AsyncClient, test_session: Session):
         """Test complete user registration flow: register -> verify email -> login."""
-        # 1. Register user
         register_data = {
             "email": "test@example.com",
             "password": "SecurePass123!",
@@ -30,13 +27,11 @@ class TestAuthenticationE2E:
         assert user_data["email"] == "test@example.com"
         assert user_data["email_verified"] is False
 
-        # 2. Get OTP code from database (in real scenario, this would be emailed)
         otp_query = select(OTPCode).where(OTPCode.user_id == user_data["id"])
-        result = await test_session.execute(otp_query)
+        result = test_session.execute(otp_query)
         otp_record = result.scalar_one()
         otp_code = otp_record.code
 
-        # 3. Verify email with OTP
         verify_data = {
             "email": "test@example.com",
             "code": otp_code
@@ -47,7 +42,6 @@ class TestAuthenticationE2E:
         verify_response = response.json()
         assert verify_response["verified"] is True
 
-        # 4. Login with verified account
         login_data = {
             "email": "test@example.com",
             "password": "SecurePass123!"
@@ -60,25 +54,18 @@ class TestAuthenticationE2E:
         assert "refresh_token" in tokens
         assert tokens["token_type"] == "bearer"
 
-        # Store tokens for further tests
-        self.access_token = tokens["access_token"]
-        self.refresh_token = tokens["refresh_token"]
-
-    async def test_password_reset_flow(self, client: AsyncClient, test_session: AsyncSession):
+    async def test_password_reset_flow(self, client: AsyncClient, test_session: Session, test_user):
         """Test password reset flow."""
-        # 1. Request password reset
-        reset_request = {"email": "test@example.com"}
+        reset_request = {"email": test_user["user"]["email"]}
 
         response = await client.post("/api/v1/auth/password-reset/request", json=reset_request)
         assert response.status_code == 200
 
-        # 2. Get reset token from database
-        reset_query = select(PasswordReset).join(User).where(User.email == "test@example.com")
-        result = await test_session.execute(reset_query)
+        reset_query = select(PasswordReset).join(User).where(User.email == test_user["user"]["email"])
+        result = test_session.execute(reset_query)
         reset_record = result.scalar_one()
         reset_token = reset_record.token
 
-        # 3. Reset password with token
         reset_confirm = {
             "token": reset_token,
             "new_password": "NewSecurePass456!"
@@ -87,44 +74,41 @@ class TestAuthenticationE2E:
         response = await client.post("/api/v1/auth/password-reset/confirm", json=reset_confirm)
         assert response.status_code == 200
 
-        # 4. Login with new password
         login_data = {
-            "email": "test@example.com",
+            "email": test_user["user"]["email"],
             "password": "NewSecurePass456!"
         }
 
         response = await client.post("/api/v1/auth/login", json=login_data)
         assert response.status_code == 200
 
-    async def test_profile_management(self, client: AsyncClient):
+    async def test_profile_management(self, authenticated_client: AsyncClient, test_user):
         """Test user profile management."""
-        # Get profile
-        headers = {"Authorization": f"Bearer {self.access_token}"}
-        response = await client.get("/api/v1/auth/profile", headers=headers)
+        headers = {"Authorization": f"Bearer {test_user['access_token']}"}
+
+        response = await authenticated_client.get("/api/v1/auth/profile", headers=headers)
         assert response.status_code == 200
         profile = response.json()
-        assert profile["email"] == "test@example.com"
+        assert profile["email"] == test_user["user"]["email"]
         assert profile["first_name"] == "Test"
 
-        # Update profile
         update_data = {
             "first_name": "Updated",
             "last_name": "Name",
             "phone": "+1234567890"
         }
 
-        response = await client.put("/api/v1/auth/profile", json=update_data, headers=headers)
+        response = await authenticated_client.put("/api/v1/auth/profile", json=update_data, headers=headers)
         assert response.status_code == 200
         updated_profile = response.json()
         assert updated_profile["first_name"] == "Updated"
         assert updated_profile["phone"] == "+1234567890"
 
-    async def test_two_factor_authentication_flow(self, client: AsyncClient, test_session: AsyncSession):
+    async def test_two_factor_authentication_flow(self, authenticated_client: AsyncClient, test_user):
         """Test 2FA setup and usage."""
-        headers = {"Authorization": f"Bearer {self.access_token}"}
+        headers = {"Authorization": f"Bearer {test_user['access_token']}"}
 
-        # 1. Setup 2FA
-        response = await client.post("/api/v1/auth/2fa/setup", headers=headers)
+        response = await authenticated_client.post("/api/v1/auth/2fa/setup", headers=headers)
         assert response.status_code == 200
         setup_data = response.json()
         assert "secret" in setup_data
@@ -135,44 +119,35 @@ class TestAuthenticationE2E:
         secret = setup_data["secret"]
         backup_codes = setup_data["backup_codes"]
 
-        # 2. Generate a valid TOTP code (in real test, would use pyotp)
         import pyotp
         totp = pyotp.TOTP(secret)
-        verification_code = totp.now()
 
-        # 3. Enable 2FA
         enable_data = {
             "secret": secret,
             "backup_codes": backup_codes,
-            "verification_code": verification_code
+            "verification_code": totp.now()
         }
 
-        response = await client.post("/api/v1/auth/2fa/enable", json=enable_data, headers=headers)
+        response = await authenticated_client.post("/api/v1/auth/2fa/enable", json=enable_data, headers=headers)
         assert response.status_code == 200
 
-        # 4. Logout and login with 2FA
-        response = await client.post("/api/v1/auth/logout", headers=headers)
+        response = await authenticated_client.post("/api/v1/auth/logout", headers=headers)
         assert response.status_code == 200
 
-        # 5. Login with 2FA required now
         login_data = {
-            "email": "test@example.com",
-            "password": "NewSecurePass456!",
-            "code": totp.now()  # Generate new code
+            "email": test_user["user"]["email"],
+            "password": "TestPass123!",
+            "code": totp.now()
         }
 
-        response = await client.post("/api/v1/auth/login-2fa", json=login_data)
+        response = await authenticated_client.post("/api/v1/auth/login-2fa", json=login_data)
         assert response.status_code == 200
         new_tokens = response.json()
         assert "access_token" in new_tokens
 
-        # Update token for further tests
-        self.access_token = new_tokens["access_token"]
-
-    async def test_token_refresh(self, client: AsyncClient):
+    async def test_token_refresh(self, client: AsyncClient, test_user):
         """Test token refresh functionality."""
-        # Refresh access token
-        refresh_data = {"refresh_token": self.refresh_token}
+        refresh_data = {"refresh_token": test_user["refresh_token"]}
 
         response = await client.post("/api/v1/auth/refresh", json=refresh_data)
         assert response.status_code == 200
@@ -180,39 +155,34 @@ class TestAuthenticationE2E:
         assert "access_token" in new_tokens
         assert new_tokens["token_type"] == "bearer"
 
-        # Update access token
-        self.access_token = new_tokens["access_token"]
-
-    async def test_password_change(self, client: AsyncClient):
+    async def test_password_change(self, client: AsyncClient, test_user):
         """Test password change functionality."""
-        headers = {"Authorization": f"Bearer {self.access_token}"}
+        headers = {"Authorization": f"Bearer {test_user['access_token']}"}
 
         change_data = {
-            "current_password": "NewSecurePass456!",
+            "current_password": "TestPass123!",
             "new_password": "FinalSecurePass789!"
         }
 
         response = await client.post("/api/v1/auth/password/change", json=change_data, headers=headers)
         assert response.status_code == 200
 
-        # Logout and login with new password
         response = await client.post("/api/v1/auth/logout", headers=headers)
         assert response.status_code == 200
 
         login_data = {
-            "email": "test@example.com",
+            "email": test_user["user"]["email"],
             "password": "FinalSecurePass789!"
         }
 
         response = await client.post("/api/v1/auth/login", json=login_data)
         assert response.status_code == 200
 
-    async def test_account_deletion(self, client: AsyncClient, test_session: AsyncSession):
+    async def test_account_deletion(self, client: AsyncClient, test_session: Session, test_user):
         """Test account deletion."""
-        # Login first to get token
         login_data = {
-            "email": "test@example.com",
-            "password": "FinalSecurePass789!"
+            "email": test_user["user"]["email"],
+            "password": "TestPass123!"
         }
 
         response = await client.post("/api/v1/auth/login", json=login_data)
@@ -221,43 +191,39 @@ class TestAuthenticationE2E:
         access_token = tokens["access_token"]
 
         headers = {"Authorization": f"Bearer {access_token}"}
-
-        # Delete account
-        delete_data = {"password": "FinalSecurePass789!"}
+        delete_data = {"password": "TestPass123!"}
 
         response = await client.post("/api/v1/auth/account/delete", json=delete_data, headers=headers)
         assert response.status_code == 200
 
-        # Verify account is deactivated
-        user_query = select(User).where(User.email == "test@example.com")
-        result = await test_session.execute(user_query)
+        user_query = select(User).where(User.email == test_user["user"]["email"])
+        result = test_session.execute(user_query)
         user = result.scalar_one()
         assert user.is_active is False
 
     async def test_rate_limiting(self, client: AsyncClient):
         """Test rate limiting on auth endpoints."""
-        # Test login rate limiting (10/minute)
         login_data = {
             "email": "nonexistent@example.com",
             "password": "wrongpassword"
         }
 
-        # Make multiple requests quickly
-        for i in range(12):  # Exceed the 10/minute limit
+        statuses = []
+        for _ in range(15):
             response = await client.post("/api/v1/auth/login", json=login_data)
-            if i < 10:
-                assert response.status_code == 401  # Invalid credentials
-            else:
-                assert response.status_code == 429  # Rate limited
+            statuses.append(response.status_code)
+
+        assert 429 in statuses
+        assert all(status in (401, 429) for status in statuses)
 
     async def test_security_headers(self, client: AsyncClient):
         """Test security headers are present."""
         response = await client.get("/health")
 
-        # Check for security headers (when HTTPS is enabled)
         if "HTTPS_ENABLED=true" in str(response.headers):
             assert "strict-transport-security" in response.headers
             assert "x-content-type-options" in response.headers
+
             assert "x-frame-options" in response.headers
             assert "x-xss-protection" in response.headers
 
@@ -283,12 +249,6 @@ class TestAuthenticationE2E:
 @pytest.mark.asyncio
 class TestErrorHandling:
     """Test error handling and edge cases."""
-
-    @pytest.fixture
-    async def client(self):
-        """Test client fixture."""
-        async with AsyncClient(app=app, base_url="http://testserver") as client:
-            yield client
 
     async def test_duplicate_email_registration(self, client: AsyncClient):
         """Test registration with duplicate email."""

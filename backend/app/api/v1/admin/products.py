@@ -16,6 +16,7 @@ from app.api.v1.admin.services import (
     upload_product_image,
     get_all_products_admin,
 )
+from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text, sanitize_slug
 
 router = APIRouter()
 
@@ -24,8 +25,7 @@ router = APIRouter()
 async def list_products_admin(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    is_active: bool = None,
-    category_id: int = None,
+    category: str = None,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_admin_user),
 ):
@@ -34,8 +34,7 @@ async def list_products_admin(
         session,
         skip=skip,
         limit=limit,
-        is_active=is_active,
-        category_id=category_id,
+        category=category,
     )
 
 
@@ -45,10 +44,8 @@ async def create_product(
     slug: str = Form(...),
     description: str = Form(None),
     price: float = Form(..., gt=0),
-    category_id: int = Form(None),
+    category: str = Form(None),
     in_stock: int = Form(0, ge=0),
-    sku: str = Form(None),
-    weight: float = Form(None),
     image: UploadFile = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_admin_user),
@@ -58,16 +55,21 @@ async def create_product(
     if image:
         image_url = await upload_product_image(image, session)
     
+    name_clean = sanitize_plain_text(name, max_length=300, single_line=True)
+    if not name_clean:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Product name is required",
+        )
     product_data = {
-        "name": name,
-        "slug": slug,
-        "description": description,
+        "name": name_clean,
+        "slug": sanitize_slug(slug),
+        "description": sanitize_multiline_text(description, max_length=20000),
         "price": price,
-        "category_id": category_id,
+        "category": sanitize_plain_text(category, max_length=64, single_line=True) if category else None,
         "in_stock": in_stock,
-        "sku": sku,
-        "weight": weight,
         "image_url": image_url,
+        "is_active": True,
     }
     
     return await create_product_admin(session, product_data)
@@ -80,10 +82,8 @@ async def update_product(
     slug: str = Form(None),
     description: str = Form(None),
     price: float = Form(None),
-    category_id: int = Form(None),
+    category: str = Form(None),
     in_stock: int = Form(None),
-    sku: str = Form(None),
-    weight: float = Form(None),
     is_active: bool = Form(None),
     image: UploadFile = File(None),
     session: Session = Depends(get_session),
@@ -94,21 +94,23 @@ async def update_product(
     if image:
         image_url = await upload_product_image(image, session)
     
-    product_data = {
-        "name": name,
-        "slug": slug,
-        "description": description,
-        "price": price,
-        "category_id": category_id,
-        "in_stock": in_stock,
-        "sku": sku,
-        "weight": weight,
-        "image_url": image_url,
-        "is_active": is_active,
-    }
-    
-    # Remove None values
-    product_data = {k: v for k, v in product_data.items() if v is not None}
+    product_data = {}
+    if name is not None:
+        product_data["name"] = sanitize_plain_text(name, max_length=300, single_line=True)
+    if slug is not None:
+        product_data["slug"] = sanitize_slug(slug)
+    if description is not None:
+        product_data["description"] = sanitize_multiline_text(description, max_length=20000)
+    if price is not None:
+        product_data["price"] = price
+    if category is not None:
+        product_data["category"] = sanitize_plain_text(category, max_length=64, single_line=True)
+    if in_stock is not None:
+        product_data["in_stock"] = in_stock
+    if image_url is not None:
+        product_data["image_url"] = image_url
+    if is_active is not None:
+        product_data["is_active"] = is_active
     
     return await update_product_admin(session, product_id, product_data)
 

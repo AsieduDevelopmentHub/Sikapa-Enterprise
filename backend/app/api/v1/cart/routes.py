@@ -8,9 +8,15 @@ from sqlmodel import Session, select
 from app.db import get_session
 from app.models import CartItem, Product
 from app.api.v1.auth.dependencies import get_current_active_user
-from app.api.v1.cart.schemas import CartItemSchema, CartItemCreateSchema, CartItemUpdateSchema
+from app.api.v1.cart.schemas import (
+    CartItemSchema,
+    CartItemCreateSchema,
+    CartItemUpdateSchema,
+    CartWithWishlistSchema,
+)
 from app.api.v1.cart.services import (
     get_user_cart,
+    get_cart_with_wishlist,
     add_to_cart,
     update_cart_item,
     remove_from_cart,
@@ -27,6 +33,15 @@ async def list_cart(
 ):
     """Get current user's cart items."""
     return await get_user_cart(session, current_user.id)
+
+
+@router.get("/with-wishlist", response_model=CartWithWishlistSchema)
+async def list_cart_with_wishlist(
+    current_user=Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    """Cart plus wishlist in one response (for cart/checkout UI)."""
+    return await get_cart_with_wishlist(session, current_user.id)
 
 
 @router.post("/items", response_model=CartItemSchema, status_code=status.HTTP_201_CREATED)

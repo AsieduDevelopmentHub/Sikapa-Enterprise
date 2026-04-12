@@ -33,6 +33,9 @@ __pycache__
 /backend/certs/*.pem
 /backend/certs/*.crt
 
+# logs
+*.log
+
 # mcp
 /.vscode/mcp.json
 

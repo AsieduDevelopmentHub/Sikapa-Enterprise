@@ -3,13 +3,26 @@ Pytest configuration and shared fixtures for E2E tests
 """
 import asyncio
 import os
-from typing import AsyncGenerator
+from typing import Generator
+
+# Test environment must be set before importing the FastAPI app.
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
+os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-key"
+os.environ["JWT_REFRESH_SECRET_KEY"] = "test-jwt-refresh-secret-key"
+os.environ["RESEND_API_KEY"] = "test-resend-api-key"
+os.environ["EMAIL_FROM"] = "test@example.com"
+os.environ["FRONTEND_URL"] = "http://localhost:3000"
+os.environ["HTTPS_ENABLED"] = "false"
+os.environ["DEBUG"] = "false"
+os.environ["TESTING"] = "true"
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel
+from sqlalchemy.pool import StaticPool
+from sqlmodel import SQLModel, Session
 
 from app.db import get_session
 from app.main import app
@@ -24,51 +37,72 @@ def event_loop():
 
 
 @pytest.fixture(scope="session")
-async def test_engine():
+def test_engine():
     """Create test database engine."""
-    # Use in-memory SQLite for tests
-    test_database_url = "sqlite+aiosqlite:///:memory:"
+    # Use shared in-memory SQLite for tests
+    test_database_url = "sqlite:///:memory:"
 
-    engine = create_async_engine(
+    engine = create_engine(
         test_database_url,
         echo=False,
         future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
 
     # Create all tables
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    SQLModel.metadata.create_all(engine)
 
     yield engine
 
     # Cleanup
-    await engine.dispose()
+    engine.dispose()
 
 
 @pytest.fixture(scope="function")
-async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
+def test_session(test_engine) -> Generator[Session, None, None]:
     """Create test database session."""
-    async_session = sessionmaker(
-        test_engine, class_=AsyncSession, expire_on_commit=False
+    SessionLocal = sessionmaker(
+        bind=test_engine,
+        class_=Session,
+        autocommit=False,
+        autoflush=False,
+        expire_on_commit=False,
     )
 
-    async with async_session() as session:
+    with SessionLocal() as session:
         # Clear all tables before each test
-        async with session.begin():
-            for table in reversed(SQLModel.metadata.sorted_tables):
-                await session.execute(table.delete())
+        for table in reversed(SQLModel.metadata.sorted_tables):
+            session.execute(table.delete())
+        session.commit()
 
         yield session
 
         # Rollback any uncommitted changes
-        await session.rollback()
+        session.rollback()
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Clear SlowAPI counters between tests so limits do not leak across tests."""
+    from app.core.rate_limit import limiter
+
+    try:
+        limiter.reset()
+    except Exception:
+        pass
+    yield
+    try:
+        limiter.reset()
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="function")
-async def client(test_session) -> AsyncGenerator[AsyncClient, None]:
+async def client(test_session) -> Generator[AsyncClient, None, None]:
     """Create test client with database session override."""
 
-    async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
+    def override_get_session() -> Generator[Session, None, None]:
         yield test_session
 
     app.dependency_overrides[get_session] = override_get_session
@@ -83,7 +117,7 @@ async def client(test_session) -> AsyncGenerator[AsyncClient, None]:
 @pytest.fixture(scope="session", autouse=True)
 def set_test_env():
     """Set test environment variables."""
-    os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
     os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
     os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-key"
     os.environ["JWT_REFRESH_SECRET_KEY"] = "test-jwt-refresh-secret-key"
@@ -91,11 +125,12 @@ def set_test_env():
     os.environ["EMAIL_FROM"] = "test@example.com"
     os.environ["FRONTEND_URL"] = "http://localhost:3000"
     os.environ["HTTPS_ENABLED"] = "false"  # Disable HTTPS for tests
+    os.environ["DEBUG"] = "false"
     os.environ["TESTING"] = "true"
 
 
 @pytest.fixture(scope="function")
-async def test_user(client: AsyncClient, test_session: AsyncSession):
+async def test_user(client: AsyncClient, test_session: Session):
     """Create a test user and return user data with tokens."""
     from app.models import User
 
@@ -116,7 +151,7 @@ async def test_user(client: AsyncClient, test_session: AsyncSession):
     from sqlalchemy import select
 
     otp_query = select(OTPCode).where(OTPCode.user_id == user_data["id"])
-    result = await test_session.execute(otp_query)
+    result = test_session.execute(otp_query)
     otp_record = result.scalar_one()
 
     verify_data = {
