@@ -62,9 +62,31 @@ module.exports = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        /** Splash: elastic logo entrance */
+        "splash-logo-bounce": {
+          "0%": { opacity: "0", transform: "scale(0.52) translateY(28px)" },
+          "48%": { opacity: "1", transform: "scale(1.08) translateY(-10px)" },
+          "68%": { transform: "scale(0.94) translateY(6px)" },
+          "82%": { transform: "scale(1.03) translateY(-3px)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+        /** Splash: blur + scale “dissolve” exit */
+        "splash-dissolve-out": {
+          "0%": { opacity: "1", filter: "blur(0px)", transform: "scale(1)" },
+          "40%": { opacity: "0.75", filter: "blur(4px)", transform: "scale(1.03)" },
+          "100%": { opacity: "0", filter: "blur(22px)", transform: "scale(1.12)" },
+        },
+        /** Subtle gold shimmer on logo during splash */
+        "splash-logo-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 6px rgba(200, 169, 106, 0.4))" },
+          "50%": { filter: "drop-shadow(0 0 22px rgba(200, 169, 106, 0.85))" },
+        },
       },
       animation: {
         "splash-in": "splash-in 0.9s ease-out forwards",
+        "splash-logo-bounce": "splash-logo-bounce 1.2s cubic-bezier(0.34, 1.45, 0.64, 1) forwards",
+        "splash-dissolve-out": "splash-dissolve-out 0.78s ease-in forwards",
+        "splash-logo-glow": "splash-logo-glow 2.2s ease-in-out infinite",
         "gold-glow": "gold-glow 2s ease-in-out infinite",
         "hero-model": "hero-model 1s ease-out 0.2s forwards",
         "hero-text": "hero-text 0.85s ease-out 0.35s forwards",
