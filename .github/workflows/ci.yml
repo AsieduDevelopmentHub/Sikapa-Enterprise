@@ -66,10 +66,12 @@ jobs:
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         if: always()
+        continue-on-error: true
         with:
           file: ./backend/coverage.xml
           flags: unittests
           name: backend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   frontend:
     name: Frontend CI
