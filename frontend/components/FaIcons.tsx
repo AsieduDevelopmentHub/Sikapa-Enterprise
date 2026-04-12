@@ -6,12 +6,15 @@ import {
   faBars,
   faCartShopping,
   faChevronLeft,
+  faCircleCheck,
   faClipboardList,
   faFilter,
   faHeart as faHeartSolid,
   faHouse,
+  faLock,
   faMagnifyingGlass,
   faStore,
+  faTruckFast,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { faHeart as faHeartRegular } from "@fortawesome/free-regular-svg-icons";
@@ -67,4 +70,18 @@ export function FaAccount({ className = "" }: IconProps) {
 
 export function FaFilterIcon({ className = "" }: IconProps) {
   return <FontAwesomeIcon icon={faFilter} className={`h-4 w-4 ${className}`} />;
+}
+
+const md = "h-5 w-5";
+
+export function FaTrustTruck({ className = "" }: IconProps) {
+  return <FontAwesomeIcon icon={faTruckFast} className={`${md} ${className}`} />;
+}
+
+export function FaTrustLock({ className = "" }: IconProps) {
+  return <FontAwesomeIcon icon={faLock} className={`${md} ${className}`} />;
+}
+
+export function FaTrustAuthentic({ className = "" }: IconProps) {
+  return <FontAwesomeIcon icon={faCircleCheck} className={`${md} ${className}`} />;
 }
