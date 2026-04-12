@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, String
 
 
 class ProductBase(SQLModel):
@@ -9,19 +10,18 @@ class ProductBase(SQLModel):
     description: Optional[str] = None
     price: float
     image_url: Optional[str] = None
-    category_id: Optional[int] = Field(default=None, foreign_key="category.id")
+    category: Optional[str] = Field(default=None, sa_column=Column("category", String, nullable=True))
+    sku: Optional[str] = Field(default=None, index=True)
+    weight: Optional[float] = None
     in_stock: int = 0
-    sku: Optional[str] = Field(default=None, index=True, unique=True)
-    weight: Optional[float] = None  # in kg
     is_active: bool = True
+    sales_count: int = Field(default=0, ge=0)
+    avg_rating: float = Field(default=0.0, ge=0, le=5)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Product(ProductBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    avg_rating: float = Field(default=0.0, ge=0, le=5)
-    review_count: int = Field(default=0, ge=0)
-    sales_count: int = Field(default=0, ge=0)
 
 
 class ProductCreate(ProductBase):
@@ -150,6 +150,11 @@ class Order(SQLModel, table=True):
     cancel_reason: Optional[str] = None
     payment_method: Optional[str] = None
     notes: Optional[str] = None
+    # Paystack (and other gateways): reference + lifecycle separate from order.status
+    paystack_reference: Optional[str] = Field(default=None, index=True)
+    payment_status: str = Field(
+        default="pending"
+    )  # pending | paid | failed | abandoned | refunded | partially_refunded
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -216,6 +221,21 @@ class EmailSubscription(SQLModel, table=True):
 
 # ============ INVOICES ============
 
+class PaystackInitIdempotency(SQLModel, table=True):
+    """Replay-safe Paystack /initialize when client sends Idempotency-Key."""
+
+    __tablename__ = "paystack_init_idempotency"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    idempotency_key: str = Field(max_length=128, unique=True, index=True)
+    order_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    reference: str = Field(max_length=128)
+    authorization_url: str
+    access_code: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Invoice(SQLModel, table=True):
     """Order invoices"""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -226,7 +246,7 @@ class Invoice(SQLModel, table=True):
     shipping: float = Field(default=0, ge=0)
     total: float = Field(ge=0)
     payment_method: Optional[str] = None
-    status: str = Field(default="pending")  # "pending", "paid", "overdue", "cancelled"
+    status: str = Field(default="pending")  # pending, paid, overdue, cancelled, refunded
     issued_at: datetime = Field(default_factory=datetime.utcnow)
     due_at: Optional[datetime] = None
     paid_at: Optional[datetime] = None

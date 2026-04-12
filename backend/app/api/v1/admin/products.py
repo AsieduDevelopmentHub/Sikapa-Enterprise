@@ -24,8 +24,7 @@ router = APIRouter()
 async def list_products_admin(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    is_active: bool = None,
-    category_id: int = None,
+    category: str = None,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_admin_user),
 ):
@@ -34,8 +33,7 @@ async def list_products_admin(
         session,
         skip=skip,
         limit=limit,
-        is_active=is_active,
-        category_id=category_id,
+        category=category,
     )
 
 
@@ -45,10 +43,8 @@ async def create_product(
     slug: str = Form(...),
     description: str = Form(None),
     price: float = Form(..., gt=0),
-    category_id: int = Form(None),
+    category: str = Form(None),
     in_stock: int = Form(0, ge=0),
-    sku: str = Form(None),
-    weight: float = Form(None),
     image: UploadFile = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_admin_user),
@@ -63,11 +59,10 @@ async def create_product(
         "slug": slug,
         "description": description,
         "price": price,
-        "category_id": category_id,
+        "category": category,
         "in_stock": in_stock,
-        "sku": sku,
-        "weight": weight,
         "image_url": image_url,
+        "is_active": True,
     }
     
     return await create_product_admin(session, product_data)
@@ -80,10 +75,8 @@ async def update_product(
     slug: str = Form(None),
     description: str = Form(None),
     price: float = Form(None),
-    category_id: int = Form(None),
+    category: str = Form(None),
     in_stock: int = Form(None),
-    sku: str = Form(None),
-    weight: float = Form(None),
     is_active: bool = Form(None),
     image: UploadFile = File(None),
     session: Session = Depends(get_session),
@@ -99,10 +92,8 @@ async def update_product(
         "slug": slug,
         "description": description,
         "price": price,
-        "category_id": category_id,
+        "category": category,
         "in_stock": in_stock,
-        "sku": sku,
-        "weight": weight,
         "image_url": image_url,
         "is_active": is_active,
     }

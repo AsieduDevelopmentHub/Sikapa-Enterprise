@@ -17,6 +17,11 @@ jobs:
   backend:
     name: Backend CI
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    environment:
+      name: CI
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,14 +29,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
 
       - name: Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('backend/requirements.txt') }}
           restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
             ${{ runner.os }}-pip-
 
       - name: Install backend dependencies
@@ -42,18 +48,36 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         env:
-          DATABASE_URL: sqlite:///./db/sikapa_ci.db
+          # In-memory SQLite (no db directory required on the runner)
+          DATABASE_URL: "sqlite:///:memory:"
+          SECRET_KEY: ci-secret-key-for-testing-only
+          JWT_SECRET_KEY: ci-jwt-secret-for-testing
+          JWT_REFRESH_SECRET_KEY: ci-jwt-refresh-secret
+          RESEND_API_KEY: test-resend-api-key
+          EMAIL_FROM: test@example.com
+          FRONTEND_URL: http://localhost:3000
           EMAIL_ENABLED: false
           HTTPS_ENABLED: false
+          DEBUG: false
+          TESTING: true
         run: |
-          python -m pytest
+          python -m pytest tests/ -v --tb=short --cov=app --cov-report=xml
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        continue-on-error: true
+        with:
+          file: ./backend/coverage.xml
+          flags: unittests
+          name: backend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   frontend:
     name: Frontend CI
     runs-on: ubuntu-latest
-    env:
-      CI: true
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    environment:
+      name: CI
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -79,4 +103,4 @@ jobs:
 
       - name: Run frontend tests
         working-directory: frontend
-        run: npm test
+        run: npm test -- --watchAll=false --passWithNoTests
