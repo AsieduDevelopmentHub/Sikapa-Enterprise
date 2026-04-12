@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, String
 
 
 class ProductBase(SQLModel):
@@ -9,19 +10,14 @@ class ProductBase(SQLModel):
     description: Optional[str] = None
     price: float
     image_url: Optional[str] = None
-    category_id: Optional[int] = Field(default=None, foreign_key="category.id")
+    category: Optional[str] = Field(default=None, sa_column=Column("category", String, nullable=True))
     in_stock: int = 0
-    sku: Optional[str] = Field(default=None, index=True, unique=True)
-    weight: Optional[float] = None  # in kg
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Product(ProductBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    avg_rating: float = Field(default=0.0, ge=0, le=5)
-    review_count: int = Field(default=0, ge=0)
-    sales_count: int = Field(default=0, ge=0)
 
 
 class ProductCreate(ProductBase):

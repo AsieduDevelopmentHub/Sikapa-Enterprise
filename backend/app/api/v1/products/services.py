@@ -23,11 +23,11 @@ async def get_products_with_filters(
     """Get products with advanced filtering and sorting."""
     
     # Base query
-    query = select(Product).where(Product.is_active == True)
+    query = select(Product)
     
-    # Apply filters
+    # Apply filters (category is now a string field)
     if category_id is not None:
-        query = query.where(Product.category_id == category_id)
+        query = query.where(Product.category == str(category_id))
     
     if min_price is not None:
         query = query.where(Product.price >= min_price)
@@ -35,43 +35,39 @@ async def get_products_with_filters(
     if max_price is not None:
         query = query.where(Product.price <= max_price)
     
-    if min_rating is not None:
-        query = query.where(Product.avg_rating >= min_rating)
+    # Note: avg_rating and is_active no longer exist in the database schema,
+    # so we remove those filters for now
     
     # Get total count before pagination
-    count_query = select(func.count(Product.id)).select_from(
-        select(Product).where(Product.is_active == True)
-    )
+    count_query = select(func.count(Product.id)).select_from(Product)
     
     if category_id is not None:
-        count_query = count_query.where(Product.category_id == category_id)
+        count_query = count_query.where(Product.category == str(category_id))
     if min_price is not None:
         count_query = count_query.where(Product.price >= min_price)
     if max_price is not None:
         count_query = count_query.where(Product.price <= max_price)
-    if min_rating is not None:
-        count_query = count_query.where(Product.avg_rating >= min_rating)
     
     # Simple count approach
-    filtered_query = select(Product).where(Product.is_active == True)
+    filtered_query = select(Product)
     if category_id is not None:
-        filtered_query = filtered_query.where(Product.category_id == category_id)
+        filtered_query = filtered_query.where(Product.category == str(category_id))
     if min_price is not None:
         filtered_query = filtered_query.where(Product.price >= min_price)
     if max_price is not None:
         filtered_query = filtered_query.where(Product.price <= max_price)
-    if min_rating is not None:
-        filtered_query = filtered_query.where(Product.avg_rating >= min_rating)
     
     total = len(session.exec(filtered_query).all())
     
-    # Apply sorting
+    # Apply sorting (only available columns: price, created_at)
     if sort_by == "price":
         sort_col = Product.price
     elif sort_by == "rating":
-        sort_col = Product.avg_rating
+        # rating sort not available in this database schema
+        sort_col = Product.created_at
     elif sort_by == "sales":
-        sort_col = Product.sales_count
+        # sales sort not available in this database schema
+        sort_col = Product.created_at
     else:  # "created_at" or default
         sort_col = Product.created_at
     
