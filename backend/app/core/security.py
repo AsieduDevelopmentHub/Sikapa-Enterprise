@@ -124,8 +124,11 @@ def generate_backup_codes(count: int = 10) -> list[str]:
 
 # ============ 2FA & TOTP ============
 def generate_totp_secret() -> str:
-    """Generate TOTP secret for 2FA."""
-    return secrets.token_urlsafe(32)
+    """Generate a base32 TOTP secret for 2FA."""
+    import base64
+
+    # Generate a 160-bit secret and encode it in Base32 so it is compatible with pyotp.
+    return base64.b32encode(secrets.token_bytes(20)).decode("utf-8").rstrip("=")
 
 
 def verify_totp_code(secret: str, code: str, window: int = 1) -> bool:

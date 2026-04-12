@@ -1,4 +1,12 @@
 """Create an admin account for the Sikapa backend."""
+import sys
+import os
+from pathlib import Path
+
+# Add the backend directory to Python path so we can import app modules
+backend_dir = Path(__file__).parent.parent.parent  # tools/admin/createadminaccount.py -> backend/
+sys.path.insert(0, str(backend_dir))
+
 import argparse
 import getpass
 from dotenv import load_dotenv
