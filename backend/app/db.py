@@ -1,7 +1,10 @@
 import os
-from dotenv import load_dotenv
-from sqlmodel import SQLModel, create_engine, Session
 from pathlib import Path
+
+from dotenv import load_dotenv
+from fastapi import Request
+from sqlalchemy import text
+from sqlmodel import Session, SQLModel, create_engine, select
 
 # Load environment variables from .env file
 load_dotenv()
@@ -10,18 +13,98 @@ load_dotenv()
 backend_dir = Path(__file__).parent.parent
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{backend_dir}/db/sikapa.db")
 
+# Configure connection arguments based on database type
 connect_args = {}
+engine_kwargs = {
+    "echo": os.getenv("DEBUG", "false").lower() == "true",
+}
+
 if DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
+elif DATABASE_URL.startswith("postgresql"):
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 20
+    engine_kwargs["pool_pre_ping"] = True
 
-engine = create_engine(DATABASE_URL, echo=True, connect_args=connect_args)
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    **engine_kwargs,
+)
+
+
+def apply_postgres_session_user(session: Session, user_id: int | None) -> None:
+    """Transaction-local GUC for RLS (PostgreSQL only). Call after you know the acting user id."""
+    if not DATABASE_URL.startswith("postgresql"):
+        return
+    val = "" if user_id is None else str(int(user_id))
+    session.connection().execute(
+        text("SELECT set_config('app.current_user_id', :v, true)"),
+        {"v": val},
+    )
+
+
+def _configure_postgres_rls_for_request(session: Session, request: Request) -> None:
+    """Set app.current_user_id from Bearer JWT (same rules as get_current_user blacklist check)."""
+    if not DATABASE_URL.startswith("postgresql"):
+        return
+
+    from app.core.security import decode_access_token
+    from app.models import TokenBlacklist, User
+
+    conn = session.connection()
+
+    def _clear() -> None:
+        conn.execute(
+            text("SELECT set_config('app.current_user_id', :v, true)"),
+            {"v": ""},
+        )
+
+    auth_header = (
+        request.headers.get("authorization") or request.headers.get("Authorization") or ""
+    )
+    token = ""
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header[7:].strip()
+
+    if not token:
+        _clear()
+        return
+
+    try:
+        payload = decode_access_token(token)
+    except Exception:
+        _clear()
+        return
+
+    email = payload.get("sub")
+    if not email:
+        _clear()
+        return
+
+    user = session.exec(select(User).where(User.email == email)).first()
+    if not user:
+        _clear()
+        return
+
+    conn.execute(
+        text("SELECT set_config('app.current_user_id', :v, true)"),
+        {"v": str(user.id)},
+    )
+    bl = session.exec(
+        select(TokenBlacklist).where(TokenBlacklist.token == token)
+    ).first()
+    if bl:
+        _clear()
+
+
+def get_session(request: Request):
+    """Dependency: DB session with PostgreSQL RLS user context from the incoming request."""
+    with Session(engine) as session:
+        _configure_postgres_rls_for_request(session, request)
+        yield session
 
 
 def create_db_and_tables() -> None:
+    """Create all database tables from SQLModel definitions."""
     SQLModel.metadata.create_all(engine)
-
-
-def get_session():
-    """Dependency to get database session."""
-    with Session(engine) as session:
-        yield session

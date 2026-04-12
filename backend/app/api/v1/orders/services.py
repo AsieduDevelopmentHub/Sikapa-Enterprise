@@ -1,10 +1,12 @@
 """
 Orders business logic
 """
+import os
+import uuid
+from datetime import datetime
+
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
-from datetime import datetime
-import uuid
 
 from app.models import Order, OrderItem, CartItem, Product, Invoice, User
 from app.api.v1.orders.schemas import OrderCreateSchema
@@ -160,7 +162,7 @@ async def send_order_confirmation_email(
 async def generate_invoice_pdf(
     session: Session,
     order_id: int,
-    company_name: str = "Sikapa Store"
+    company_name: str = "Sikapa Enterprise",
 ) -> bytes:
     """
     Generate PDF invoice for an order.
@@ -168,7 +170,7 @@ async def generate_invoice_pdf(
     Args:
         session: Database session
         order_id: Order ID
-        company_name: Company name for invoice header
+        company_name: Brand name on the invoice header
         
     Returns:
         bytes: PDF content
@@ -186,13 +188,22 @@ async def generate_invoice_pdf(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
     order_items = session.exec(select(OrderItem).where(OrderItem.order_id == order_id)).all()
-    
+    product_ids = list({i.product_id for i in order_items})
+    products_by_id: dict[int, Product] = {}
+    if product_ids:
+        products = session.exec(select(Product).where(Product.id.in_(product_ids))).all()
+        products_by_id = {p.id: p for p in products if p.id is not None}
+
+    currency = os.getenv("PAYSTACK_CURRENCY", "GHS").strip().upper()
+
     return invoice_service.generate_invoice_pdf(
         invoice=invoice,
         order=order,
         user=user,
         order_items=order_items,
-        company_name=company_name
+        products_by_id=products_by_id,
+        company_name=company_name,
+        currency_code=currency,
     )
 
 

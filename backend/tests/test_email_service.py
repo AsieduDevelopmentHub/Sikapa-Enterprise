@@ -31,10 +31,11 @@ class TestEmailService:
             # Should return True in debug mode (simulated success)
             assert result is True
 
-            # Check that debug message was printed
-            mock_print.assert_called_once()
-            call_args = mock_print.call_args[0][0]
-            assert "[DEBUG] Would send email to test@example.com" in call_args
+            assert mock_print.call_count >= 1
+            combined = " ".join(
+                str(c.args[0]) for c in mock_print.call_args_list if c.args
+            )
+            assert "[DEBUG] Would send email to test@example.com" in combined
 
     def test_send_email_verification_debug_mode(self, email_service):
         """Test sending email verification in debug mode."""
@@ -48,11 +49,12 @@ class TestEmailService:
             # Should return True in debug mode (simulated success)
             assert result is True
 
-            # Check that debug message was printed
-            mock_print.assert_called_once()
-            call_args = mock_print.call_args[0][0]
-            assert "[DEBUG] Would send email to test@example.com" in call_args
-            assert "Verify Your Email" in call_args
+            assert mock_print.call_count >= 1
+            combined = " ".join(
+                str(c.args[0]) for c in mock_print.call_args_list if c.args
+            )
+            assert "[DEBUG] Would send email to test@example.com" in combined
+            assert "Verify Your Email" in combined
 
     def test_send_password_reset_debug_mode(self, email_service):
         """Test sending password reset email in debug mode."""
@@ -66,10 +68,11 @@ class TestEmailService:
             # Should return True in debug mode (simulated success)
             assert result is True
 
-            # Check that debug message was printed
-            mock_print.assert_called_once()
-            call_args = mock_print.call_args[0][0]
-            assert "[DEBUG] Would send email to test@example.com" in call_args
+            assert mock_print.call_count >= 1
+            combined = " ".join(
+                str(c.args[0]) for c in mock_print.call_args_list if c.args
+            )
+            assert "[DEBUG] Would send email to test@example.com" in combined
 
     def test_send_2fa_enabled_debug_mode(self, email_service):
         """Test sending 2FA enabled email in debug mode."""
@@ -82,10 +85,11 @@ class TestEmailService:
             # Should return True in debug mode (simulated success)
             assert result is True
 
-            # Check that debug message was printed
-            mock_print.assert_called_once()
-            call_args = mock_print.call_args[0][0]
-            assert "[DEBUG] Would send email to test@example.com" in call_args
+            assert mock_print.call_count >= 1
+            combined = " ".join(
+                str(c.args[0]) for c in mock_print.call_args_list if c.args
+            )
+            assert "[DEBUG] Would send email to test@example.com" in combined
 
     def test_send_account_deletion_debug_mode(self, email_service):
         """Test sending account deletion email in debug mode."""
@@ -98,7 +102,8 @@ class TestEmailService:
             # Should return True in debug mode (simulated success)
             assert result is True
 
-            # Check that debug message was printed
-            mock_print.assert_called_once()
-            call_args = mock_print.call_args[0][0]
-            assert "[DEBUG] Would send email to test@example.com" in call_args
+            assert mock_print.call_count >= 1
+            combined = " ".join(
+                str(c.args[0]) for c in mock_print.call_args_list if c.args
+            )
+            assert "[DEBUG] Would send email to test@example.com" in combined

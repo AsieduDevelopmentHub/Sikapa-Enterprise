@@ -19,6 +19,11 @@ from app.api.v1.orders.services import (
     generate_invoice_pdf,
     update_order_status_and_notify,
 )
+from app.api.v1.payments import services as payment_services
+from app.api.v1.payments.schemas import (
+    PaystackRefundRequestBody,
+    PaystackRefundResponse,
+)
 
 router = APIRouter()
 
@@ -51,6 +56,30 @@ async def list_orders_admin(
         limit=limit,
         status=status,
     )
+
+
+@router.post(
+    "/{order_id}/paystack/refund",
+    response_model=PaystackRefundResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def admin_paystack_refund(
+    order_id: int,
+    body: PaystackRefundRequestBody,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """
+    Initiate a Paystack refund for a paid order (full refund if `amount` is omitted).
+    """
+    data = payment_services.admin_refund_paystack_order(
+        session,
+        order_id,
+        amount_major=body.amount,
+        customer_note=body.customer_note,
+        merchant_note=body.merchant_note,
+    )
+    return PaystackRefundResponse(**data)
 
 
 @router.patch("/{order_id}/status")

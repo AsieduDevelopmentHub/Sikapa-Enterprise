@@ -21,6 +21,7 @@ from app.core.security import (
     get_totp_qr_code,
 )
 from app.core.email_service import email_service
+from app.db import apply_postgres_session_user
 from app.models import (
     User,
     TokenBlacklist,
@@ -58,6 +59,7 @@ def register_user(session: Session, email: str, password: str, first_name: str =
     session.add(user)
     session.commit()
     session.refresh(user)
+    apply_postgres_session_user(session, user.id)
 
     # Generate and send OTP for email verification
     otp_code = generate_otp_code()
@@ -164,9 +166,10 @@ def verify_email(session: Session, email: str, code: str) -> User:
     user = session.exec(select(User).where(User.email == email)).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired OTP code"
         )
+    apply_postgres_session_user(session, user.id)
 
     # Find valid OTP code
     otp = session.exec(
@@ -212,6 +215,7 @@ def request_password_reset(session: Session, email: str) -> None:
     if not user:
         # Don't reveal if user exists for security
         return None
+    apply_postgres_session_user(session, user.id)
 
     # Generate reset token
     reset_token = generate_password_reset_token()
@@ -251,6 +255,8 @@ def reset_password(session: Session, token: str, new_password: str) -> User:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reset token has expired"
         )
+
+    apply_postgres_session_user(session, password_reset.user_id)
 
     # Update password
     user = session.get(User, password_reset.user_id)
