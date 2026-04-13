@@ -2,13 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { ordersCreate } from "@/lib/api/orders";
-import { paystackInitialize, paystackVerify } from "@/lib/api/payments";
+import { paystackInitialize } from "@/lib/api/payments";
 import {
   DELIVERY_COURIER_OPTIONS,
   GHANA_REGIONS,
@@ -19,8 +18,6 @@ import { formatGhs } from "@/lib/mock-data";
 import { sanitizeMultiline, validateShippingAddress } from "@/lib/validation/input";
 
 export function CartPageClient() {
-  const searchParams = useSearchParams();
-  const paidRef = searchParams.get("reference") ?? searchParams.get("trxref");
   const { user, accessToken } = useAuth();
   const {
     lines,
@@ -39,43 +36,12 @@ export function CartPageClient() {
   const [orderNotes, setOrderNotes] = useState("");
   const n = lines.reduce((s, l) => s + l.quantity, 0);
 
-  const paystackReturnDone = useRef(false);
-
   const deliveryFee = useMemo(
     () => deliveryFeeFor(shippingMethod, shippingMethod === "delivery" ? shippingRegion : null),
     [shippingMethod, shippingRegion]
   );
 
   const checkoutTotal = subtotal + deliveryFee;
-
-  useEffect(() => {
-    if (!paidRef || !accessToken || paystackReturnDone.current) return;
-    paystackReturnDone.current = true;
-    let cancelled = false;
-    (async () => {
-      setCheckoutBusy(true);
-      setCheckoutMsg(null);
-      try {
-        const v = await paystackVerify(accessToken, paidRef);
-        if (cancelled) return;
-        setCheckoutMsg(
-          v.status === "success" || v.already_confirmed
-            ? "Payment confirmed. Thank you!"
-            : `Payment status: ${v.status}`
-        );
-        if (typeof window !== "undefined") {
-          window.history.replaceState({}, "", "/cart");
-        }
-      } catch (e) {
-        if (!cancelled) setCheckoutMsg(e instanceof Error ? e.message : "Could not verify payment");
-      } finally {
-        if (!cancelled) setCheckoutBusy(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [paidRef, accessToken]);
 
   const onCheckout = async () => {
     if (!accessToken || !user) {
@@ -109,7 +75,6 @@ export function CartPageClient() {
     setCheckoutMsg(null);
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
-      const callbackUrl = `${origin}/cart`;
       const order = await ordersCreate(accessToken, {
         shipping_method: shippingMethod,
         shipping_region: shippingMethod === "delivery" ? shippingRegion : null,
@@ -117,6 +82,7 @@ export function CartPageClient() {
         shipping_address: addr,
         notes: notesTrim.length > 0 ? notesTrim : null,
       });
+      const callbackUrl = `${origin}/orders/${order.id}`;
       const pay = await paystackInitialize(accessToken, order.id, callbackUrl);
       if (typeof window !== "undefined" && pay.authorization_url) {
         window.location.href = pay.authorization_url;

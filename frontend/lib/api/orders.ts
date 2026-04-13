@@ -1,4 +1,4 @@
-import { apiFetchJsonAuth } from "@/lib/api/client";
+import { apiFetchBlobAuth, apiFetchJsonAuth } from "@/lib/api/client";
 import { V1 } from "@/lib/api/v1-paths";
 
 export type OrderRow = {
@@ -12,12 +12,46 @@ export type OrderRow = {
   status: string;
   shipping_address?: string | null;
   shipping_provider?: string | null;
+  notes?: string | null;
   payment_status?: string;
   paystack_reference?: string | null;
   created_at: string;
   updated_at: string;
   preview_product_name?: string | null;
   preview_image_url?: string | null;
+  line_count?: number;
+};
+
+export type OrderLineItem = {
+  id: number;
+  order_id: number;
+  product_id: number;
+  quantity: number;
+  price_at_purchase: number;
+  created_at: string;
+  product_name?: string | null;
+  product_image_url?: string | null;
+};
+
+export type OrderInvoiceSummary = {
+  id: number;
+  order_id: number;
+  invoice_number: string;
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  payment_method?: string | null;
+  status: string;
+  issued_at: string;
+  due_at?: string | null;
+  paid_at?: string | null;
+  pdf_url?: string | null;
+};
+
+export type OrderDetail = OrderRow & {
+  items: OrderLineItem[];
+  invoice: OrderInvoiceSummary | null;
 };
 
 export type OrderCreateBody = {
@@ -40,6 +74,22 @@ export async function ordersCreate(accessToken: string, body: OrderCreateBody): 
   });
 }
 
-export async function ordersDetail(accessToken: string, orderId: number): Promise<Record<string, unknown>> {
-  return apiFetchJsonAuth<Record<string, unknown>>(accessToken, V1.orders.detail(orderId));
+export async function ordersDetail(accessToken: string, orderId: number): Promise<OrderDetail> {
+  return apiFetchJsonAuth<OrderDetail>(accessToken, V1.orders.detail(orderId));
+}
+
+export async function ordersInvoicePdfBlob(accessToken: string, orderId: number): Promise<Blob> {
+  return apiFetchBlobAuth(accessToken, V1.orders.invoicePdf(orderId));
+}
+
+export function downloadBlobAsFile(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

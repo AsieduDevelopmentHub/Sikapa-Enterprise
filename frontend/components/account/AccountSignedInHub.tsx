@@ -264,14 +264,14 @@ export function AccountSignedInHub() {
             <NavRow label="Close account" hint="Permanent" onClick={() => setPanel("danger")} />
           </div>
 
-          {u.is_admin && (
+          {accessToken && u.is_admin === true ? (
             <Link
               href="/admin"
               className="block rounded-[12px] bg-sikapa-text-primary px-5 py-4 text-center text-small font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
             >
               Admin dashboard
             </Link>
-          )}
+          ) : null}
 
           <button
             type="button"

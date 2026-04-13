@@ -1,0 +1,354 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { ScreenHeader } from "@/components/ScreenHeader";
+import { useAuth } from "@/context/AuthContext";
+import {
+  downloadBlobAsFile,
+  ordersDetail,
+  ordersInvoicePdfBlob,
+  type OrderDetail,
+} from "@/lib/api/orders";
+import { paystackVerify } from "@/lib/api/payments";
+import { GHANA_REGIONS } from "@/lib/ghana-shipping";
+import { resolveMediaUrl } from "@/lib/media-url";
+import { formatGhs } from "@/lib/mock-data";
+import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
+
+function regionLabel(slug: string | null | undefined): string | null {
+  if (!slug?.trim()) return null;
+  return GHANA_REGIONS.find((r) => r.slug === slug)?.label ?? slug;
+}
+
+function formatWhen(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function paymentLabel(s: string | undefined): string {
+  const t = (s ?? "pending").trim().toLowerCase();
+  if (!t) return "Pending";
+  return t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, " ");
+}
+
+type Props = { orderIdParam: string };
+
+export function OrderDetailPageClient({ orderIdParam }: Props) {
+  const searchParams = useSearchParams();
+  const paidRef = searchParams.get("reference") ?? searchParams.get("trxref");
+  const { user, accessToken, loading: authLoading } = useAuth();
+  const orderId = Number.parseInt(orderIdParam, 10);
+  const idValid = Number.isFinite(orderId) && orderId > 0;
+
+  const [detail, setDetail] = useState<OrderDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!accessToken || !idValid) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const d = await ordersDetail(accessToken, orderId);
+      setDetail(d);
+    } catch (e) {
+      setDetail(null);
+      setErr(e instanceof Error ? e.message : "Could not load order");
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, orderId, idValid]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || !accessToken || !idValid) return;
+    void load();
+  }, [authLoading, user, accessToken, idValid, load]);
+
+  useEffect(() => {
+    if (!paidRef || !accessToken || !idValid) return;
+    const doneKey = `sikapa-ps-verify-${paidRef}`;
+    if (typeof window !== "undefined" && sessionStorage.getItem(doneKey)) {
+      window.history.replaceState({}, "", `/orders/${orderId}`);
+      void load();
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const v = await paystackVerify(accessToken, paidRef);
+        if (cancelled) return;
+        if (typeof window !== "undefined") sessionStorage.setItem(doneKey, "1");
+        setVerifyMsg(
+          v.status === "success" || v.already_confirmed
+            ? "Payment confirmed. Your receipt is available below."
+            : `Payment status: ${v.status}`
+        );
+        await load();
+        if (typeof window !== "undefined") {
+          window.history.replaceState({}, "", `/orders/${orderId}`);
+        }
+      } catch (e) {
+        if (!cancelled) setVerifyMsg(e instanceof Error ? e.message : "Could not verify payment");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paidRef, accessToken, orderId, idValid, load]);
+
+  async function onDownloadPdf() {
+    if (!accessToken || !idValid) return;
+    setPdfBusy(true);
+    try {
+      const blob = await ordersInvoicePdfBlob(accessToken, orderId);
+      downloadBlobAsFile(blob, `invoice_order_${orderId}.pdf`);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not download invoice");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  if (authLoading) {
+    return (
+      <main className="min-h-[40vh] bg-sikapa-cream px-4 py-16 text-center text-small text-sikapa-text-secondary dark:bg-zinc-950 dark:text-zinc-400">
+        Loading…
+      </main>
+    );
+  }
+
+  if (!user || !accessToken) {
+    return (
+      <main className="bg-sikapa-cream dark:bg-zinc-950">
+        <ScreenHeader variant="inner" title="Order" left="back" backHref="/orders" right="profile" />
+        <div className="mx-auto max-w-mobile px-4 py-14 text-center">
+          <p className="text-body text-sikapa-text-secondary dark:text-zinc-400">Sign in to view this order.</p>
+          <Link href="/account" className="mt-4 inline-block font-semibold text-sikapa-gold hover:underline">
+            Account
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (!idValid) {
+    return (
+      <main className="bg-sikapa-cream dark:bg-zinc-950">
+        <ScreenHeader variant="inner" title="Order" left="back" backHref="/orders" right="profile" />
+        <p className="mx-auto max-w-mobile px-4 py-10 text-center text-small text-sikapa-text-secondary dark:text-zinc-400">
+          Invalid order link.
+        </p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="bg-sikapa-cream pb-10 dark:bg-zinc-950">
+      <ScreenHeader
+        variant="inner"
+        title={`Order #${orderId}`}
+        left="back"
+        backHref="/orders"
+        right="profile"
+      />
+
+      <div className="mx-auto max-w-mobile space-y-4 px-4 pt-2">
+        {verifyMsg && (
+          <p className="rounded-[10px] bg-emerald-50 px-3 py-2.5 text-small text-emerald-900 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-900/40">
+            {verifyMsg}
+          </p>
+        )}
+
+        {err && (
+          <p className="rounded-[10px] bg-red-50 px-3 py-2 text-small text-red-800 ring-1 ring-red-100 dark:bg-red-950/40 dark:text-red-100">
+            {err}
+          </p>
+        )}
+
+        {loading && !detail ? (
+          <p className="text-small text-sikapa-text-muted dark:text-zinc-500">Loading order…</p>
+        ) : null}
+
+        {detail ? (
+          <>
+            <section className="rounded-[12px] bg-white p-4 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 ${orderStatusPillClass(
+                    detail.status
+                  )}`}
+                >
+                  {orderStatusLabel(detail.status)}
+                </span>
+                <span className="rounded-full bg-sikapa-gray-soft px-2.5 py-1 text-[11px] font-semibold text-sikapa-text-secondary ring-1 ring-black/[0.06] dark:bg-zinc-800 dark:text-zinc-300 dark:ring-white/10">
+                  Payment: {paymentLabel(detail.payment_status)}
+                </span>
+              </div>
+              <p className="mt-3 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                Placed {formatWhen(detail.created_at)}
+              </p>
+              {detail.paystack_reference ? (
+                <p className="mt-1 font-mono text-[11px] text-sikapa-text-muted dark:text-zinc-500">
+                  Ref: {detail.paystack_reference}
+                </p>
+              ) : null}
+            </section>
+
+            <section className="rounded-[12px] bg-white p-4 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+              <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                Items
+              </h2>
+              <ul className="mt-3 divide-y divide-sikapa-gray-soft/80 dark:divide-white/10">
+                {detail.items.map((line) => {
+                  const img = resolveMediaUrl(line.product_image_url);
+                  const name = line.product_name?.trim() || `Product #${line.product_id}`;
+                  const lineTotal = line.price_at_purchase * line.quantity;
+                  return (
+                    <li key={line.id} className="flex gap-3 py-4 first:pt-0">
+                      <Link
+                        href={`/product/${line.product_id}`}
+                        className="relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800"
+                      >
+                        <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/product/${line.product_id}`}
+                          className="font-semibold leading-snug text-sikapa-text-primary hover:text-sikapa-gold dark:text-zinc-100"
+                        >
+                          {name}
+                        </Link>
+                        <p className="mt-1 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                          {formatGhs(line.price_at_purchase)} × {line.quantity}
+                        </p>
+                        <p className="mt-1 text-body font-semibold text-sikapa-gold">{formatGhs(lineTotal)}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="mt-2 space-y-1.5 border-t border-sikapa-gray-soft pt-3 text-body dark:border-white/10">
+                {typeof detail.subtotal_amount === "number" ? (
+                  <div className="flex justify-between text-sikapa-text-secondary dark:text-zinc-400">
+                    <span>Subtotal</span>
+                    <span className="text-sikapa-text-primary dark:text-zinc-100">
+                      {formatGhs(detail.subtotal_amount)}
+                    </span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between text-sikapa-text-secondary dark:text-zinc-400">
+                  <span>Delivery</span>
+                  <span className="text-sikapa-text-primary dark:text-zinc-100">
+                    {formatGhs(detail.delivery_fee ?? 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-sikapa-gray-soft pt-2 font-bold text-sikapa-text-primary dark:border-white/10 dark:text-zinc-100">
+                  <span>Total</span>
+                  <span>{formatGhs(detail.total_price)}</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-[12px] bg-white p-4 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+              <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                Shipping
+              </h2>
+              <dl className="mt-3 space-y-2 text-small">
+                <div>
+                  <dt className="text-sikapa-text-muted dark:text-zinc-500">Method</dt>
+                  <dd className="font-medium text-sikapa-text-primary dark:text-zinc-200">
+                    {detail.shipping_method === "delivery"
+                      ? "Delivery"
+                      : detail.shipping_method === "pickup"
+                        ? "Local pickup"
+                        : detail.shipping_method ?? "—"}
+                  </dd>
+                </div>
+                {regionLabel(detail.shipping_region) ? (
+                  <div>
+                    <dt className="text-sikapa-text-muted dark:text-zinc-500">Region</dt>
+                    <dd className="font-medium text-sikapa-text-primary dark:text-zinc-200">
+                      {regionLabel(detail.shipping_region)}
+                    </dd>
+                  </div>
+                ) : null}
+                {detail.shipping_provider ? (
+                  <div>
+                    <dt className="text-sikapa-text-muted dark:text-zinc-500">Courier / service</dt>
+                    <dd className="font-medium text-sikapa-text-primary dark:text-zinc-200">
+                      {detail.shipping_provider}
+                    </dd>
+                  </div>
+                ) : null}
+                {detail.shipping_address ? (
+                  <div>
+                    <dt className="text-sikapa-text-muted dark:text-zinc-500">Address</dt>
+                    <dd className="whitespace-pre-wrap font-medium text-sikapa-text-primary dark:text-zinc-200">
+                      {detail.shipping_address}
+                    </dd>
+                  </div>
+                ) : null}
+                {detail.notes ? (
+                  <div>
+                    <dt className="text-sikapa-text-muted dark:text-zinc-500">Notes</dt>
+                    <dd className="whitespace-pre-wrap text-sikapa-text-secondary dark:text-zinc-300">{detail.notes}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
+
+            {detail.invoice ? (
+              <section className="rounded-[12px] bg-white p-4 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+                <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                  Invoice
+                </h2>
+                <p className="mt-2 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                  {detail.invoice.invoice_number}
+                </p>
+                <p className="mt-1 text-[11px] text-sikapa-text-muted dark:text-zinc-500">
+                  Issued {formatWhen(detail.invoice.issued_at)} · {paymentLabel(detail.invoice.status)}
+                </p>
+                <button
+                  type="button"
+                  disabled={pdfBusy}
+                  className="sikapa-tap mt-4 w-full rounded-[10px] border border-sikapa-gold py-3 text-small font-semibold text-sikapa-gold disabled:opacity-50"
+                  onClick={() => void onDownloadPdf()}
+                >
+                  {pdfBusy ? "Preparing PDF…" : "Download invoice (PDF)"}
+                </button>
+              </section>
+            ) : (
+              <section className="rounded-[12px] bg-white p-4 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+                <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                  Invoice
+                </h2>
+                <p className="mt-2 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                  Invoice record is not available for this order yet.
+                </p>
+              </section>
+            )}
+
+            <Link
+              href="/shop"
+              className="block rounded-[10px] bg-sikapa-text-primary py-3 text-center text-small font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              Continue shopping
+            </Link>
+          </>
+        ) : null}
+      </div>
+    </main>
+  );
+}

@@ -135,43 +135,50 @@ export function OrdersPageClient() {
           ) : null}
         </div>
       ) : (
-        <ul className="mx-auto max-w-mobile space-y-4 px-4 pb-6">
+        <ul className="mx-auto max-w-mobile space-y-3 px-4 pb-6">
           {filtered.map((order) => {
-            const name = order.preview_product_name?.trim() || `Order #${order.id}`;
+            const name = order.preview_product_name?.trim() || "Order summary";
             const img = resolveMediaUrl(order.preview_image_url);
+            const nLines = order.line_count ?? 0;
+            const pay = (order.payment_status ?? "pending").toLowerCase();
             return (
-              <li
-                key={order.id}
-                className="overflow-hidden rounded-[10px] bg-white p-4 shadow-[0_2px_14px_rgba(59,42,37,0.06)] ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10"
-              >
-                <div className="mb-3 flex items-start justify-between gap-2">
-                  <span className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
-                    Order #{order.id}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 ${orderStatusPillClass(
-                      order.status
-                    )}`}
-                  >
-                    {orderStatusLabel(order.status)}
-                  </span>
-                </div>
-                <div className="flex gap-3">
-                  <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800">
-                    <Image src={img} alt="" fill className="object-cover" sizes="88px" />
+              <li key={order.id}>
+                <Link
+                  href={`/orders/${order.id}`}
+                  className="sikapa-tap block overflow-hidden rounded-[10px] bg-white p-4 shadow-[0_2px_14px_rgba(59,42,37,0.06)] ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                      Order #{order.id}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 ${orderStatusPillClass(
+                        order.status
+                      )}`}
+                    >
+                      {orderStatusLabel(order.status)}
+                    </span>
                   </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <p className="font-semibold leading-snug text-sikapa-text-primary dark:text-zinc-100">{name}</p>
-                    <p className="text-small text-sikapa-text-secondary dark:text-zinc-400">{formatOrderDate(order.created_at)}</p>
-                    <p className="text-body font-semibold text-sikapa-gold">{formatGhs(order.total_price)}</p>
-                    {order.shipping_method ? (
-                      <p className="text-[11px] text-sikapa-text-muted dark:text-zinc-500">
-                        {order.shipping_method === "pickup" ? "Pickup" : "Delivery"}
-                        {order.shipping_provider ? ` · ${order.shipping_provider}` : ""}
+                  <div className="mt-3 flex gap-3">
+                    <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800">
+                      <Image src={img} alt="" fill className="object-cover" sizes="72px" />
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-sikapa-text-muted dark:text-zinc-500">
+                        Summary
                       </p>
-                    ) : null}
+                      <p className="line-clamp-2 text-small font-medium leading-snug text-sikapa-text-primary dark:text-zinc-100">
+                        {name}
+                        {nLines > 1 ? ` +${nLines - 1} more` : ""}
+                      </p>
+                      <p className="text-small text-sikapa-text-secondary dark:text-zinc-400">
+                        {formatOrderDate(order.created_at)} · Payment: {pay}
+                      </p>
+                      <p className="text-body font-semibold text-sikapa-gold">{formatGhs(order.total_price)}</p>
+                      <p className="text-[11px] font-semibold text-sikapa-gold">View order details →</p>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </li>
             );
           })}
