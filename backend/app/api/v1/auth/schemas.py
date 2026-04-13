@@ -65,6 +65,7 @@ class UserProfileUpdate(BaseModel):
     username: Optional[str] = None
     name: Optional[str] = None
     phone: Optional[str] = None
+    email: Optional[EmailStr] = None
     shipping_region: Optional[str] = None
     shipping_city: Optional[str] = None
     shipping_address_line1: Optional[str] = None
@@ -88,6 +89,14 @@ class UserProfileUpdate(BaseModel):
     @classmethod
     def _strip_phone(cls, v):
         return sanitize_phone(v)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _strip_email_profile(cls, v):
+        if v is None:
+            return None
+        txt = sanitize_plain_text(str(v).strip(), max_length=255, single_line=True)
+        return txt.lower() if txt else None
 
     @field_validator(
         "shipping_region",

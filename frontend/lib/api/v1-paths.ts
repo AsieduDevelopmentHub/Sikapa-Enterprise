@@ -8,6 +8,7 @@ export const V1 = {
     profile: "/auth/profile",
     profilePut: "/auth/profile",
     verifyEmail: "/auth/verify-email",
+    resendEmailVerification: "/auth/resend-email-verification",
     passwordResetRequest: "/auth/password-reset/request",
     passwordResetConfirm: "/auth/password-reset/confirm",
     passwordChange: "/auth/password/change",

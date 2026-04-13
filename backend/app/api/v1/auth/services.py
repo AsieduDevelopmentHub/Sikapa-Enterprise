@@ -98,7 +98,7 @@ def register_user(
         hashed_password=get_password_hash(password),
         first_name=name,
         last_name=None,
-        email_verified=bool(email),
+        email_verified=False,
     )
     session.add(user)
     session.commit()
@@ -325,30 +325,69 @@ def reset_password(session: Session, token: str, new_password: str) -> User:
 
 
 # ============ User Profile ============
-def update_user_profile(
-    session: Session,
-    user_id: int,
-    username: str = None,
-    name: str = None,
-    phone: str = None,
-    shipping_region: str = None,
-    shipping_city: str = None,
-    shipping_address_line1: str = None,
-    shipping_address_line2: str = None,
-    shipping_landmark: str = None,
-    shipping_contact_name: str = None,
-    shipping_contact_phone: str = None,
-) -> User:
-    """Update user profile information."""
+def _invalidate_email_verification_otps(session: Session, user_id: int) -> None:
+    for otp in session.exec(
+        select(OTPCode).where(
+            OTPCode.user_id == user_id,
+            OTPCode.purpose == "email_verification",
+            OTPCode.used == False,  # noqa: E712
+        )
+    ).all():
+        otp.used = True
+        session.add(otp)
+
+
+def _issue_email_verification_otp(session: Session, user: User) -> None:
+    """Create a new email verification OTP and send mail. User row must already include the target email."""
+    if not user.email:
+        return
+    apply_postgres_session_user(session, user.id)
+    _invalidate_email_verification_otps(session, user.id)
+    otp_code = generate_otp_code()
+    otp = OTPCode(
+        user_id=user.id,
+        code=otp_code,
+        purpose="email_verification",
+        expires_at=datetime.utcnow() + timedelta(hours=24),
+    )
+    session.add(otp)
+    session.commit()
+    email_sent = email_service.send_email_verification(user.email, otp_code, user.name)
+    if not email_sent:
+        print(f"⚠️  Warning: Failed to send verification email to {user.email}")
+
+
+def resend_email_verification(session: Session, user_id: int) -> None:
+    """Resend verification code for the email currently on file (must be unverified)."""
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not user.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Add an email to your profile first",
+        )
+    if user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already verified",
+        )
+    apply_postgres_session_user(session, user.id)
+    _issue_email_verification_otp(session, user)
+
+
+def update_user_profile(session: Session, user_id: int, patch: dict) -> User:
+    """Apply partial profile updates. Only keys present in `patch` are updated."""
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="User not found",
         )
+    old_email_norm = (user.email or "").strip().lower()
 
-    if username is not None:
-        uname = _normalize_username(username)
+    if "username" in patch and patch["username"] is not None:
+        uname = _normalize_username(patch["username"])
         if not _USERNAME_RE.fullmatch(uname):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -361,32 +400,59 @@ def update_user_profile(
                 detail="Username already taken",
             )
         user.username = uname
-    if name is not None:
-        user.name = name
-        # Keep legacy field available while transitioning older clients.
-        user.first_name = name
+
+    if "name" in patch and patch["name"] is not None:
+        user.name = patch["name"]
+        user.first_name = patch["name"]
         user.last_name = None
-    if phone is not None:
-        user.phone = phone
-    if shipping_region is not None:
-        user.shipping_region = shipping_region
-    if shipping_city is not None:
-        user.shipping_city = shipping_city
-    if shipping_address_line1 is not None:
-        user.shipping_address_line1 = shipping_address_line1
-    if shipping_address_line2 is not None:
-        user.shipping_address_line2 = shipping_address_line2
-    if shipping_landmark is not None:
-        user.shipping_landmark = shipping_landmark
-    if shipping_contact_name is not None:
-        user.shipping_contact_name = shipping_contact_name
-    if shipping_contact_phone is not None:
-        user.shipping_contact_phone = shipping_contact_phone
+
+    if "phone" in patch:
+        user.phone = patch["phone"]
+
+    if "email" in patch:
+        new_email = patch["email"]
+        old_norm = (user.email or "").strip().lower()
+        if new_email is None:
+            user.email = None
+            user.email_verified = False
+        else:
+            ne = new_email.strip().lower()
+            if ne == old_norm:
+                pass
+            else:
+                taken = session.exec(select(User).where(User.email == ne)).first()
+                if taken and taken.id != user_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Email already registered",
+                    )
+                user.email = ne
+                user.email_verified = False
+
+    if "shipping_region" in patch:
+        user.shipping_region = patch["shipping_region"]
+    if "shipping_city" in patch:
+        user.shipping_city = patch["shipping_city"]
+    if "shipping_address_line1" in patch:
+        user.shipping_address_line1 = patch["shipping_address_line1"]
+    if "shipping_address_line2" in patch:
+        user.shipping_address_line2 = patch["shipping_address_line2"]
+    if "shipping_landmark" in patch:
+        user.shipping_landmark = patch["shipping_landmark"]
+    if "shipping_contact_name" in patch:
+        user.shipping_contact_name = patch["shipping_contact_name"]
+    if "shipping_contact_phone" in patch:
+        user.shipping_contact_phone = patch["shipping_contact_phone"]
 
     user.updated_at = datetime.utcnow()
     session.add(user)
     session.commit()
     session.refresh(user)
+
+    if "email" in patch and patch["email"]:
+        new_norm = str(patch["email"]).strip().lower()
+        if new_norm and new_norm != old_email_norm:
+            _issue_email_verification_otp(session, user)
 
     return user
 
