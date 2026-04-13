@@ -7,12 +7,11 @@ from urllib.parse import quote
 import resend
 from dotenv import load_dotenv
 
+from app.core import email_templates as T
 from app.core.placeholder_email import is_undeliverable_placeholder_email
 
-# Load environment variables
 load_dotenv()
 
-# Development email settings
 resend_api_key = os.getenv("RESEND_API_KEY")
 email_enabled = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
 default_from_email = os.getenv("DEFAULT_FROM_EMAIL", "Sikapa Enterprise <no-reply@localhost>")
@@ -35,20 +34,8 @@ class EmailService:
         to_email: str,
         subject: str,
         html_content: str,
-        from_email: str | None = None
+        from_email: str | None = None,
     ) -> Optional[str]:
-        """
-        Send an email using Resend API.
-
-        Args:
-            to_email: Recipient email address
-            subject: Email subject
-            html_content: HTML content of the email
-            from_email: Sender email address (default: Sikapa noreply)
-
-        Returns:
-            Message ID if successful, None if failed
-        """
         if from_email is None:
             from_email = default_from_email
 
@@ -74,209 +61,239 @@ class EmailService:
             return None
 
     @staticmethod
-    def send_welcome_email(email: str, first_name: str = None) -> bool:
-        """Send welcome email to new user."""
+    def send_welcome_email(email: str, first_name: str | None = None) -> bool:
         name = first_name or "there"
-        subject = "Welcome to Sikapa Enterprise!"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Welcome to Sikapa Enterprise, {name}!</h1>
-            <p>Thank you for joining our platform. Your account has been created successfully.</p>
-            <p>Please verify your email address to access all features.</p>
-            <p>If you have any questions, feel free to contact our support team.</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        subject = "Welcome to Sikapa Enterprise"
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph(
+                "Thank you for joining us. Your account is ready—verify your email when "
+                "prompted to unlock the full experience."
+            )
+            + T.muted_paragraph(
+                "If you have questions, reply to this message or reach out through the store."
+            )
+        )
+        html_content = T.wrap_email(
+            title="Welcome",
+            preheader="Your Sikapa account is ready.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_email_verification(email: str, otp_code: str, first_name: str = None) -> bool:
-        """Send email verification OTP code."""
+    def send_email_verification(email: str, otp_code: str, first_name: str | None = None) -> bool:
         name = first_name or "there"
-        subject = "Verify Your Email - Sikapa Enterprise"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Verify Your Email Address</h1>
-            <p>Hello {name},</p>
-            <p>Please use the following verification code to complete your email verification:</p>
-            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px;">
-                <h2 style="color: #333; margin: 0; font-size: 24px; letter-spacing: 3px;">{otp_code}</h2>
-            </div>
-            <p>This code will expire in 24 hours.</p>
-            <p>If you didn't request this verification, please ignore this email.</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        subject = "Verify your email — Sikapa"
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph("Use this code to verify your email address:")
+            + T.otp_box(otp_code)
+            + T.muted_paragraph("This code expires in 24 hours. If you did not request it, you can ignore this email.")
+        )
+        html_content = T.wrap_email(
+            title="Verify your email",
+            preheader=f"Your code: {otp_code}",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_password_reset(email: str, reset_token: str, first_name: str = None) -> bool:
-        """Send password reset email with reset link."""
+    def send_password_reset(email: str, reset_token: str, first_name: str | None = None) -> bool:
         name = first_name or "there"
-        base = (frontend_url or "").rstrip("/")
-        reset_url = f"{base}/reset-password/{quote(reset_token, safe='')}"
-
-        subject = "Reset Your Password - Sikapa Enterprise"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Reset Your Password</h1>
-            <p>Hello {name},</p>
-            <p>You have requested to reset your password. Click the button below to reset it:</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{reset_url}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
-            </div>
-            <p>If the button doesn't work, copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #666;">{reset_url}</p>
-            <p>This link will expire in 1 hour for security reasons.</p>
-            <p>If you didn't request this reset, please ignore this email.</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        reset_url = T.reset_password_url(reset_token)
+        subject = "Reset your password — Sikapa"
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph("We received a request to reset your password. Choose a new one using the button below.")
+            + T.primary_button(reset_url, "Reset password")
+            + T.link_fallback(reset_url)
+            + T.muted_paragraph("This link expires in one hour. If you did not ask for a reset, you can ignore this email.")
+        )
+        html_content = T.wrap_email(
+            title="Reset your password",
+            preheader="Secure your Sikapa account with a new password.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_2fa_enabled(email: str, first_name: str = None) -> bool:
-        """Send notification when 2FA is enabled."""
+    def send_2fa_enabled(email: str, first_name: str | None = None) -> bool:
         name = first_name or "there"
-        subject = "Two-Factor Authentication Enabled - Sikapa Enterprise"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">2FA Enabled Successfully</h1>
-            <p>Hello {name},</p>
-            <p>Two-factor authentication has been successfully enabled on your account.</p>
-            <p>Your account is now more secure. You'll need both your password and an authenticator code to log in.</p>
-            <p>Make sure to save your backup codes in a safe place in case you lose access to your authenticator app.</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        subject = "Two-factor authentication enabled — Sikapa"
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph(
+                "Two-factor authentication is now on for your account. You will need your password "
+                "and your authenticator code to sign in."
+            )
+            + T.muted_paragraph("Store your backup codes somewhere safe in case you lose your device.")
+        )
+        html_content = T.wrap_email(
+            title="2FA is on",
+            preheader="Your Sikapa account is more secure.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_account_deletion(email: str, first_name: str = None) -> bool:
-        """Send confirmation when account is deleted."""
+    def send_account_deletion(email: str, first_name: str | None = None) -> bool:
         name = first_name or "there"
-        subject = "Account Deleted - Sikapa Enterprise"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Account Deleted</h1>
-            <p>Hello {name},</p>
-            <p>Your Sikapa Enterprise account has been successfully deleted.</p>
-            <p>All your data has been removed from our systems in accordance with our privacy policy.</p>
-            <p>If you change your mind, you can always create a new account.</p>
-            <br>
-            <p>Thank you for using Sikapa Enterprise.</p>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        subject = "Account deleted — Sikapa"
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph("Your Sikapa Enterprise account has been deleted as requested.")
+            + T.muted_paragraph("Personal data is removed according to our privacy policy. You are welcome back anytime.")
+        )
+        html_content = T.wrap_email(
+            title="Account deleted",
+            preheader="Your Sikapa account has been removed.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
     def send_subscription_confirmation(email: str, verification_token: str) -> bool:
-        """Send newsletter subscription confirmation email."""
-        verify_url = f"{frontend_url}/api/v1/subscriptions/verify/{verification_token}"
-        subject = "Confirm Your Newsletter Subscription - Sikapa Enterprise"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Confirm Your Subscription</h1>
-            <p>Thank you for subscribing to our newsletter!</p>
-            <p>Click the button below to confirm your subscription:</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{verify_url}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Confirm Subscription</a>
-            </div>
-            <p>If the button doesn't work, copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #666;">{verify_url}</p>
-            <p>You'll start receiving our latest updates and offers once you confirm.</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        base = (frontend_url or "").rstrip("/")
+        verify_url = f"{base}/api/v1/subscriptions/verify/{quote(verification_token, safe='')}"
+        subject = "Confirm your newsletter — Sikapa"
+        inner = (
+            T.paragraph("Thanks for subscribing. Confirm your email to start receiving updates.")
+            + T.primary_button(verify_url, "Confirm subscription")
+            + T.link_fallback(verify_url)
+        )
+        html_content = T.wrap_email(
+            title="Confirm subscription",
+            preheader="One click to join the Sikapa list.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_account_deactivated(email: str, first_name: str = None) -> bool:
-        """Send notification when account is deactivated by admin."""
+    def send_account_deactivated(email: str, first_name: str | None = None) -> bool:
         name = first_name or "there"
-        subject = "Account Deactivated - Sikapa Enterprise"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Account Deactivated</h1>
-            <p>Hello {name},</p>
-            <p>Your Sikapa Enterprise account has been deactivated by our admin team.</p>
-            <p>If you believe this is a mistake or would like to appeal, please contact our support team.</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        subject = "Account deactivated — Sikapa"
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph("Your account has been deactivated by an administrator.")
+            + T.muted_paragraph("If you believe this is a mistake, contact support.")
+        )
+        html_content = T.wrap_email(
+            title="Account deactivated",
+            preheader="Your Sikapa access is paused.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_account_reactivated(email: str, first_name: str = None) -> bool:
-        """Send notification when account is reactivated by admin."""
+    def send_account_reactivated(email: str, first_name: str | None = None) -> bool:
         name = first_name or "there"
-        subject = "Account Reactivated - Sikapa Enterprise"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Account Reactivated</h1>
-            <p>Hello {name},</p>
-            <p>Good news! Your Sikapa Enterprise account has been reactivated.</p>
-            <p>You can now log in and access all features again.</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        subject = "Account reactivated — Sikapa"
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph("Good news—your account is active again. You can sign in and shop as usual.")
+        )
+        html_content = T.wrap_email(
+            title="Welcome back",
+            preheader="Your Sikapa account is active again.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_order_confirmation(email: str, order_id: int, order_total: float, first_name: str = None) -> bool:
-        """Send order confirmation email."""
+    def send_order_confirmation(
+        email: str,
+        order_id: int,
+        order_total: float,
+        first_name: str | None = None,
+        *,
+        currency: str = "GHS",
+        line_items: list[dict] | None = None,
+    ) -> bool:
         name = first_name or "Customer"
-        subject = f"Order Confirmation #{order_id} - Sikapa Enterprise"
-        order_url = f"{frontend_url}/orders/{order_id}"
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Order Confirmed!</h1>
-            <p>Hello {name},</p>
-            <p>Thank you for your order! We've received it and will process it shortly.</p>
-            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px;">
-                <h2 style="color: #333; margin: 0;">Order #{order_id}</h2>
-                <p style="color: #666; margin: 10px 0;">Total: ${order_total:.2f}</p>
-            </div>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{order_url}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">View Order</a>
-            </div>
-            <p>We'll notify you as soon as your order ships!</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        cur = (currency or "GHS").strip().upper()
+        base = (frontend_url or "").rstrip("/")
+        order_url = f"{base}/orders/{order_id}"
+        n_items = len(line_items or [])
+        summary_bit = f"{n_items} item{'s' if n_items != 1 else ''}" if n_items else "your purchase"
+        subject = f"Order confirmed — {summary_bit} · Sikapa"
+
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph("Thank you. Payment is confirmed and we are preparing your order.")
+        )
+        if line_items:
+            inner += T.order_lines_table(line_items, cur)
+        inner += T.order_total_bar(float(order_total), cur)
+        inner += (
+            T.muted_paragraph(f"Reference: order #{order_id}")
+            + T.primary_button(order_url, "View order")
+            + T.link_fallback(order_url)
+            + T.muted_paragraph("We will notify you when your order ships.")
+        )
+        html_content = T.wrap_email(
+            title="Your order is confirmed",
+            preheader=f"Thank you — {cur} {order_total:,.2f} total.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_order_shipped(email: str, order_id: int, tracking_number: str = None, first_name: str = None) -> bool:
-        """Send order shipped notification."""
+    def send_order_shipped(
+        email: str,
+        order_id: int,
+        tracking_number: str | None = None,
+        first_name: str | None = None,
+        *,
+        shipping_provider: str | None = None,
+        estimated_delivery: str | None = None,
+        line_items: list[dict] | None = None,
+        currency: str = "GHS",
+    ) -> bool:
         name = first_name or "Customer"
-        subject = f"Your Order #{order_id} Has Been Shipped!"
-        tracking_info = f"<p>Tracking Number: <strong>{tracking_number}</strong></p>" if tracking_number else ""
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Order Shipped!</h1>
-            <p>Hello {name},</p>
-            <p>Great news! Your order has been shipped.</p>
-            <div style="background-color: #f4f4f4; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                <h2 style="color: #333; margin: 0;">Order #{order_id}</h2>
-                {tracking_info}
-            </div>
-            <p>You can track your shipment using the tracking number above.</p>
-            <br>
-            <p>Best regards,<br>The Sikapa Team</p>
-        </div>
-        """
+        cur = (currency or "GHS").strip().upper()
+        base = (frontend_url or "").rstrip("/")
+        order_url = f"{base}/orders/{order_id}"
+        subject = "Your order has shipped — Sikapa"
+
+        inner = T.greeting_line(name) + T.paragraph("Your order is on its way.")
+        if line_items:
+            inner += T.order_lines_table(line_items, cur)
+        if shipping_provider:
+            inner += T.muted_paragraph(f"Carrier: {shipping_provider}")
+        if tracking_number:
+            inner += T.muted_paragraph(f"Tracking: {tracking_number}")
+        if estimated_delivery:
+            inner += T.muted_paragraph(f"Estimated delivery: {estimated_delivery}")
+        inner += T.primary_button(order_url, "View order") + T.link_fallback(order_url)
+        html_content = T.wrap_email(
+            title="Shipped",
+            preheader="Your Sikapa parcel is on the move.",
+            inner_html=inner,
+        )
+        return EmailService.send_email(email, subject, html_content) is not None
+
+    @staticmethod
+    def send_order_cancelled(
+        email: str,
+        order_id: int,
+        first_name: str | None = None,
+        reason: str | None = None,
+    ) -> bool:
+        name = first_name or "Customer"
+        subject = f"Order #{order_id} cancelled — Sikapa"
+        r = (reason or "No reason provided").strip()
+        inner = (
+            T.greeting_line(name)
+            + T.paragraph(f"Order #{order_id} has been cancelled.")
+            + T.muted_paragraph(f"Reason: {r}")
+        )
+        html_content = T.wrap_email(
+            title="Order cancelled",
+            preheader=f"Order #{order_id} was cancelled.",
+            inner_html=inner,
+        )
         return EmailService.send_email(email, subject, html_content) is not None
 
 
-# Global email service instance
 email_service = EmailService()

@@ -26,10 +26,16 @@ logger = logging.getLogger(__name__)
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 THUMB_MAX = 0.52 * inch
-BRAND_PRIMARY = colors.HexColor("#0f172a")
-BRAND_ACCENT = colors.HexColor("#2563eb")
-TEXT_MUTED = colors.HexColor("#64748b")
-TEXT_BODY = colors.HexColor("#334155")
+# Sikapa luxury palette (warm ink, antique gold, cream accents)
+BRAND_PRIMARY = colors.HexColor("#2c1810")
+BRAND_ACCENT = colors.HexColor("#c9a962")
+BRAND_DEEP = colors.HexColor("#5c1528")
+TEXT_MUTED = colors.HexColor("#7a6a62")
+TEXT_BODY = colors.HexColor("#3d342f")
+PANEL_CREAM = colors.HexColor("#faf7f2")
+GRID_LINE = colors.HexColor("#e5ddd3")
+HEADER_TEXT_MUTED = colors.HexColor("#d4c4b0")
+LOGO_MAX_W = 1.15 * inch
 
 
 def _fmt_money(amount: float, currency_code: str) -> str:
@@ -95,6 +101,27 @@ def _thumbnail_flowable(image_url: Optional[str]) -> Paragraph | Image:
         return Paragraph("—", ph)
 
 
+def _header_logo_flowable() -> Image | None:
+    """Optional brand mark from EMAIL_LOGO_URL (HTTPS or local file supported)."""
+    url = os.getenv("EMAIL_LOGO_URL", "").strip()
+    if not url:
+        return None
+    data = _load_product_image_bytes(url)
+    if not data:
+        return None
+    try:
+        ir = ImageReader(io.BytesIO(data))
+        iw, ih = ir.getSize()
+        if iw <= 0 or ih <= 0:
+            return None
+        scale = min(LOGO_MAX_W / iw, 0.45 * inch / ih)
+        w, h = iw * scale, ih * scale
+        return Image(ImageReader(io.BytesIO(data)), width=w, height=h, mask="auto")
+    except Exception as exc:
+        logger.warning("Invoice header logo failed: %s", exc)
+        return None
+
+
 class InvoiceService:
     """Generate Sikapa Enterprise PDF invoices."""
 
@@ -140,7 +167,7 @@ class InvoiceService:
             "BrandSub",
             parent=styles["Normal"],
             fontSize=9,
-            textColor=colors.HexColor("#94a3b8"),
+            textColor=HEADER_TEXT_MUTED,
             leading=12,
         )
         h_section = ParagraphStyle(
@@ -181,17 +208,34 @@ class InvoiceService:
         issued = invoice.issued_at.strftime("%Y-%m-%d") if invoice.issued_at else "—"
         left_block = (
             f"<b><font size='20' color='white'>{escape(company_name)}</font></b><br/>"
-            f"<font size='9' color='#94a3b8'>Official tax invoice · {escape(issued)}</font>"
+            f"<font size='9' color='#d4c4b0'>Official tax invoice · {escape(issued)}</font>"
         )
         right_block = (
             f"<para alignment='right'>"
             f"<font size='22' color='white'>INVOICE</font><br/>"
-            f"<font size='9' color='#94a3b8'>{escape(invoice.invoice_number)}</font><br/>"
-            f"<font size='9' color='#94a3b8'>Order ORD-{order.id}</font>"
+            f"<font size='9' color='#d4c4b0'>{escape(invoice.invoice_number)}</font><br/>"
+            f"<font size='9' color='#d4c4b0'>Order ORD-{order.id}</font>"
             f"</para>"
         )
+        logo = _header_logo_flowable()
+        left_stack_rows: list[list] = []
+        if logo is not None:
+            left_stack_rows.append([logo])
+        left_stack_rows.append([Paragraph(left_block, brand_sub)])
+        left_cell = Table(left_stack_rows, colWidths=[4.15 * inch])
+        left_cell.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (0, 0), 8 if logo is not None else 0),
+                ]
+            )
+        )
         header_tbl = Table(
-            [[Paragraph(left_block, brand_sub), Paragraph(right_block, brand_sub)]],
+            [[left_cell, Paragraph(right_block, brand_sub)]],
             colWidths=[4.15 * inch, 3.35 * inch],
         )
         header_tbl.setStyle(
@@ -203,7 +247,7 @@ class InvoiceService:
                     ("RIGHTPADDING", (0, 0), (-1, -1), 16),
                     ("TOPPADDING", (0, 0), (-1, -1), 20),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 20),
-                    ("LINEABOVE", (0, 0), (-1, 0), 3, BRAND_ACCENT),
+                    ("LINEABOVE", (0, 0), (-1, 0), 2, BRAND_ACCENT),
                 ]
             )
         )
@@ -240,7 +284,7 @@ class InvoiceService:
                     ("TEXTCOLOR", (3, 0), (3, -1), TEXT_BODY),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                     ("TOPPADDING", (0, 0), (-1, -1), 2),
-                    ("LINEBELOW", (0, -1), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                    ("LINEBELOW", (0, -1), (-1, -1), 0.5, GRID_LINE),
                 ]
             )
         )
@@ -249,10 +293,9 @@ class InvoiceService:
 
         # --- Bill to / Ship to ---
         elements.append(Paragraph("Bill to", h_section))
-        name = escape(
-            f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip()
-            or (user.email or "Customer")
-        )
+        fn_ln = f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip()
+        display_name = fn_ln or (user.name or "").strip() or (user.email or "Customer")
+        name = escape(display_name)
         bill_lines = f"<b>{name}</b><br/>{escape(user.email or '')}"
         if user.phone:
             bill_lines += f"<br/>{escape(user.phone)}"
@@ -291,7 +334,7 @@ class InvoiceService:
                 desc_short = prod.description.strip()
                 if len(desc_short) > 120:
                     desc_short = desc_short[:117] + "…"
-                desc_bits += f"<br/><font size='8' color='#64748b'>{escape(desc_short)}</font>"
+                desc_bits += f"<br/><font size='8' color='#7a6a62'>{escape(desc_short)}</font>"
             desc = Paragraph(desc_bits, product_title)
             line_total = float(item.quantity * item.price_at_purchase)
             rows.append(
@@ -315,7 +358,7 @@ class InvoiceService:
         items_tbl.setStyle(
             TableStyle(
                 [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f1f5f9")),
+                    ("BACKGROUND", (0, 0), (-1, 0), PANEL_CREAM),
                     ("TEXTCOLOR", (0, 0), (-1, 0), BRAND_PRIMARY),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, 0), 9),
@@ -329,8 +372,8 @@ class InvoiceService:
                     ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                     ("TOPPADDING", (0, 1), (-1, -1), 8),
                     ("BOTTOMPADDING", (0, 1), (-1, -1), 8),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
+                    ("GRID", (0, 0), (-1, -1), 0.5, GRID_LINE),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, PANEL_CREAM]),
                 ]
             )
         )
@@ -357,7 +400,7 @@ class InvoiceService:
                     ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, -2), 10),
                     ("FONTSIZE", (0, -1), (-1, -1), 12),
-                    ("TEXTCOLOR", (0, -1), (-1, -1), BRAND_PRIMARY),
+                    ("TEXTCOLOR", (0, -1), (-1, -1), BRAND_DEEP),
                     ("LINEABOVE", (0, -1), (-1, -1), 1, BRAND_ACCENT),
                     ("TOPPADDING", (0, 0), (-1, -1), 6),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
@@ -384,7 +427,7 @@ class InvoiceService:
         elements.append(Spacer(1, 0.35 * inch))
         year = datetime.utcnow().year
         footer_txt = (
-            f"<para alignment='center'><font size='8' color='#94a3b8'>"
+            f"<para alignment='center'><font size='8' color='#7a6a62'>"
             f"Thank you for shopping with {escape(company_name)}.<br/>"
             f"This document was generated electronically and is valid without signature.<br/>"
             f"© {year} {escape(company_name)} · Invoice {escape(invoice.invoice_number)}"
