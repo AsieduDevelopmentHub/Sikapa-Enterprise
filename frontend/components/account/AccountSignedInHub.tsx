@@ -8,6 +8,7 @@ import { useTheme } from "@/context/ThemeContext";
 import {
   authChangePassword,
   authDeleteAccount,
+  authResendEmailVerification,
   authUpdateProfile,
   authVerifyEmail,
 } from "@/lib/api/auth";
@@ -52,7 +53,7 @@ function NavRow({
       <span>
         <span className="block text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">{label}</span>
         {hint ? (
-          <span className="mt-0.5 block text-[11px] text-sikapa-text-muted dark:text-zinc-500">{hint}</span>
+          <span className="mt-0.5 block text-small text-sikapa-text-muted dark:text-zinc-500">{hint}</span>
         ) : null}
       </span>
       <span className="text-sikapa-text-muted dark:text-zinc-500" aria-hidden>
@@ -70,6 +71,7 @@ export function AccountSignedInHub() {
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [profileBusy, setProfileBusy] = useState(false);
   const [shipRegion, setShipRegion] = useState("");
@@ -83,11 +85,13 @@ export function AccountSignedInHub() {
 
   const [curPw, setCurPw] = useState("");
   const [newPw, setNewPw] = useState("");
+  const [newPwConfirm, setNewPwConfirm] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
 
   const [inboxEmail, setInboxEmail] = useState("");
   const [inboxCode, setInboxCode] = useState("");
   const [inboxBusy, setInboxBusy] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
 
   const [newsEmail, setNewsEmail] = useState("");
   const [newsBusy, setNewsBusy] = useState(false);
@@ -104,6 +108,7 @@ export function AccountSignedInHub() {
   useEffect(() => {
     setName(u.name ?? "");
     setUsername(u.username ?? "");
+    setProfileEmail(u.email ?? "");
     setPhone(u.phone ?? "");
     setShipRegion(u.shipping_region ?? "");
     setShipCity(u.shipping_city ?? "");
@@ -142,12 +147,21 @@ export function AccountSignedInHub() {
       setBanner({ type: "err", text: phoneErr });
       return;
     }
+    const em = profileEmail.trim();
+    if (em) {
+      const emailErr = validateEmail(em);
+      if (emailErr) {
+        setBanner({ type: "err", text: emailErr });
+        return;
+      }
+    }
     setProfileBusy(true);
     try {
       await authUpdateProfile(token, {
         name: sanitizePlainText(name, 120) || null,
         username: sanitizePlainText(username, 50)?.toLowerCase() || null,
         phone: phone.trim() || null,
+        email: em || null,
       });
       await refreshProfile();
       setBanner({ type: "ok", text: "Profile updated." });
@@ -166,11 +180,16 @@ export function AccountSignedInHub() {
       setBanner({ type: "err", text: err });
       return;
     }
+    if (newPw !== newPwConfirm) {
+      setBanner({ type: "err", text: "New passwords do not match." });
+      return;
+    }
     setPwBusy(true);
     try {
       await authChangePassword(token, curPw, newPw);
       setCurPw("");
       setNewPw("");
+      setNewPwConfirm("");
       setBanner({ type: "ok", text: "Password updated." });
     } catch (err) {
       setBanner({ type: "err", text: err instanceof Error ? err.message : "Could not change password" });
@@ -275,7 +294,7 @@ export function AccountSignedInHub() {
   if (!user || !accessToken) return null;
 
   return (
-    <div className="mx-auto max-w-mobile space-y-4 px-5 py-8">
+    <div className="mx-auto max-w-mobile space-y-4 px-5 py-8 text-body">
       {banner && (
         <p
           className={`rounded-[10px] px-3 py-2.5 text-small ${
@@ -304,8 +323,8 @@ export function AccountSignedInHub() {
       {panel === "home" && (
         <>
           <section className="rounded-[12px] bg-white p-5 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-text-muted">Signed in as</p>
-            <h1 className="mt-1 font-serif text-[1.25rem] font-semibold text-sikapa-text-primary dark:text-zinc-100">
+            <p className="text-small font-semibold uppercase tracking-wider text-sikapa-text-muted">Signed in as</p>
+            <h1 className="mt-1 font-serif text-page-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
               {displayName}
             </h1>
             <p className="mt-0.5 text-small text-sikapa-text-secondary">
@@ -320,7 +339,11 @@ export function AccountSignedInHub() {
           </section>
 
           <div className="space-y-2">
-            <NavRow label="Profile & settings" hint="Name, username, phone" onClick={() => setPanel("settings")} />
+            <NavRow
+              label="Profile & settings"
+              hint="Name, username, email, phone"
+              onClick={() => setPanel("settings")}
+            />
             <NavRow
               label="Address & contact"
               hint="Default shipping details for faster checkout"
@@ -331,7 +354,7 @@ export function AccountSignedInHub() {
             <NavRow label="Notifications" hint="How we reach you" onClick={() => setPanel("notifications")} />
             <NavRow label="Wishlist" hint="Saved products" onClick={() => setPanel("wishlist")} />
             {!!u.email && !u.email_verified && (
-              <NavRow label="Verify email" hint="Enter your inbox code" onClick={() => setPanel("verify")} />
+              <NavRow label="Verify email" hint="Enter the code we sent you" onClick={() => setPanel("verify")} />
             )}
             <NavRow label="Newsletter" hint="Offers and updates" onClick={() => setPanel("newsletter")} />
             <NavRow label="Close account" hint="Permanent" onClick={() => setPanel("danger")} />
@@ -387,6 +410,25 @@ export function AccountSignedInHub() {
                   className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
                 />
               </div>
+            </div>
+            <div>
+              <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="hub-email">
+                Email
+              </label>
+              <input
+                id="hub-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={profileEmail}
+                placeholder="you@example.com"
+                onChange={(e) => setProfileEmail(e.target.value)}
+                className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              />
+              <p className="mt-1.5 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                Optional for sign-in, but required for order emails and Paystack. After you add or change your email, we
+                send a verification code.
+              </p>
             </div>
             <div>
               <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="hub-ph">
@@ -536,6 +578,15 @@ export function AccountSignedInHub() {
                 minLength={8}
                 className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
               />
+              <input
+                type="password"
+                value={newPwConfirm}
+                onChange={(e) => setNewPwConfirm(e.target.value)}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                minLength={8}
+                className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              />
               <button
                 type="submit"
                 disabled={pwBusy}
@@ -593,29 +644,74 @@ export function AccountSignedInHub() {
           <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
             Verify email
           </h2>
-          <form onSubmit={verifySignedIn} className="mt-4 space-y-3">
-            <input
-              type="email"
-              value={inboxEmail}
-              onChange={(e) => setInboxEmail(e.target.value)}
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <input
-              inputMode="numeric"
-              value={inboxCode}
-              onChange={(e) => setInboxCode(sanitizeDigits(e.target.value, 6))}
-              placeholder="6-digit code"
-              maxLength={6}
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <button
-              type="submit"
-              disabled={inboxBusy}
-              className="w-full rounded-[10px] border border-sikapa-gold py-2.5 text-small font-semibold text-sikapa-gold disabled:opacity-50"
-            >
-              {inboxBusy ? "Verifying…" : "Confirm"}
-            </button>
-          </form>
+          {!u.email ? (
+            <p className="mt-3 text-small text-sikapa-text-secondary">
+              Add an email in{" "}
+              <button
+                type="button"
+                className="font-semibold text-sikapa-gold underline"
+                onClick={() => setPanel("settings")}
+              >
+                Profile & settings
+              </button>{" "}
+              first, then open this screen again.
+            </p>
+          ) : (
+            <form onSubmit={verifySignedIn} className="mt-4 space-y-3">
+              <div>
+                <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="verify-email">
+                  Email
+                </label>
+                <input
+                  id="verify-email"
+                  type="email"
+                  value={inboxEmail}
+                  onChange={(e) => setInboxEmail(e.target.value)}
+                  className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                />
+              </div>
+              <div>
+                <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="verify-code">
+                  Verification code
+                </label>
+                <input
+                  id="verify-code"
+                  inputMode="numeric"
+                  value={inboxCode}
+                  onChange={(e) => setInboxCode(sanitizeDigits(e.target.value, 6))}
+                  placeholder="6-digit code"
+                  maxLength={6}
+                  className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={inboxBusy}
+                className="w-full rounded-[10px] border border-sikapa-gold py-2.5 text-small font-semibold text-sikapa-gold disabled:opacity-50"
+              >
+                {inboxBusy ? "Verifying…" : "Confirm"}
+              </button>
+              <button
+                type="button"
+                disabled={resendBusy || !u.email || u.email_verified}
+                onClick={async () => {
+                  setBanner(null);
+                  setResendBusy(true);
+                  try {
+                    await authResendEmailVerification(token);
+                    setBanner({ type: "ok", text: "A new verification code was sent to your email." });
+                  } catch (err) {
+                    setBanner({ type: "err", text: err instanceof Error ? err.message : "Could not resend code" });
+                  } finally {
+                    setResendBusy(false);
+                  }
+                }}
+                className="w-full rounded-[10px] border border-sikapa-gray-soft py-2.5 text-small font-semibold text-sikapa-text-primary disabled:opacity-50 dark:border-white/10 dark:text-zinc-100"
+              >
+                {resendBusy ? "Sending…" : "Resend verification code"}
+              </button>
+            </form>
+          )}
         </section>
       )}
 

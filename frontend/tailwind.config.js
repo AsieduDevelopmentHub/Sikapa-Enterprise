@@ -30,10 +30,10 @@ module.exports = {
       fontSize: {
         hero: ["2rem", { lineHeight: "1.15" }], // 32px mobile
         "hero-lg": ["2.25rem", { lineHeight: "1.12" }], // 36px
-        "page-title": ["1.25rem", { lineHeight: "1.3" }], // 20px
-        "section-title": ["1.125rem", { lineHeight: "1.35" }], // 18px
-        body: ["0.875rem", { lineHeight: "1.5" }], // 14px
-        small: ["0.75rem", { lineHeight: "1.45" }], // 12px
+        "page-title": ["1.375rem", { lineHeight: "1.3" }], // ~22px (+0.125rem)
+        "section-title": ["1.25rem", { lineHeight: "1.35" }], // 20px (+0.125rem)
+        body: ["1rem", { lineHeight: "1.5" }], // 16px (+0.125rem)
+        small: ["0.875rem", { lineHeight: "1.45" }], // 14px (+0.125rem)
       },
       maxWidth: {
         mobile: "430px",

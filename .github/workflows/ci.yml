@@ -116,19 +116,29 @@ jobs:
     needs: [backend, frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/frontend'
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Create or update PR from frontend to main
         id: cpr
-        uses: repo-sync/pull-request@v2
-        with:
-          source_branch: frontend
-          destination_branch: main
-          pr_title: "chore: sync frontend branch into main"
-          pr_body: |
-            Auto-generated PR after CI passed on `frontend`.
-
-            - Backend CI: passed
-            - Frontend CI: passed
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUM=$(gh pr list --head frontend --base main --state open --json number --jq '.[0].number // empty')
+          if [ -z "${PR_NUM}" ]; then
+            {
+              printf '%s\n' 'Auto-generated PR after CI passed on `frontend`.'
+              printf '%s\n' ''
+              printf '%s\n' '- Backend CI: passed'
+              printf '%s\n' '- Frontend CI: passed'
+            } > /tmp/pr-body.md
+            gh pr create --base main --head frontend \
+              --title "chore: sync frontend branch into main" \
+              --body-file /tmp/pr-body.md
+            PR_NUM=$(gh pr list --head frontend --base main --state open --json number --jq '.[0].number')
+          fi
+          echo "pr_number=${PR_NUM}" >> "$GITHUB_OUTPUT"
 
       - name: Enable PR auto-merge (squash)
         if: ${{ steps.cpr.outputs.pr_number != '' }}

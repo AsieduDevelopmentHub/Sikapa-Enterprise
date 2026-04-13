@@ -25,7 +25,7 @@ class TestAuthenticationE2E:
         assert response.status_code == 201
         user_data = response.json()
         assert user_data["email"] == "test@example.com"
-        assert user_data["email_verified"] is True
+        assert user_data["email_verified"] is False
 
         otp_query = select(OTPCode).where(OTPCode.user_id == user_data["id"])
         result = test_session.execute(otp_query)
