@@ -16,12 +16,19 @@ export function StarRating({
       aria-label={`${value} out of 5 stars`}
     >
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={i <= rounded ? "text-sikapa-gold" : "text-sikapa-gray-soft"}>
+        <span
+          key={i}
+          className={
+            i <= rounded ? "text-sikapa-gold" : "text-sikapa-gray-soft dark:text-zinc-600"
+          }
+        >
           ★
         </span>
       ))}
       {showNumeric && (
-        <span className="ml-1 text-[11px] text-sikapa-text-muted">{value.toFixed(1)}</span>
+        <span className="ml-1 text-[11px] text-sikapa-text-muted dark:text-zinc-500">
+          {value.toFixed(1)}
+        </span>
       )}
     </div>
   );

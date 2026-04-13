@@ -4,7 +4,13 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     /* Allow optimizer to fetch `http://localhost:8000/uploads/...` (resolves to 127.0.0.1 / ::1). Dev-only — do not enable in public production deploys. */
-    ...(isDev ? { dangerouslyAllowLocalIP: true } : {}),
+    ...(isDev
+      ? {
+          dangerouslyAllowLocalIP: true,
+          /* Re-optimize local `public/` logos quickly when you overwrite PNGs (avoids stale `/_next/image` cache in dev). */
+          minimumCacheTTL: 0,
+        }
+      : {}),
     remotePatterns: [
       {
         protocol: "https",

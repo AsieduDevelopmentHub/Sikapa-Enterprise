@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +13,7 @@ import {
 } from "@/lib/api/orders";
 import { paystackVerify } from "@/lib/api/payments";
 import { GHANA_REGIONS } from "@/lib/ghana-shipping";
-import { resolveMediaUrl } from "@/lib/media-url";
+import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
 import { formatGhs } from "@/lib/mock-data";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
 
@@ -212,16 +211,18 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
               </h2>
               <ul className="mt-3 divide-y divide-sikapa-gray-soft/80 dark:divide-white/10">
                 {detail.items.map((line) => {
-                  const img = resolveMediaUrl(line.product_image_url);
                   const name = line.product_name?.trim() || `Product #${line.product_id}`;
                   const lineTotal = line.price_at_purchase * line.quantity;
                   return (
                     <li key={line.id} className="flex gap-3 py-4 first:pt-0">
                       <Link
                         href={`/product/${line.product_id}`}
-                        className="relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800"
+                        className="relative block h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800"
                       >
-                        <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                        <OrderProductThumb
+                          src={line.product_image_url}
+                          className="h-full w-full object-cover"
+                        />
                       </Link>
                       <div className="min-w-0 flex-1">
                         <Link

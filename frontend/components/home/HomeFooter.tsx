@@ -20,7 +20,7 @@ const onPage = [
 
 export function HomeFooter() {
   return (
-    <footer className="border-t border-sikapa-gray-soft bg-[#2a2422] px-4 py-8 text-sikapa-gray-soft">
+    <footer className="border-t border-sikapa-gray-soft bg-[#2a2422] px-4 py-8 text-sikapa-gray-soft dark:border-white/10">
       <div className="mx-auto max-w-mobile">
         <p className="font-serif text-small font-semibold tracking-[0.12em] text-white">SIKAPA</p>
         <p className="mt-1 text-[11px] leading-relaxed text-white/60">

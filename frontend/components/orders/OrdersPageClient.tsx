@@ -1,13 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { FaFilterIcon } from "@/components/FaIcons";
 import { useAuth } from "@/context/AuthContext";
 import { ordersList, type OrderRow } from "@/lib/api/orders";
-import { resolveMediaUrl } from "@/lib/media-url";
+import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
 import { formatGhs } from "@/lib/mock-data";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
 
@@ -138,7 +137,6 @@ export function OrdersPageClient() {
         <ul className="mx-auto max-w-mobile space-y-3 px-4 pb-6">
           {filtered.map((order) => {
             const name = order.preview_product_name?.trim() || "Order summary";
-            const img = resolveMediaUrl(order.preview_image_url);
             const nLines = order.line_count ?? 0;
             const pay = (order.payment_status ?? "pending").toLowerCase();
             return (
@@ -161,7 +159,10 @@ export function OrdersPageClient() {
                   </div>
                   <div className="mt-3 flex gap-3">
                     <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800">
-                      <Image src={img} alt="" fill className="object-cover" sizes="72px" />
+                      <OrderProductThumb
+                        src={order.preview_image_url}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <p className="text-[11px] font-medium uppercase tracking-wide text-sikapa-text-muted dark:text-zinc-500">

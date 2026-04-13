@@ -3,7 +3,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 
 export default function AccountPage() {
   return (
-    <main className="bg-sikapa-cream">
+    <main className="bg-sikapa-cream dark:bg-zinc-950">
       <ScreenHeader
         variant="inner"
         title="Account"

@@ -34,7 +34,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
 
   if (props.variant === "home") {
     return (
-      <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900">
+      <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-950">
         <div className="mx-auto flex max-w-mobile items-center justify-between gap-2">
           <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
             <FaBars />
@@ -53,7 +53,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const { title, left, backHref = "/", right } = props;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900">
+    <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-950">
       <div className="mx-auto flex max-w-mobile items-center justify-between gap-2">
         {left === "menu" ? (
           <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
