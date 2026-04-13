@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
@@ -32,7 +32,11 @@ export function CartPageClient() {
   const [shippingMethod, setShippingMethod] = useState<ShippingMethodClient>("pickup");
   const [shippingRegion, setShippingRegion] = useState<string>(GHANA_REGIONS[0]?.slug ?? "greater-accra");
   const [shippingProvider, setShippingProvider] = useState<string>(DELIVERY_COURIER_OPTIONS[0] ?? "Station driver");
+  const [shippingCity, setShippingCity] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
+  const [useDefaultContact, setUseDefaultContact] = useState(true);
+  const [shippingContactName, setShippingContactName] = useState("");
+  const [shippingContactPhone, setShippingContactPhone] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const n = lines.reduce((s, l) => s + l.quantity, 0);
 
@@ -42,6 +46,19 @@ export function CartPageClient() {
   );
 
   const checkoutTotal = subtotal + deliveryFee;
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.shipping_region) setShippingRegion(user.shipping_region);
+    if (user.shipping_city) setShippingCity(user.shipping_city);
+    const line1 = user.shipping_address_line1?.trim() || "";
+    const line2 = user.shipping_address_line2?.trim() || "";
+    const landmark = user.shipping_landmark?.trim() || "";
+    const merged = [line1, line2, landmark ? `Landmark: ${landmark}` : ""].filter(Boolean).join(", ");
+    if (merged) setShippingAddress(merged);
+    if (user.shipping_contact_name) setShippingContactName(user.shipping_contact_name);
+    if (user.shipping_contact_phone) setShippingContactPhone(user.shipping_contact_phone);
+  }, [user]);
 
   const onCheckout = async () => {
     if (!accessToken || !user) {
@@ -62,8 +79,24 @@ export function CartPageClient() {
         setCheckoutMsg("Choose your region for delivery.");
         return;
       }
+      if (!shippingCity.trim()) {
+        setCheckoutMsg("Enter your city or town for delivery.");
+        return;
+      }
       if (!shippingProvider.trim()) {
         setCheckoutMsg("Choose a courier.");
+        return;
+      }
+      const nameSource = useDefaultContact
+        ? (user.shipping_contact_name || user.name || "").trim()
+        : shippingContactName.trim();
+      const phoneSource = useDefaultContact ? (user.shipping_contact_phone || user.phone || "").trim() : shippingContactPhone.trim();
+      if (!nameSource) {
+        setCheckoutMsg("Enter a delivery contact name.");
+        return;
+      }
+      if (!phoneSource) {
+        setCheckoutMsg("Enter a delivery contact phone.");
         return;
       }
     } else {
@@ -78,7 +111,24 @@ export function CartPageClient() {
       const order = await ordersCreate(accessToken, {
         shipping_method: shippingMethod,
         shipping_region: shippingMethod === "delivery" ? shippingRegion : null,
+        shipping_city: shippingMethod === "delivery" ? shippingCity.trim() : null,
         shipping_provider: shippingMethod === "delivery" ? shippingProvider.trim() : null,
+        shipping_contact_name:
+          shippingMethod === "delivery"
+            ? (
+                useDefaultContact
+                  ? (user.shipping_contact_name || user.name || "").trim()
+                  : shippingContactName.trim()
+              ) || null
+            : null,
+        shipping_contact_phone:
+          shippingMethod === "delivery"
+            ? (
+                useDefaultContact
+                  ? (user.shipping_contact_phone || user.phone || "").trim()
+                  : shippingContactPhone.trim()
+              ) || null
+            : null,
         shipping_address: addr,
         notes: notesTrim.length > 0 ? notesTrim : null,
       });
@@ -215,6 +265,18 @@ export function CartPageClient() {
                     </select>
                   </div>
                   <div>
+                    <label htmlFor="cart-city" className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                      City / town
+                    </label>
+                    <input
+                      id="cart-city"
+                      value={shippingCity}
+                      onChange={(e) => setShippingCity(e.target.value)}
+                      className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                      placeholder="e.g. Kumasi"
+                    />
+                  </div>
+                  <div>
                     <label htmlFor="cart-courier" className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
                       Courier / service
                     </label>
@@ -231,6 +293,51 @@ export function CartPageClient() {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <p className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">Delivery contact</p>
+                    <label className="mt-2 flex cursor-pointer items-center gap-2 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                      <input
+                        type="checkbox"
+                        checked={useDefaultContact}
+                        onChange={(e) => setUseDefaultContact(e.target.checked)}
+                        className="accent-sikapa-gold"
+                      />
+                      Use account contact ({(user.shipping_contact_name || user.name || "No name set").trim()} ·{" "}
+                      {(user.shipping_contact_phone || user.phone || "No phone set").trim()})
+                    </label>
+                  </div>
+                  {!useDefaultContact && (
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label
+                          htmlFor="cart-contact-name"
+                          className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200"
+                        >
+                          Contact name
+                        </label>
+                        <input
+                          id="cart-contact-name"
+                          value={shippingContactName}
+                          onChange={(e) => setShippingContactName(e.target.value)}
+                          className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="cart-contact-phone"
+                          className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200"
+                        >
+                          Contact phone
+                        </label>
+                        <input
+                          id="cart-contact-phone"
+                          value={shippingContactPhone}
+                          onChange={(e) => setShippingContactPhone(e.target.value)}
+                          className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label htmlFor="cart-ship-addr" className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
                       Delivery address <span className="text-sikapa-crimson">*</span>

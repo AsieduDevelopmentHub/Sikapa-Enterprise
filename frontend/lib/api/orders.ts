@@ -9,12 +9,16 @@ export type OrderRow = {
   delivery_fee?: number;
   shipping_method?: string | null;
   shipping_region?: string | null;
+  shipping_city?: string | null;
   status: string;
   shipping_address?: string | null;
   shipping_provider?: string | null;
+  shipping_contact_name?: string | null;
+  shipping_contact_phone?: string | null;
   notes?: string | null;
   payment_status?: string;
   paystack_reference?: string | null;
+  confirmation_email_sent_at?: string | null;
   created_at: string;
   updated_at: string;
   preview_product_name?: string | null;
@@ -59,7 +63,10 @@ export type OrderCreateBody = {
   notes?: string | null;
   shipping_method: "pickup" | "delivery";
   shipping_region?: string | null;
+  shipping_city?: string | null;
   shipping_provider?: string | null;
+  shipping_contact_name?: string | null;
+  shipping_contact_phone?: string | null;
 };
 
 export async function ordersList(accessToken: string): Promise<OrderRow[]> {

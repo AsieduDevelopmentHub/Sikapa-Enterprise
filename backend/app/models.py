@@ -53,6 +53,13 @@ class User(UserBase, table=True):
     last_name: Optional[str] = None
     two_fa_enabled: bool = False
     two_fa_method: Optional[str] = None  # "totp" or "email"
+    shipping_region: Optional[str] = Field(default=None, max_length=80)
+    shipping_city: Optional[str] = Field(default=None, max_length=120)
+    shipping_address_line1: Optional[str] = Field(default=None, max_length=255)
+    shipping_address_line2: Optional[str] = Field(default=None, max_length=255)
+    shipping_landmark: Optional[str] = Field(default=None, max_length=255)
+    shipping_contact_name: Optional[str] = Field(default=None, max_length=120)
+    shipping_contact_phone: Optional[str] = Field(default=None, max_length=32)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -76,6 +83,13 @@ class UserUpdate(SQLModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
+    shipping_region: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_address_line1: Optional[str] = None
+    shipping_address_line2: Optional[str] = None
+    shipping_landmark: Optional[str] = None
+    shipping_contact_name: Optional[str] = None
+    shipping_contact_phone: Optional[str] = None
 
 
 # Authentication tokens and sessions
@@ -166,6 +180,9 @@ class Order(SQLModel, table=True):
     delivery_fee: float = Field(default=0.0, ge=0)
     shipping_method: Optional[str] = None
     shipping_region: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_contact_name: Optional[str] = None
+    shipping_contact_phone: Optional[str] = None
     status: str = Field(default="pending")  # "pending", "processing", "shipped", "delivered", "cancelled"
     shipping_address: Optional[str] = None
     shipping_provider: Optional[str] = None
@@ -180,6 +197,7 @@ class Order(SQLModel, table=True):
     payment_status: str = Field(
         default="pending"
     )  # pending | paid | failed | abandoned | refunded | partially_refunded
+    confirmation_email_sent_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
