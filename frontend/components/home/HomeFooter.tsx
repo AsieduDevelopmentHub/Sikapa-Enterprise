@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NewsletterFooterForm } from "@/components/home/NewsletterFooterForm";
 import { SIKAPA_LOCATION_LINE } from "@/lib/site";
 
 const primary = [
@@ -54,6 +55,8 @@ export function HomeFooter() {
             ))}
           </ul>
         </nav>
+
+        <NewsletterFooterForm />
 
         <p className="mt-8 border-t border-white/10 pt-6 text-center text-[10px] text-white/45">
           © {new Date().getFullYear()} Sikapa Enterprise. All rights reserved.

@@ -1,3 +1,4 @@
+import { parseApiErrorBody } from "@/lib/api/error-message";
 import { V1 } from "@/lib/api/v1-paths";
 
 const STORAGE_ACCESS = "sikapa_access_token";
@@ -69,7 +70,7 @@ export async function apiFetchJson<T>(path: string, init?: RequestInit): Promise
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    throw new Error(parseApiErrorBody(res.status, text));
   }
   return parseJsonResponse<T>(res);
 }
@@ -101,7 +102,7 @@ export async function apiFetchJsonAuth<T>(
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    throw new Error(parseApiErrorBody(res.status, text));
   }
   return parseJsonResponse<T>(res);
 }

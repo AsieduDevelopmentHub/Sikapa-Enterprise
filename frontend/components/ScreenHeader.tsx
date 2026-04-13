@@ -27,14 +27,14 @@ type InnerProps = {
 export type ScreenHeaderProps = HomeProps | InnerProps;
 
 const hit =
-  "sikapa-tap flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sikapa-text-primary";
+  "sikapa-tap flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sikapa-text-primary dark:text-zinc-100";
 
 export function ScreenHeader(props: ScreenHeaderProps) {
   const { openDrawer } = useNavDrawer();
 
   if (props.variant === "home") {
     return (
-      <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2">
+      <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900">
         <div className="mx-auto flex max-w-mobile items-center justify-between gap-2">
           <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
             <FaBars />
@@ -53,7 +53,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const { title, left, backHref = "/", right } = props;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2">
+    <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900">
       <div className="mx-auto flex max-w-mobile items-center justify-between gap-2">
         {left === "menu" ? (
           <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
@@ -64,7 +64,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
             <FaChevronLeft />
           </Link>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-center font-serif text-page-title font-semibold tracking-tight text-sikapa-text-primary">
+        <h1 className="min-w-0 flex-1 truncate text-center font-serif text-page-title font-semibold tracking-tight text-sikapa-text-primary dark:text-zinc-100">
           {title}
         </h1>
         {right === "search" && (
