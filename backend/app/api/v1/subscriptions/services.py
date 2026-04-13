@@ -2,6 +2,7 @@
 Email subscriptions business logic
 """
 import uuid
+from datetime import datetime
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
@@ -78,7 +79,7 @@ async def unsubscribe_email(session: Session, email: str) -> None:
         )
     
     subscription.is_subscribed = False
-    subscription.unsubscribed_at = None
+    subscription.unsubscribed_at = datetime.utcnow()
     session.add(subscription)
     session.commit()
 
