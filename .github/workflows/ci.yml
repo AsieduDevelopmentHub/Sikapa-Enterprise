@@ -11,7 +11,7 @@ on:
       - main
       - frontend
       - backend
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -50,7 +50,6 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         env:
-          # In-memory SQLite (no db directory required on the runner)
           DATABASE_URL: "sqlite:///:memory:"
           SECRET_KEY: ci-secret-key-for-testing-only
           JWT_SECRET_KEY: ci-jwt-secret-for-testing
@@ -103,11 +102,8 @@ jobs:
 
       - name: Run frontend tests
         working-directory: frontend
-        # vitest.config.ts sets passWithNoTests; smoke test lives in __tests__/
         run: npm test
 
-  # Uses GH_ACTIONS_PR_TOKEN when set (needed if org blocks GITHUB_TOKEN from opening PRs).
-  # Otherwise falls back to github.token so `gh` is never invoked with an empty token.
   auto-pr-merge-frontend-to-main:
     name: Auto PR + Auto-merge (frontend -> main)
     runs-on: ubuntu-latest
