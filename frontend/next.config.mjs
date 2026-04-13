@@ -40,16 +40,11 @@ const nextConfig = {
         port: "8000",
         pathname: "/**",
       },
-      {
-        protocol: "http",
-        hostname: "192.168.1.202",
-        port: "3000",
-        pathname: "/**",
-      },
+      /* Product media and any future static paths from the Render API host */
       {
         protocol: "https",
         hostname: "sikapa-backend.onrender.com",
-        pathname: "/uploads/**",
+        pathname: "/**",
       },
     ],
   },

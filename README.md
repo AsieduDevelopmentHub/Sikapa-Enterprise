@@ -77,9 +77,18 @@ It wraps the hosted storefront in a WebView for deployment to Android devices.
 
 ## Documentation
 
-Backend documentation is available at:
+**Start here:** [docs/README.md](docs/README.md) — index of all guides (environment, operations, auth, API, hosting).
 
-- `backend/docs/migration/migration.md`
+| Area | Location |
+|------|----------|
+| Env vars & `SECRET_KEY` | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) |
+| Health, CORS, JWT refresh | [docs/OPERATIONS.md](docs/OPERATIONS.md) |
+| Backend setup & migrations | [backend/README.md](backend/README.md) |
+| Auth system | [backend/docs/AUTHENTICATION.md](backend/docs/AUTHENTICATION.md) |
+| API examples | [backend/docs/API_REFERENCE.md](backend/docs/API_REFERENCE.md) |
+| Frontend (Vercel) | [frontend/docs/hosting/vercel.md](frontend/docs/hosting/vercel.md) |
+| Backend (Render) | [backend/docs/hosting/render.md](backend/docs/hosting/render.md) |
+| DB migrations detail | [backend/docs/migration/migration.md](backend/docs/migration/migration.md) |
 
 ## Notes
 
