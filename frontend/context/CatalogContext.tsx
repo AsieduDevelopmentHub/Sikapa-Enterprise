@@ -39,9 +39,10 @@ type CatalogContextValue = {
 const CatalogContext = createContext<CatalogContextValue | null>(null);
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<MockProduct[]>(() => mockCatalogDisplay().products);
-  const [categories, setCategories] = useState<CatalogCategory[]>(() => mockCatalogDisplay().categories);
-  const [source, setSource] = useState<Source>("mock");
+  /** Start empty so we never flash demo products while the API request is in flight. */
+  const [products, setProducts] = useState<MockProduct[]>([]);
+  const [categories, setCategories] = useState<CatalogCategory[]>([]);
+  const [source, setSource] = useState<Source>("api");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

@@ -6,19 +6,28 @@ import { useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavDrawer } from "@/context/NavDrawerContext";
 import { useTheme } from "@/context/ThemeContext";
-import { SIKAPA_LOCATION_LINE } from "@/lib/site";
+import { faqUrl, privacyUrl, SIKAPA_LOCATION_LINE, termsUrl } from "@/lib/site";
 
-const BASE_LINKS: { href: string; label: string; description: string }[] = [
+const MAIN_LINKS: { href: string; label: string; description: string }[] = [
   { href: "/", label: "Home", description: "Hero, collections, and featured products." },
   { href: "/shop", label: "Shop", description: "Browse the full catalog with grid or list view." },
-  { href: "/#categories", label: "Categories", description: "Jump to all collections on the home page." },
-  { href: "/#featured", label: "Featured", description: "Curated picks and seasonal highlights." },
   { href: "/cart", label: "Cart", description: "Review items and proceed when you are ready." },
   { href: "/orders", label: "Orders", description: "Track purchases and delivery status." },
   { href: "/account", label: "Account", description: "Sign in, profile, and preferences." },
+];
+
+const DISCOVER_LINKS: { href: string; label: string; description: string }[] = [
+  { href: "/#categories", label: "Categories", description: "Jump to all collections on the home page." },
+  { href: "/#featured", label: "Featured", description: "Curated picks and seasonal highlights." },
   { href: "/#delivery", label: "Delivery & visit", description: "Pickup, nationwide shipping, and our location." },
   { href: "/#trust", label: "Why Sikapa", description: "Quality, secure checkout, and how we help." },
   { href: "/#need-help", label: "Need help?", description: "WhatsApp (if configured) and support links." },
+];
+
+const HELP_LEGAL_LINKS: { href: string; label: string; description: string }[] = [
+  { href: faqUrl(), label: "FAQs", description: "Common questions about ordering and delivery." },
+  { href: termsUrl(), label: "Terms of service", description: "How you may use Sikapa Enterprise." },
+  { href: privacyUrl(), label: "Privacy policy", description: "How we handle your data." },
 ];
 
 const ADMIN_LINK = {
@@ -27,19 +36,64 @@ const ADMIN_LINK = {
   description: "Store metrics and analytics for team accounts.",
 } as const;
 
+function NavDisclosure({
+  title,
+  items,
+  closeDrawer,
+}: {
+  title: string;
+  items: { href: string; label: string; description: string }[];
+  closeDrawer: () => void;
+}) {
+  return (
+    <details className="group rounded-[10px] ring-1 ring-transparent open:bg-sikapa-cream open:ring-black/[0.04] dark:open:bg-zinc-900 dark:open:ring-white/10">
+      <summary className="sikapa-tap cursor-pointer list-none rounded-[10px] px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center justify-between gap-2">
+          <span className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">{title}</span>
+          <svg
+            className="h-4 w-4 shrink-0 text-sikapa-text-muted transition-transform group-open:rotate-180 dark:text-zinc-500"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
+            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+          </svg>
+        </span>
+      </summary>
+      <ul className="space-y-1 border-t border-sikapa-gray-soft/90 py-2 dark:border-white/10">
+        {items.map((item) => (
+          <li key={`${item.href}-${item.label}`}>
+            <Link
+              href={item.href}
+              onClick={closeDrawer}
+              className="sikapa-tap block rounded-[8px] px-3 py-2 ring-1 ring-transparent hover:bg-white/80 hover:ring-black/[0.04] dark:hover:bg-zinc-950 dark:hover:ring-white/10"
+            >
+              <span className="block text-[13px] font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                {item.label}
+              </span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-sikapa-text-secondary dark:text-zinc-400">
+                {item.description}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export function NavSidebarPanel() {
   const { user, accessToken } = useAuth();
   const { preference, setPreference } = useTheme();
   const { open, closeDrawer } = useNavDrawer();
   const pathname = usePathname() || "/";
 
-  /** Admin entry points must not appear unless the session is authenticated and the server marked the user as admin. */
   const showAdminLink = Boolean(user && accessToken && user.is_admin === true);
 
-  const links = useMemo(() => {
-    if (!showAdminLink) return BASE_LINKS;
-    const i = BASE_LINKS.findIndex((l) => l.href === "/account");
-    const next = [...BASE_LINKS];
+  const mainLinks = useMemo(() => {
+    if (!showAdminLink) return MAIN_LINKS;
+    const i = MAIN_LINKS.findIndex((l) => l.href === "/account");
+    const next = [...MAIN_LINKS];
     next.splice(i + 1, 0, ADMIN_LINK);
     return next;
   }, [showAdminLink]);
@@ -79,7 +133,7 @@ export function NavSidebarPanel() {
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="Main navigation">
           <ul className="space-y-1">
-            {links.map((item) => (
+            {mainLinks.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
@@ -96,6 +150,12 @@ export function NavSidebarPanel() {
               </li>
             ))}
           </ul>
+
+          <div className="mt-3 space-y-2">
+            <NavDisclosure title="Explore the site" items={DISCOVER_LINKS} closeDrawer={closeDrawer} />
+            <NavDisclosure title="Help & policies" items={HELP_LEGAL_LINKS} closeDrawer={closeDrawer} />
+          </div>
+
           <div className="mt-4 rounded-[10px] border border-sikapa-gray-soft px-3 py-3 dark:border-white/10">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-sikapa-text-muted dark:text-zinc-500">
               Theme

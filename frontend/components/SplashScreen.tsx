@@ -2,12 +2,13 @@
 
 import { useEffect, useLayoutEffect, useState } from "react";
 import { SikapaLogo } from "@/components/SikapaLogo";
+import { pingBackendHealth } from "@/lib/api/client";
 
 const STORAGE_KEY = "sikapa_splash_seen";
-/** Time logo stays readable after entrance bounce (ms). */
-const HOLD_MS = 2600;
+/** Time on screen before exit starts (ms); logo entrance runs first (~1.75s). */
+const HOLD_MS = 4000;
 /** Must match `splash-dissolve-out` duration in tailwind.config.js */
-const EXIT_ANIM_MS = 780;
+const EXIT_ANIM_MS = 1150;
 
 /**
  * Animated brand gradient, elastic logo entrance, blur/scale dissolve on exit.
@@ -25,6 +26,8 @@ export function SplashScreen() {
     } catch {
       /* still show splash */
     }
+
+    pingBackendHealth();
 
     const displayTimer = window.setTimeout(() => {
       setExiting(true);
@@ -66,14 +69,16 @@ export function SplashScreen() {
       />
 
       <div className="relative z-[1] flex items-center justify-center px-8">
-        <div className="animate-splash-logo-bounce">
-          <div className="animate-splash-logo-glow">
-            <SikapaLogo
-              asset="primary"
-              alt=""
-              priority
-              imageClassName="h-auto max-h-[min(340px,52vh)] w-[min(260px,78vw)] object-contain"
-            />
+        <div className="animate-splash-logo-enter">
+          <div className="rounded-[22px] bg-white/10 p-4 shadow-[0_24px_64px_rgba(0,0,0,0.28)] ring-1 ring-white/25 backdrop-blur-[2px] dark:bg-black/20 dark:ring-white/15">
+            <div className="overflow-hidden rounded-[18px] ring-1 ring-black/5 dark:ring-white/10">
+              <SikapaLogo
+                asset="primary"
+                alt=""
+                priority
+                imageClassName="h-auto max-h-[min(340px,52vh)] w-[min(260px,78vw)] object-contain"
+              />
+            </div>
           </div>
         </div>
       </div>

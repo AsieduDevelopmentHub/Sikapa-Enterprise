@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { NewsletterFooterForm } from "@/components/home/NewsletterFooterForm";
-import { SIKAPA_LOCATION_LINE } from "@/lib/site";
+import { faqUrl, privacyUrl, SIKAPA_LOCATION_LINE, termsUrl } from "@/lib/site";
 
 const primary = [
   { href: "/shop", label: "Shop" },
@@ -53,6 +53,26 @@ export function HomeFooter() {
                 </Link>
               </li>
             ))}
+          </ul>
+          <p className="mt-5 text-[10px] font-semibold uppercase tracking-wider text-sikapa-gold/90">
+            Legal & help
+          </p>
+          <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+            <li>
+              <Link href={faqUrl()} className="text-small text-white/70 hover:text-sikapa-gold">
+                FAQs
+              </Link>
+            </li>
+            <li>
+              <Link href={termsUrl()} className="text-small text-white/70 hover:text-sikapa-gold">
+                Terms
+              </Link>
+            </li>
+            <li>
+              <Link href={privacyUrl()} className="text-small text-white/70 hover:text-sikapa-gold">
+                Privacy
+              </Link>
+            </li>
           </ul>
         </nav>
 

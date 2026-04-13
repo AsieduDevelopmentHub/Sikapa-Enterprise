@@ -3,6 +3,7 @@ Email service using Resend API for sending emails.
 """
 import os
 from typing import Optional
+from urllib.parse import quote
 import resend
 from dotenv import load_dotenv
 
@@ -108,7 +109,8 @@ class EmailService:
     def send_password_reset(email: str, reset_token: str, first_name: str = None) -> bool:
         """Send password reset email with reset link."""
         name = first_name or "there"
-        reset_url = f"{frontend_url}/reset-password?token={reset_token}"
+        base = (frontend_url or "").rstrip("/")
+        reset_url = f"{base}/reset-password/{quote(reset_token, safe='')}"
 
         subject = "Reset Your Password - Sikapa Enterprise"
         html_content = f"""
