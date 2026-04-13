@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SIKAPA_LOCATION_LINE } from "@/lib/site";
 
 const primary = [
   { href: "/shop", label: "Shop" },
@@ -10,8 +11,10 @@ const primary = [
 const onPage = [
   { href: "/#categories", label: "Categories" },
   { href: "/#featured", label: "Featured" },
-  { href: "/#how-it-works", label: "How it works" },
   { href: "/#trust", label: "Why Sikapa" },
+  { href: "/#delivery", label: "Delivery & visit" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#need-help", label: "Need help?" },
 ] as const;
 
 export function HomeFooter() {
@@ -21,6 +24,10 @@ export function HomeFooter() {
         <p className="font-serif text-small font-semibold tracking-[0.12em] text-white">SIKAPA</p>
         <p className="mt-1 text-[11px] leading-relaxed text-white/60">
           Luxury beauty for all — cosmetics, wigs, skincare, and fragrance.
+        </p>
+        <p className="mt-3 text-[11px] leading-relaxed text-white/55">
+          <span className="text-white/45">Location · </span>
+          {SIKAPA_LOCATION_LINE}
         </p>
 
         <nav className="mt-6" aria-label="Footer">

@@ -17,8 +17,6 @@ export function SplashScreen() {
   const [exiting, setExiting] = useState(false);
 
   useLayoutEffect(() => {
-    let displayTimer: number | undefined;
-
     try {
       if (sessionStorage.getItem(STORAGE_KEY)) {
         setShow(false);
@@ -28,14 +26,12 @@ export function SplashScreen() {
       /* still show splash */
     }
 
-    displayTimer = window.setTimeout(() => {
+    const displayTimer = window.setTimeout(() => {
       setExiting(true);
     }, HOLD_MS);
 
     return () => {
-      if (displayTimer !== undefined) {
-        window.clearTimeout(displayTimer);
-      }
+      window.clearTimeout(displayTimer);
     };
   }, []);
 

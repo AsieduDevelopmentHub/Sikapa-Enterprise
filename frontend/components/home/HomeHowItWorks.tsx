@@ -14,10 +14,10 @@ const steps = [
   },
   {
     step: "2",
-    title: "Bag it",
-    body: "Add favourites to your cart and adjust quantities anytime.",
-    href: "/cart",
-    cta: "View cart",
+    title: "Choose & add",
+    body: "Open a product for full details and pricing, then add to your cart.",
+    href: "/shop",
+    cta: "Browse products",
     Icon: FaCart,
   },
   {

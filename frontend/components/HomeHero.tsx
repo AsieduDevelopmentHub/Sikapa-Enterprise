@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
-/** Hero portrait from `public/assets/icons/hero.jpeg`. */
-const HERO_MODEL_SRC = "/assets/icons/hero.jpeg";
+/** Hero portrait from `public/assets/icons/hero.png`. */
+const HERO_MODEL_SRC = "/assets/icons/hero.png";
 
 export function HomeHero() {
   return (

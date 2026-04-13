@@ -1,14 +1,14 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { CategorySection } from "@/components/CategorySection";
 import { FeaturedProducts } from "@/components/FeaturedProducts";
 import { HomeBrowseAll } from "@/components/home/HomeBrowseAll";
+import { HomeCategoryRails } from "@/components/home/HomeCategoryRails";
 import { HomeFooter } from "@/components/home/HomeFooter";
 import { HomeHelpCta } from "@/components/home/HomeHelpCta";
+import { HomeNeedHelpBanner } from "@/components/home/HomeNeedHelpBanner";
 import { HomeHowItWorks } from "@/components/home/HomeHowItWorks";
-import { HomeTrustStrip } from "@/components/home/HomeTrustStrip";
+import { HomeTrustAndLogistics } from "@/components/home/HomeTrustAndLogistics";
 import { HomeHero } from "@/components/HomeHero";
 
-/** Home: hero → trust → categories → all collections → featured → how-to → help → footer. */
 export default function HomePage() {
   return (
     <main className="bg-sikapa-cream">
@@ -23,10 +23,11 @@ export default function HomePage() {
           Shop High-End Beauty & Lifestyle
         </p>
       </section>
-      <HomeTrustStrip />
-      <CategorySection />
+      <HomeNeedHelpBanner />
       <HomeBrowseAll />
+      <HomeCategoryRails />
       <FeaturedProducts />
+      <HomeTrustAndLogistics />
       <HomeHowItWorks />
       <HomeHelpCta />
       <HomeFooter />
