@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import os
 
 from app.core.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
     get_password_hash,
     verify_password,
     create_access_token,
@@ -113,7 +114,7 @@ def create_user_tokens(user: User) -> dict:
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "expires_in": 900,  # 15 minutes in seconds
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     }
 
 
@@ -137,11 +138,13 @@ def refresh_access_token(session: Session, refresh_token: str) -> dict:
         )
 
     new_access_token = create_access_token({"sub": user.email})
+    new_refresh_token = create_refresh_token({"sub": user.email})
 
     return {
         "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
         "token_type": "bearer",
-        "expires_in": 900,
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     }
 
 
