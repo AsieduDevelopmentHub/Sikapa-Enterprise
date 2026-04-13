@@ -50,16 +50,25 @@ if https_enabled and not os.getenv("DEBUG", "false").lower() == "true":
     app.add_middleware(HTTPSRedirectMiddleware)
 
 # CORS Middleware for frontend integration
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://localhost:3000,http://192.168.1.202:3000").split(",")
+_cors_raw = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,https://localhost:3000,http://192.168.1.202:3000",
+)
+cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
 cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
+# Optional: e.g. https://.*\\.vercel\\.app for preview deploys (still validates Origin per request).
+_cors_regex = os.getenv("CORS_ORIGIN_REGEX", "").strip()
 
-app.add_middleware(
-    CORSMiddleware,
+_cors_kwargs = dict(
     allow_origins=cors_origins,
     allow_credentials=cors_allow_credentials,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
+if _cors_regex:
+    _cors_kwargs["allow_origin_regex"] = _cors_regex
+
+app.add_middleware(CORSMiddleware, **_cors_kwargs)
 
 _request_log = logging.getLogger("sikapa.request")
 
@@ -148,10 +157,12 @@ def root() -> dict:
 
 
 @app.get("/health")
+@app.get("/health/")
 def health_check() -> dict:
+    """Both paths avoid 307 redirects from probes that add or omit a trailing slash."""
     return {
         "status": "healthy",
         "service": "Sikapa Enterprise API",
         "version": "0.1.0",
-        "security": "HTTPS/TLS" if https_enabled else "HTTP"
+        "security": "HTTPS/TLS" if https_enabled else "HTTP",
     }
