@@ -50,7 +50,8 @@ export function validateReviewBody(body: string): string | null {
 
 export function validateShippingAddress(addr: string): string | null {
   const a = sanitizeMultiline(addr, 2000);
-  if (a.length < 12) return "Enter a full delivery address.";
+  /** Short but real addresses (e.g. "12 Kanda Accra") are valid; commas are not required. */
+  if (a.length < 8) return "Add a bit more detail: where to deliver (street, area, city).";
   if (a.length > 2000) return "Address is too long.";
   return null;
 }

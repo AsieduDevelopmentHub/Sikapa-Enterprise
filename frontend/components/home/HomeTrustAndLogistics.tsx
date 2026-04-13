@@ -36,16 +36,16 @@ export function HomeTrustAndLogistics() {
 
   return (
     <section
-      className="scroll-mt-20 border-y border-sikapa-gray-soft bg-white px-4 py-6"
+      className="scroll-mt-20 border-y border-sikapa-gray-soft bg-white px-4 py-6 dark:border-white/10 dark:bg-zinc-950"
       aria-labelledby="trust-heading"
     >
       <h2
         id="trust-heading"
-        className="font-serif text-section-title font-semibold text-sikapa-text-primary"
+        className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100"
       >
         Why Sikapa
       </h2>
-      <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary">
+      <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">
         Luxury beauty with clear service — quality, safe checkout, and real support.
       </p>
 
@@ -53,31 +53,33 @@ export function HomeTrustAndLogistics() {
         {values.map(({ title, body, Icon }) => (
           <li
             key={title}
-            className="flex gap-3 rounded-[10px] bg-sikapa-cream/80 px-3 py-3 ring-1 ring-black/[0.04]"
+            className="flex gap-3 rounded-[10px] bg-sikapa-cream/80 px-3 py-3 ring-1 ring-black/[0.04] dark:bg-zinc-900/80 dark:ring-white/10"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-sikapa-gray-soft">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:ring-white/10">
               <Icon className="text-sikapa-gold" />
             </span>
             <div>
-              <p className="font-sans text-body font-semibold text-sikapa-text-primary">{title}</p>
-              <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary">{body}</p>
+              <p className="font-sans text-body font-semibold text-sikapa-text-primary dark:text-zinc-100">{title}</p>
+              <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">{body}</p>
             </div>
           </li>
         ))}
-        <li className="flex gap-3 rounded-[10px] bg-sikapa-cream/80 px-3 py-3 ring-1 ring-black/[0.04]">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-sikapa-gray-soft">
+        <li className="flex gap-3 rounded-[10px] bg-sikapa-cream/80 px-3 py-3 ring-1 ring-black/[0.04] dark:bg-zinc-900/80 dark:ring-white/10">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:ring-white/10">
             <FaHeadset className="text-sikapa-gold" />
           </span>
           <div>
-            <p className="font-sans text-body font-semibold text-sikapa-text-primary">Help when you need it</p>
-            <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary">
+            <p className="font-sans text-body font-semibold text-sikapa-text-primary dark:text-zinc-100">
+              Help when you need it
+            </p>
+            <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">
               {wa ? (
                 <>
                   <a
                     href={wa}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-emerald-800 underline decoration-emerald-600/40 underline-offset-2"
+                    className="font-medium text-emerald-800 underline decoration-emerald-600/40 underline-offset-2 dark:text-emerald-300"
                   >
                     WhatsApp
                   </a>
@@ -96,11 +98,14 @@ export function HomeTrustAndLogistics() {
         </li>
       </ul>
 
-      <div id="delivery" className="scroll-mt-20 mt-10 border-t border-sikapa-gray-soft pt-8">
-        <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+      <div
+        id="delivery"
+        className="scroll-mt-20 mt-10 border-t border-sikapa-gray-soft pt-8 dark:border-white/10"
+      >
+        <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
           Delivery &amp; pickup
         </h2>
-        <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary">
+        <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">
           Based in the Ashanti Region — choose pickup or delivery nationwide.
         </p>
 
@@ -108,32 +113,32 @@ export function HomeTrustAndLogistics() {
           {deliveryOptions.map(({ title, body, Icon }) => (
             <li
               key={title}
-              className="flex gap-3 rounded-[10px] bg-sikapa-cream/90 px-3 py-3.5 ring-1 ring-black/[0.05]"
+              className="flex gap-3 rounded-[10px] bg-sikapa-cream/90 px-3 py-3.5 ring-1 ring-black/[0.05] dark:bg-zinc-900/90 dark:ring-white/10"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-sikapa-gray-soft">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:ring-white/10">
                 <Icon className="text-sikapa-gold" />
               </span>
               <div>
-                <p className="font-sans text-body font-semibold text-sikapa-text-primary">{title}</p>
-                <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary">{body}</p>
+                <p className="font-sans text-body font-semibold text-sikapa-text-primary dark:text-zinc-100">{title}</p>
+                <p className="mt-1 text-small leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">{body}</p>
               </div>
             </li>
           ))}
         </ul>
 
-        <div className="mt-6 rounded-[10px] bg-sikapa-cream/80 px-4 py-4 ring-1 ring-black/[0.06]">
+        <div className="mt-6 rounded-[10px] bg-sikapa-cream/80 px-4 py-4 ring-1 ring-black/[0.06] dark:bg-zinc-900/80 dark:ring-white/10">
           <div className="flex gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-sikapa-gray-soft">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:ring-white/10">
               <FaLocationPin className="text-sikapa-crimson" />
             </span>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sikapa-text-muted">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sikapa-text-muted dark:text-zinc-500">
                 Visit us
               </p>
-              <p className="mt-1 font-sans text-body font-medium leading-snug text-sikapa-text-primary">
+              <p className="mt-1 font-sans text-body font-medium leading-snug text-sikapa-text-primary dark:text-zinc-100">
                 {SIKAPA_LOCATION_LINE}
               </p>
-              <p className="mt-1.5 text-small leading-relaxed text-sikapa-text-secondary">
+              <p className="mt-1.5 text-small leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">
                 Pickup, advice, or browsing in person — confirm hours before you travel.
               </p>
             </div>

@@ -50,9 +50,11 @@ function NavRow({
     >
       <span>
         <span className="block text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">{label}</span>
-        {hint ? <span className="mt-0.5 block text-[11px] text-sikapa-text-muted">{hint}</span> : null}
+        {hint ? (
+          <span className="mt-0.5 block text-[11px] text-sikapa-text-muted dark:text-zinc-500">{hint}</span>
+        ) : null}
       </span>
-      <span className="text-sikapa-text-muted" aria-hidden>
+      <span className="text-sikapa-text-muted dark:text-zinc-500" aria-hidden>
         ›
       </span>
     </button>

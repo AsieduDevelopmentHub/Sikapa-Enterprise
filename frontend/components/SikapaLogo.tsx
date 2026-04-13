@@ -26,8 +26,8 @@ const DIMENSIONS: Record<
   navigation: {
     width: 640,
     height: 240,
-    className:
-      "h-[2.625rem] w-auto max-w-[min(168px,44vw)] object-contain sm:h-[2.25rem] sm:max-w-[min(178px,46vw)]",
+    /** Applied to each `fill` image inside the fixed frame below. */
+    className: "object-contain object-center",
   },
   primary: {
     width: 512,
@@ -35,6 +35,22 @@ const DIMENSIONS: Record<
     className: "h-28 w-auto max-w-[200px] object-contain",
   },
 };
+
+/** Fixed slot for nav logos (height + width cap match original bar layout). */
+const NAV_LOGO_FRAME =
+  "relative h-[2.625rem] w-[min(168px,44vw)] shrink-0 overflow-visible sm:h-[2.25rem] sm:w-[min(178px,46vw)]";
+
+/** Intrinsic size of `public/assets/logos/navigation.png` — update when the file changes. */
+const NAV_LIGHT_PX = { w: 877, h: 285 } as const;
+/** Intrinsic size of `public/assets/logos/navigation_darkmode.png` — update when the file changes. */
+const NAV_DARK_PX = { w: 1536, h: 924 } as const;
+
+/**
+ * Header slot is height-limited; mismatched aspects → different drawn widths under `object-contain`.
+ * Scale dark so its width matches light: `(lightW/lightH) / (darkW/darkH)`.
+ */
+const NAV_DARK_MATCH_LIGHT_SCALE =
+  (NAV_LIGHT_PX.w / NAV_LIGHT_PX.h) / (NAV_DARK_PX.w / NAV_DARK_PX.h);
 
 /**
  * Renders logos from `public/assets/logos/`.
@@ -51,6 +67,36 @@ export function SikapaLogo({
 }: Props) {
   const dim = DIMENSIONS[asset];
   const imgClass = [dim.className, imageClassName].filter(Boolean).join(" ");
+
+  if (asset === "navigation") {
+    return (
+      <span className={`inline-flex shrink-0 items-center justify-center ${className}`}>
+        <span className={NAV_LOGO_FRAME}>
+          <Image
+            src={LOGOS.navigation}
+            alt={alt}
+            fill
+            className={`${imgClass} dark:hidden`.trim()}
+            sizes="(max-width: 640px) 168px, 178px"
+            priority={priority}
+          />
+          <Image
+            src={LOGOS.navigationDark}
+            alt={alt}
+            fill
+            className={`${imgClass} hidden dark:block`.trim()}
+            sizes="(max-width: 640px) 168px, 178px"
+            priority={priority}
+            style={{
+              transform: `scale(${NAV_DARK_MATCH_LIGHT_SCALE})`,
+              transformOrigin: "center center",
+            }}
+          />
+        </span>
+      </span>
+    );
+  }
+
   return (
     <span className={`inline-flex shrink-0 items-center justify-center ${className}`}>
       <Image

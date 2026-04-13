@@ -241,7 +241,7 @@ export function CartPageClient() {
                       rows={4}
                       value={shippingAddress}
                       onChange={(e) => setShippingAddress(e.target.value)}
-                      placeholder="Street, house number, landmark, city"
+                      placeholder="Example: 22 Oxford Street Osu Accra (write naturally — commas optional)"
                       className="mt-1 w-full resize-y rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body text-sikapa-text-primary ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
                     />
                   </div>

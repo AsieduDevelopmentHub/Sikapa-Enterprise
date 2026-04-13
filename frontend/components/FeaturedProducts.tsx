@@ -12,13 +12,13 @@ export function FeaturedProducts() {
   return (
     <section
       id="featured"
-      className="scroll-mt-20 bg-sikapa-cream py-4 pb-6"
+      className="scroll-mt-20 bg-sikapa-cream py-4 pb-6 dark:bg-zinc-950"
       aria-labelledby="featured-title"
     >
       <div className="mb-3 flex items-center justify-between px-4">
         <h2
           id="featured-title"
-          className="font-serif text-section-title font-semibold text-sikapa-text-primary"
+          className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100"
         >
           Featured
         </h2>
