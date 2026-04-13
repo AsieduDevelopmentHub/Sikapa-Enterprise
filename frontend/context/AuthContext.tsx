@@ -29,13 +29,13 @@ type AuthContextValue = {
   loading: boolean;
   authError: string | null;
   clearAuthError: () => void;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithTotp: (email: string, password: string, code: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  loginWithTotp: (identifier: string, password: string, code: string) => Promise<void>;
   register: (
-    email: string,
+    username: string,
+    name: string,
     password: string,
-    firstName?: string,
-    lastName?: string
+    email?: string
   ) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -148,18 +148,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearTokens]);
 
   const loginWithCredentials = useCallback(
-    async (email: string, password: string) => {
-      const tokens = await authLogin(email, password);
+    async (identifier: string, password: string) => {
+      const tokens = await authLogin(identifier, password);
       await applySession(tokens);
     },
     [applySession]
   );
 
   const loginWithTotp = useCallback(
-    async (email: string, password: string, code: string) => {
+    async (identifier: string, password: string, code: string) => {
       setAuthError(null);
       try {
-        const tokens = await authLoginWith2FA(email, password, code);
+        const tokens = await authLoginWith2FA(identifier, password, code);
         await applySession(tokens);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Sign-in failed";
@@ -171,10 +171,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (identifier: string, password: string) => {
       setAuthError(null);
       try {
-        await loginWithCredentials(email, password);
+        await loginWithCredentials(identifier, password);
       } catch (e) {
         if (e instanceof TwoFactorRequiredError) {
           throw e;
@@ -188,11 +188,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (email: string, password: string, firstName?: string, lastName?: string) => {
+    async (username: string, name: string, password: string, email?: string) => {
       setAuthError(null);
       try {
-        await authRegister(email, password, firstName, lastName);
-        await loginWithCredentials(email, password);
+        await authRegister(username, name, password, email);
+        await loginWithCredentials(username, password);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Registration failed";
         setAuthError(msg);

@@ -13,12 +13,15 @@ class TestRateLimiting:
         """Test rate limiting on registration endpoint (5/minute)."""
         register_template = {
             "password": "SecurePass123!",
-            "first_name": "Rate",
-            "last_name": "Limit",
+            "name": "Rate Limit",
         }
 
         for i in range(6):
-            data = {**register_template, "email": f"ratelimit{i}@example.com"}
+            data = {
+                **register_template,
+                "username": f"ratelimit{i}",
+                "email": f"ratelimit{i}@example.com",
+            }
             response = await client.post("/api/v1/auth/register", json=data)
 
             if i < 5:
@@ -33,7 +36,7 @@ class TestRateLimiting:
     async def test_login_rate_limit(self, client: AsyncClient):
         """Test rate limiting on login endpoint (10/minute)."""
         login_data = {
-            "email": "nonexistent@example.com",
+            "identifier": "nonexistent@example.com",
             "password": "wrongpassword",
         }
 
@@ -105,7 +108,7 @@ class TestRateLimiting:
     async def test_different_ips_not_shared(self, client: AsyncClient):
         """Requests from same client share one bucket; rate limit eventually applies."""
         login_data = {
-            "email": "nonexistent@example.com",
+            "identifier": "nonexistent@example.com",
             "password": "wrongpassword",
         }
 
@@ -120,7 +123,7 @@ class TestRateLimiting:
     async def test_rate_limit_headers(self, client: AsyncClient):
         """First login failures are 401 before the bucket is exhausted."""
         login_data = {
-            "email": "nonexistent@example.com",
+            "identifier": "nonexistent@example.com",
             "password": "wrongpassword",
         }
 
@@ -131,7 +134,7 @@ class TestRateLimiting:
     async def test_rate_limit_reset(self, client: AsyncClient):
         """After enough attempts, login is rate limited."""
         login_data = {
-            "email": "nonexistent@example.com",
+            "identifier": "nonexistent@example.com",
             "password": "wrongpassword",
         }
 
@@ -146,7 +149,7 @@ class TestRateLimiting:
     async def test_rate_limiting_doesnt_affect_other_endpoints(self, client: AsyncClient):
         """Login can hit 429 while registration still succeeds under its own limit."""
         login_data = {
-            "email": "nonexistent@example.com",
+            "identifier": "nonexistent@example.com",
             "password": "wrongpassword",
         }
 
@@ -156,10 +159,10 @@ class TestRateLimiting:
         assert response.status_code == 429
 
         register_data = {
+            "username": "different-user",
+            "name": "Different User",
             "email": "different@example.com",
             "password": "SecurePass123!",
-            "first_name": "Different",
-            "last_name": "User",
         }
 
         response = await client.post("/api/v1/auth/register", json=register_data)

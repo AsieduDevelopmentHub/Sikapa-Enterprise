@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavDrawer } from "@/context/NavDrawerContext";
+import { useTheme } from "@/context/ThemeContext";
 import { SIKAPA_LOCATION_LINE } from "@/lib/site";
 
 const BASE_LINKS: { href: string; label: string; description: string }[] = [
@@ -28,6 +29,7 @@ const ADMIN_LINK = {
 
 export function NavSidebarPanel() {
   const { user, accessToken } = useAuth();
+  const { preference, setPreference } = useTheme();
   const { open, closeDrawer } = useNavDrawer();
   const pathname = usePathname() || "/";
 
@@ -94,6 +96,33 @@ export function NavSidebarPanel() {
               </li>
             ))}
           </ul>
+          <div className="mt-4 rounded-[10px] border border-sikapa-gray-soft px-3 py-3 dark:border-white/10">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-sikapa-text-muted dark:text-zinc-500">
+              Theme
+            </p>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {(
+                [
+                  { id: "light" as const, label: "Light" },
+                  { id: "dark" as const, label: "Dark" },
+                  { id: "system" as const, label: "System" },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setPreference(opt.id)}
+                  className={`sikapa-tap rounded-[8px] border px-2 py-2 text-[11px] font-semibold ${
+                    preference === opt.id
+                      ? "border-sikapa-gold bg-sikapa-cream text-sikapa-text-primary dark:bg-zinc-800 dark:text-zinc-100"
+                      : "border-sikapa-gray-soft text-sikapa-text-secondary dark:border-white/10 dark:text-zinc-400"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </nav>
         <div className="border-t border-sikapa-gray-soft px-4 py-3 dark:border-white/10">
           <button

@@ -115,7 +115,7 @@ export function AccountScreen() {
           onRegisterSuccess={() =>
             setBanner({
               type: "ok",
-              text: "Account created. Check your email for a verification code.",
+              text: "Account created. Sign in complete.",
             })
           }
         />

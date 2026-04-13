@@ -15,17 +15,17 @@ class TestAuthenticationE2E:
     async def test_complete_user_registration_flow(self, client: AsyncClient, test_session: Session):
         """Test complete user registration flow: register -> verify email -> login."""
         register_data = {
+            "username": "testuser001",
+            "name": "Test User",
             "email": "test@example.com",
             "password": "SecurePass123!",
-            "first_name": "Test",
-            "last_name": "User"
         }
 
         response = await client.post("/api/v1/auth/register", json=register_data)
         assert response.status_code == 201
         user_data = response.json()
         assert user_data["email"] == "test@example.com"
-        assert user_data["email_verified"] is False
+        assert user_data["email_verified"] is True
 
         otp_query = select(OTPCode).where(OTPCode.user_id == user_data["id"])
         result = test_session.execute(otp_query)
@@ -43,7 +43,7 @@ class TestAuthenticationE2E:
         assert verify_response["verified"] is True
 
         login_data = {
-            "email": "test@example.com",
+            "identifier": "testuser001",
             "password": "SecurePass123!"
         }
 
@@ -53,6 +53,40 @@ class TestAuthenticationE2E:
         assert "access_token" in tokens
         assert "refresh_token" in tokens
         assert tokens["token_type"] == "bearer"
+
+    async def test_username_or_email_login(self, client: AsyncClient):
+        register_data = {
+            "username": "dual-login-user",
+            "name": "Dual Login User",
+            "email": "dual@example.com",
+            "password": "SecurePass123!",
+        }
+        response = await client.post("/api/v1/auth/register", json=register_data)
+        assert response.status_code == 201
+
+        by_username = await client.post(
+            "/api/v1/auth/login",
+            json={"identifier": "dual-login-user", "password": "SecurePass123!"},
+        )
+        assert by_username.status_code == 200
+
+        by_email = await client.post(
+            "/api/v1/auth/login",
+            json={"identifier": "dual@example.com", "password": "SecurePass123!"},
+        )
+        assert by_email.status_code == 200
+
+    async def test_optional_email_registration(self, client: AsyncClient):
+        register_data = {
+            "username": "username-only",
+            "name": "Username Only",
+            "password": "SecurePass123!",
+        }
+        response = await client.post("/api/v1/auth/register", json=register_data)
+        assert response.status_code == 201
+        user_data = response.json()
+        assert user_data["username"] == "username-only"
+        assert user_data.get("email") is None
 
     async def test_password_reset_flow(self, client: AsyncClient, test_session: Session, test_user):
         """Test password reset flow."""
@@ -75,7 +109,7 @@ class TestAuthenticationE2E:
         assert response.status_code == 200
 
         login_data = {
-            "email": test_user["user"]["email"],
+            "identifier": test_user["user"]["username"],
             "password": "NewSecurePass456!"
         }
 
@@ -90,18 +124,19 @@ class TestAuthenticationE2E:
         assert response.status_code == 200
         profile = response.json()
         assert profile["email"] == test_user["user"]["email"]
-        assert profile["first_name"] == "Test"
+        assert profile["name"] == "Test User"
 
         update_data = {
-            "first_name": "Updated",
-            "last_name": "Name",
+            "name": "Updated Name",
+            "username": "updated-name",
             "phone": "+1234567890"
         }
 
         response = await authenticated_client.put("/api/v1/auth/profile", json=update_data, headers=headers)
         assert response.status_code == 200
         updated_profile = response.json()
-        assert updated_profile["first_name"] == "Updated"
+        assert updated_profile["name"] == "Updated Name"
+        assert updated_profile["username"] == "updated-name"
         assert updated_profile["phone"] == "+1234567890"
 
     async def test_two_factor_authentication_flow(self, authenticated_client: AsyncClient, test_user):
@@ -135,7 +170,7 @@ class TestAuthenticationE2E:
         assert response.status_code == 200
 
         login_data = {
-            "email": test_user["user"]["email"],
+            "identifier": test_user["user"]["username"],
             "password": "TestPass123!",
             "code": totp.now()
         }
@@ -172,7 +207,7 @@ class TestAuthenticationE2E:
         assert response.status_code == 200
 
         login_data = {
-            "email": test_user["user"]["email"],
+            "identifier": test_user["user"]["username"],
             "password": "FinalSecurePass789!"
         }
 
@@ -182,7 +217,7 @@ class TestAuthenticationE2E:
     async def test_account_deletion(self, client: AsyncClient, test_session: Session, test_user):
         """Test account deletion."""
         login_data = {
-            "email": test_user["user"]["email"],
+            "identifier": test_user["user"]["username"],
             "password": "TestPass123!"
         }
 
@@ -205,7 +240,7 @@ class TestAuthenticationE2E:
     async def test_rate_limiting(self, client: AsyncClient):
         """Test rate limiting on auth endpoints."""
         login_data = {
-            "email": "nonexistent@example.com",
+            "identifier": "nonexistent",
             "password": "wrongpassword"
         }
 
@@ -255,19 +290,42 @@ class TestErrorHandling:
         """Test registration with duplicate email."""
         # First registration
         register_data = {
+            "username": "duplicate-user-1",
+            "name": "Test User",
             "email": "duplicate@example.com",
             "password": "SecurePass123!",
-            "first_name": "Test",
-            "last_name": "User"
         }
 
-        response = await client.post("/api/v1/auth/register", json=register_data)
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={**register_data, "username": "duplicate-user-2"},
+        )
         assert response.status_code == 201
 
         # Second registration with same email
         response = await client.post("/api/v1/auth/register", json=register_data)
         assert response.status_code == 400
         assert "Email already registered" in response.json()["detail"]
+
+    async def test_duplicate_username_registration(self, client: AsyncClient):
+        register_data = {
+            "username": "taken-name",
+            "name": "User One",
+            "email": "first@example.com",
+            "password": "SecurePass123!",
+        }
+        response = await client.post("/api/v1/auth/register", json=register_data)
+        assert response.status_code == 201
+
+        second = {
+            "username": "taken-name",
+            "name": "User Two",
+            "email": "second@example.com",
+            "password": "SecurePass123!",
+        }
+        response = await client.post("/api/v1/auth/register", json=second)
+        assert response.status_code == 400
+        assert "Username already taken" in response.json()["detail"]
 
     async def test_invalid_otp_verification(self, client: AsyncClient):
         """Test verification with invalid OTP."""
@@ -283,26 +341,26 @@ class TestErrorHandling:
     async def test_weak_password_registration(self, client: AsyncClient):
         """Test registration with weak password."""
         register_data = {
+            "username": "weak-user",
+            "name": "Test User",
             "email": "weak@example.com",
             "password": "123",  # Too short
-            "first_name": "Test",
-            "last_name": "User"
         }
 
         response = await client.post("/api/v1/auth/register", json=register_data)
         assert response.status_code == 422  # Validation error
 
-    async def test_invalid_email_format(self, client: AsyncClient):
-        """Test registration with invalid email format."""
+    async def test_invalid_username_format(self, client: AsyncClient):
+        """Test registration with invalid username format."""
         register_data = {
-            "email": "invalid-email",
+            "username": "bad space",
+            "name": "Test User",
+            "email": "valid@example.com",
             "password": "SecurePass123!",
-            "first_name": "Test",
-            "last_name": "User"
         }
 
         response = await client.post("/api/v1/auth/register", json=register_data)
-        assert response.status_code == 422  # Validation error
+        assert response.status_code in (400, 422)
 
     async def test_expired_reset_token(self, client: AsyncClient):
         """Test password reset with expired token."""

@@ -67,8 +67,8 @@ export function AccountSignedInHub() {
   const [panel, setPanel] = useState<Panel>("home");
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
   const [profileBusy, setProfileBusy] = useState(false);
 
@@ -93,10 +93,10 @@ export function AccountSignedInHub() {
   const u = user!;
 
   useEffect(() => {
-    setFirstName(u.first_name ?? "");
-    setLastName(u.last_name ?? "");
+    setName(u.name ?? "");
+    setUsername(u.username ?? "");
     setPhone(u.phone ?? "");
-    if (!u.email_verified) setInboxEmail(u.email);
+    if (!u.email_verified && u.email) setInboxEmail(u.email);
   }, [u]);
 
   const loadWishlist = useCallback(async () => {
@@ -116,8 +116,7 @@ export function AccountSignedInHub() {
     if (panel === "wishlist") void loadWishlist();
   }, [panel, loadWishlist]);
 
-  const displayName =
-    [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || u.email;
+  const displayName = (u.name || "").trim() || u.username || u.email || "User";
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -130,8 +129,8 @@ export function AccountSignedInHub() {
     setProfileBusy(true);
     try {
       await authUpdateProfile(token, {
-        first_name: sanitizePlainText(firstName, 80) || null,
-        last_name: sanitizePlainText(lastName, 80) || null,
+        name: sanitizePlainText(name, 120) || null,
+        username: sanitizePlainText(username, 50)?.toLowerCase() || null,
         phone: phone.trim() || null,
       });
       await refreshProfile();
@@ -167,7 +166,7 @@ export function AccountSignedInHub() {
   async function verifySignedIn(e: React.FormEvent) {
     e.preventDefault();
     setBanner(null);
-    const em = inboxEmail.trim() || u.email;
+    const em = inboxEmail.trim() || u.email || "";
     const emailErr = validateEmail(em);
     if (emailErr) {
       setBanner({ type: "err", text: emailErr });
@@ -244,7 +243,9 @@ export function AccountSignedInHub() {
             <h1 className="mt-1 font-serif text-[1.25rem] font-semibold text-sikapa-text-primary dark:text-zinc-100">
               {displayName}
             </h1>
-            <p className="mt-0.5 text-small text-sikapa-text-secondary">{u.email}</p>
+            <p className="mt-0.5 text-small text-sikapa-text-secondary">
+              @{u.username}{u.email ? ` · ${u.email}` : ""}
+            </p>
             <p className="mt-2 text-small text-sikapa-text-secondary">
               Email{" "}
               <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">
@@ -254,12 +255,12 @@ export function AccountSignedInHub() {
           </section>
 
           <div className="space-y-2">
-            <NavRow label="Profile & settings" hint="Name, phone" onClick={() => setPanel("settings")} />
+            <NavRow label="Profile & settings" hint="Name, username, phone" onClick={() => setPanel("settings")} />
             <NavRow label="Appearance" hint="Light, dark, or system" onClick={() => setPanel("appearance")} />
             <NavRow label="Security" hint="Password and two-step sign-in" onClick={() => setPanel("security")} />
             <NavRow label="Notifications" hint="How we reach you" onClick={() => setPanel("notifications")} />
             <NavRow label="Wishlist" hint="Saved products" onClick={() => setPanel("wishlist")} />
-            {!u.email_verified && (
+            {!!u.email && !u.email_verified && (
               <NavRow label="Verify email" hint="Enter your inbox code" onClick={() => setPanel("verify")} />
             )}
             <NavRow label="Newsletter" hint="Offers and updates" onClick={() => setPanel("newsletter")} />
@@ -293,26 +294,26 @@ export function AccountSignedInHub() {
           <form onSubmit={saveProfile} className="mt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="hub-fn">
-                  First name
+                <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="hub-name">
+                  Name
                 </label>
                 <input
-                  id="hub-fn"
-                  value={firstName}
+                  id="hub-name"
+                  value={name}
                   maxLength={80}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => setName(e.target.value)}
                   className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
                 />
               </div>
               <div>
-                <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="hub-ln">
-                  Last name
+                <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="hub-username">
+                  Username
                 </label>
                 <input
-                  id="hub-ln"
-                  value={lastName}
+                  id="hub-username"
+                  value={username}
                   maxLength={80}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
                   className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
                 />
               </div>
@@ -414,7 +415,9 @@ export function AccountSignedInHub() {
             Notifications
           </h2>
           <p className="mt-3 text-small leading-relaxed text-sikapa-text-secondary">
-            Order updates, delivery notes, and account security alerts are sent to your email on file ({u.email}).
+            {u.email
+              ? `Order updates, delivery notes, and account security alerts are sent to your email on file (${u.email}).`
+              : "No email is on this account yet. Add one to receive email notifications."}
           </p>
         </section>
       )}
@@ -487,7 +490,7 @@ export function AccountSignedInHub() {
               e.preventDefault();
               setNewsBusy(true);
               setBanner(null);
-              const em = newsEmail.trim() || u.email;
+              const em = newsEmail.trim() || u.email || "";
               const err = validateEmail(em);
               if (err) {
                 setBanner({ type: "err", text: err });
@@ -506,7 +509,7 @@ export function AccountSignedInHub() {
           >
             <input
               type="email"
-              value={newsEmail || u.email}
+              value={newsEmail || u.email || ""}
               onChange={(e) => setNewsEmail(e.target.value)}
               className="min-w-0 flex-1 rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
             />

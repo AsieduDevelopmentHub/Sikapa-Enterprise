@@ -55,6 +55,15 @@ npm run dev
 - **401** with **“Refresh token expired — sign in again”** means the user must log in again.
 - On **refresh**, the API returns **new access and refresh tokens** (rotation). Clients should **persist both**—especially the new `refresh_token`.
 
+## Login payload format
+
+- `POST /api/v1/auth/login` expects:
+  - `identifier`: username or email
+  - `password`
+- `POST /api/v1/auth/register` expects:
+  - `username`, `name`, `password`
+  - optional `email`
+
 ---
 
 ## After changing `SECRET_KEY`

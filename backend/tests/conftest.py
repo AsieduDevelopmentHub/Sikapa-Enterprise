@@ -136,10 +136,10 @@ async def test_user(client: AsyncClient, test_session: Session):
 
     # Register user
     register_data = {
+        "username": "testuser",
+        "name": "Test User",
         "email": "testuser@example.com",
         "password": "TestPass123!",
-        "first_name": "Test",
-        "last_name": "User"
     }
 
     response = await client.post("/api/v1/auth/register", json=register_data)
@@ -164,7 +164,7 @@ async def test_user(client: AsyncClient, test_session: Session):
 
     # Login to get tokens
     login_data = {
-        "email": "testuser@example.com",
+        "identifier": "testuser",
         "password": "TestPass123!"
     }
 

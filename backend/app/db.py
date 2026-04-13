@@ -77,12 +77,16 @@ def _configure_postgres_rls_for_request(session: Session, request: Request) -> N
         _clear()
         return
 
-    email = payload.get("sub")
-    if not email:
+    subject = payload.get("sub")
+    if not subject:
         _clear()
         return
 
-    user = session.exec(select(User).where(User.email == email)).first()
+    if str(subject).isdigit():
+        user = session.get(User, int(subject))
+    else:
+        sub = str(subject).strip().lower()
+        user = session.exec(select(User).where((User.email == sub) | (User.username == sub))).first()
     if not user:
         _clear()
         return

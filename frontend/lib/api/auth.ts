@@ -11,9 +11,9 @@ export type TokenResponse = {
 
 export type UserProfile = {
   id: number;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
+  username: string;
+  name: string;
+  email?: string | null;
   phone?: string | null;
   email_verified: boolean;
   two_fa_enabled: boolean;
@@ -26,7 +26,9 @@ export type UserProfile = {
 
 export type RegisterUserResponse = {
   id: number;
-  email: string;
+  username: string;
+  name: string;
+  email?: string | null;
   is_active: boolean;
   is_admin: boolean;
   email_verified: boolean;
@@ -43,11 +45,11 @@ export class TwoFactorRequiredError extends Error {
   }
 }
 
-export async function authLogin(email: string, password: string): Promise<TokenResponse> {
+export async function authLogin(identifier: string, password: string): Promise<TokenResponse> {
   const res = await fetch(`${getApiV1Base()}${V1.auth.login}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ identifier, password }),
   });
   if (res.status === 403) {
     const raw = await res.text();
@@ -73,19 +75,19 @@ export async function authLogin(email: string, password: string): Promise<TokenR
 }
 
 export async function authRegister(
-  email: string,
+  username: string,
+  name: string,
   password: string,
-  first_name?: string,
-  last_name?: string
+  email?: string
 ): Promise<RegisterUserResponse> {
   return apiFetchJson<RegisterUserResponse>(V1.auth.register, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      email,
+      username,
+      name,
       password,
-      first_name: first_name || null,
-      last_name: last_name || null,
+      email: email || null,
     }),
   });
 }
@@ -101,14 +103,14 @@ export async function authLogout(accessToken: string): Promise<void> {
 }
 
 export async function authLoginWith2FA(
-  email: string,
+  identifier: string,
   password: string,
   code: string
 ): Promise<TokenResponse> {
   return apiFetchJson<TokenResponse>(V1.auth.login2fa, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, code }),
+    body: JSON.stringify({ identifier, password, code }),
   });
 }
 
@@ -168,7 +170,7 @@ export async function authVerifyEmail(email: string, code: string): Promise<{
 
 export async function authUpdateProfile(
   accessToken: string,
-  body: { first_name?: string | null; last_name?: string | null; phone?: string | null }
+  body: { username?: string | null; name?: string | null; phone?: string | null }
 ): Promise<UserProfile> {
   return apiFetchJsonAuth<UserProfile>(accessToken, V1.auth.profilePut, {
     method: "PUT",

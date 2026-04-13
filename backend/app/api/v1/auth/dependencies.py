@@ -47,15 +47,19 @@ async def get_current_user(
             detail="Invalid token",
         )
 
-    email: str = payload.get("sub")
-    if email is None:
+    subject: str = payload.get("sub")
+    if subject is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
 
-    # Get user from database
-    user = session.exec(select(User).where(User.email == email)).first()
+    # Get user from database (new tokens use user id; legacy tokens may still carry email/username)
+    if str(subject).isdigit():
+        user = session.get(User, int(subject))
+    else:
+        sub = str(subject).strip().lower()
+        user = session.exec(select(User).where((User.email == sub) | (User.username == sub))).first()
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

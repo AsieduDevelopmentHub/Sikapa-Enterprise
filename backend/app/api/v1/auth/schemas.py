@@ -7,24 +7,38 @@ from app.core.sanitization import sanitize_phone, sanitize_plain_text
 
 # ============ Registration & Login ============
 class RegisterRequest(BaseModel):
-    email: EmailStr
+    username: str = Field(..., min_length=3, max_length=50)
+    name: str = Field(..., min_length=1, max_length=120)
+    email: Optional[EmailStr] = None
     password: str = Field(..., min_length=8)
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
 
-    @field_validator("first_name", "last_name", mode="before")
+    @field_validator("username", mode="before")
     @classmethod
-    def _strip_names(cls, v):
+    def _normalize_username(cls, v):
+        txt = sanitize_plain_text(v, max_length=50, single_line=True)
+        return txt.lower() if txt else txt
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _strip_name(cls, v):
         return sanitize_plain_text(v, max_length=120, single_line=True)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _strip_email(cls, v):
+        if v is None:
+            return None
+        txt = sanitize_plain_text(v, max_length=255, single_line=True)
+        return txt.lower() if txt else None
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    identifier: str = Field(..., min_length=1, max_length=255)
     password: str
 
 
 class LoginWithTwoFARequest(BaseModel):
-    email: EmailStr
+    identifier: str = Field(..., min_length=1, max_length=255)
     password: str
     code: str = Field(..., min_length=6, max_length=6)
 
@@ -48,13 +62,19 @@ class RefreshTokenRequest(BaseModel):
 
 # ============ User Profile ============
 class UserProfileUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    username: Optional[str] = None
+    name: Optional[str] = None
     phone: Optional[str] = None
 
-    @field_validator("first_name", "last_name", mode="before")
+    @field_validator("username", mode="before")
     @classmethod
-    def _strip_names(cls, v):
+    def _normalize_username(cls, v):
+        txt = sanitize_plain_text(v, max_length=50, single_line=True)
+        return txt.lower() if txt else None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _strip_name(cls, v):
         return sanitize_plain_text(v, max_length=120, single_line=True)
 
     @field_validator("phone", mode="before")
@@ -65,9 +85,9 @@ class UserProfileUpdate(BaseModel):
 
 class UserProfileResponse(BaseModel):
     id: int
-    email: str
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    username: str
+    name: str
+    email: Optional[str] = None
     phone: Optional[str] = None
     email_verified: bool
     two_fa_enabled: bool

@@ -3,7 +3,13 @@
 import { useId, useState } from "react";
 import { TwoFactorRequiredError } from "@/lib/api/auth";
 import { useAuth } from "@/context/AuthContext";
-import { sanitizeDigits, validateEmail, validateOtpCode, validatePassword } from "@/lib/validation/input";
+import {
+  sanitizeDigits,
+  sanitizePlainText,
+  validateEmail,
+  validateOtpCode,
+  validatePassword,
+} from "@/lib/validation/input";
 
 type Props = {
   defaultMode?: "signin" | "register";
@@ -25,11 +31,12 @@ export function AccountAuthForm({
   const { authError, clearAuthError, login, loginWithTotp, register } = useAuth();
   const [mode, setMode] = useState<"signin" | "register">(defaultMode);
   const [signinStep, setSigninStep] = useState<"password" | "totp">("password");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -37,16 +44,36 @@ export function AccountAuthForm({
     e.preventDefault();
     clearAuthError();
     setLocalError(null);
-    const emailErr = validateEmail(email);
-    if (emailErr) {
-      setLocalError(emailErr);
-      return;
+    const id = sanitizePlainText(identifier, 255);
+    if (mode === "signin") {
+      if (!id) return setLocalError("Enter your email or username.");
+      if (id.includes("@")) {
+        const emailErr = validateEmail(id);
+        if (emailErr) return setLocalError(emailErr);
+      }
     }
     if (mode === "signin" && signinStep === "password" && !password) {
       setLocalError("Enter your password.");
       return;
     }
     if (mode === "register") {
+      const u = sanitizePlainText(username, 50)?.toLowerCase() || "";
+      if (!/^[a-z0-9._-]{3,50}$/.test(u)) {
+        setLocalError("Username must be 3-50 chars using letters, numbers, dot, underscore, or hyphen.");
+        return;
+      }
+      if (!sanitizePlainText(name, 120)) {
+        setLocalError("Enter your name.");
+        return;
+      }
+      const registerEmail = email.trim();
+      if (registerEmail) {
+        const emailErr = validateEmail(registerEmail);
+        if (emailErr) {
+          setLocalError(emailErr);
+          return;
+        }
+      }
       const pwErr = validatePassword(password, 8);
       if (pwErr) {
         setLocalError(pwErr);
@@ -65,13 +92,13 @@ export function AccountAuthForm({
     try {
       if (mode === "signin") {
         if (signinStep === "totp") {
-          await loginWithTotp(email.trim(), password, sanitizeDigits(totpCode, 6));
+          await loginWithTotp(id, password, sanitizeDigits(totpCode, 6));
           setSigninStep("password");
           setTotpCode("");
           onSignInSuccess?.();
         } else {
           try {
-            await login(email.trim(), password);
+            await login(id, password);
             onSignInSuccess?.();
           } catch (err) {
             if (err instanceof TwoFactorRequiredError) {
@@ -83,7 +110,12 @@ export function AccountAuthForm({
           }
         }
       } else {
-        await register(email.trim(), password, firstName.trim() || undefined, lastName.trim() || undefined);
+        await register(
+          sanitizePlainText(username, 50)?.toLowerCase() || "",
+          sanitizePlainText(name, 120) || "",
+          password,
+          email.trim() || undefined
+        );
         onRegisterSuccess?.();
       }
     } catch {
@@ -144,46 +176,61 @@ export function AccountAuthForm({
         {mode === "register" && (
           <>
             <div>
-              <label htmlFor={`${id}-first`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                First name
+              <label htmlFor={`${id}-name`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                Name
               </label>
               <input
-                id={`${id}-first`}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                autoComplete="given-name"
+                id={`${id}-name`}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
                 className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
               />
             </div>
             <div>
-              <label htmlFor={`${id}-last`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                Last name
+              <label htmlFor={`${id}-username`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                Username
               </label>
               <input
-                id={`${id}-last`}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                autoComplete="family-name"
+                id={`${id}-username`}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              />
+            </div>
+            <div>
+              <label htmlFor={`${id}-register-email`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                Email (optional)
+              </label>
+              <input
+                id={`${id}-register-email`}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
               />
             </div>
           </>
         )}
-        <div>
-          <label htmlFor={`${id}-email`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-            Email
-          </label>
-          <input
-            id={`${id}-email`}
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            disabled={mode === "signin" && signinStep === "totp"}
-            className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 disabled:opacity-60 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-          />
-        </div>
+        {mode === "signin" && (
+          <div>
+            <label htmlFor={`${id}-identifier`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+              Email or username
+            </label>
+            <input
+              id={`${id}-identifier`}
+              type="text"
+              required
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="username"
+              disabled={signinStep === "totp"}
+              className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 disabled:opacity-60 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+            />
+          </div>
+        )}
         {!(mode === "signin" && signinStep === "totp") && (
           <div>
             <label htmlFor={`${id}-password`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
