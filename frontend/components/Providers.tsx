@@ -7,18 +7,27 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CatalogProvider } from "@/context/CatalogContext";
 import { CartProvider } from "@/context/CartContext";
 import { NavDrawerProvider } from "@/context/NavDrawerContext";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { ToastProvider } from "@/context/ToastContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <NavDrawerProvider>
-      <AuthProvider>
-        <CatalogProvider>
-          <CartProvider>
-            <AppShell>{children}</AppShell>
-            <NavSidebarPanel />
-          </CartProvider>
-        </CatalogProvider>
-      </AuthProvider>
-    </NavDrawerProvider>
+    <ThemeProvider>
+      <NavDrawerProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <CatalogProvider>
+              <WishlistProvider>
+                <CartProvider>
+                  <AppShell>{children}</AppShell>
+                  <NavSidebarPanel />
+                </CartProvider>
+              </WishlistProvider>
+            </CatalogProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </NavDrawerProvider>
+    </ThemeProvider>
   );
 }

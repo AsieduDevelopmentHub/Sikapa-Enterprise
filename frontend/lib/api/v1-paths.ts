@@ -42,6 +42,7 @@ export const V1 = {
   reviews: {
     create: "/reviews",
     product: (productId: number) => `/reviews/product/${productId}`,
+    canReview: (productId: number) => `/reviews/product/${productId}/can-review`,
     mine: "/reviews/user/me",
     delete: (reviewId: number) => `/reviews/${reviewId}`,
   },

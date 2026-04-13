@@ -154,6 +154,10 @@ class Order(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
     total_price: float = Field(ge=0)
+    subtotal_amount: Optional[float] = Field(default=None, ge=0)
+    delivery_fee: float = Field(default=0.0, ge=0)
+    shipping_method: Optional[str] = None
+    shipping_region: Optional[str] = None
     status: str = Field(default="pending")  # "pending", "processing", "shipped", "delivered", "cancelled"
     shipping_address: Optional[str] = None
     shipping_provider: Optional[str] = None

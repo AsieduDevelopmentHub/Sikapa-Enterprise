@@ -174,3 +174,11 @@ body {
     transform: translateX(0);
   }
 }
+
+html.dark body {
+  @apply bg-zinc-950 text-zinc-100;
+}
+
+html.dark {
+  color-scheme: dark;
+}

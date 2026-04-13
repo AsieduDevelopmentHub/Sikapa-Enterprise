@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { FaBag, FaCart } from "@/components/FaIcons";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
 import { ProductReviewsSection } from "@/components/product/ProductReviewsSection";
+import { ProductWishlistButton } from "@/components/product/ProductWishlistButton";
 import { StarRating } from "@/components/StarRating";
 import { useCart } from "@/context/CartContext";
 import { useCatalog } from "@/context/CatalogContext";
@@ -46,6 +47,7 @@ export function ProductDetailScreen({ product: p }: Props) {
             sizes="(max-width:430px) 100vw, 400px"
             priority
           />
+          <ProductWishlistButton productId={p.id} size="md" className="absolute right-3 top-3 z-[1]" />
           <button
             type="button"
             className="sikapa-tap-bounce absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center rounded-full bg-sikapa-gold text-white shadow-lg ring-2 ring-white/90"
@@ -127,6 +129,7 @@ export function ProductDetailScreen({ product: p }: Props) {
                   key={item.id}
                   className="relative w-[46%] max-w-[200px] shrink-0 snap-start overflow-hidden rounded-[10px] bg-white shadow-[0_2px_12px_rgba(59,42,37,0.06)] ring-1 ring-black/[0.05]"
                 >
+                  <ProductWishlistButton productId={item.id} className="absolute right-1.5 top-1.5 z-[1]" />
                   <Link href={`/product/${item.id}`} className="sikapa-tap block">
                     <div className="relative aspect-square w-full">
                       <Image

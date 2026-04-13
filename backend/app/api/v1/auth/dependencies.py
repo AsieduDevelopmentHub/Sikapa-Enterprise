@@ -1,6 +1,8 @@
 """
 Authentication dependencies for FastAPI route protection and token validation.
 """
+from __future__ import annotations
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session, select
@@ -73,6 +75,21 @@ async def get_current_active_user(
             detail="User account is inactive"
         )
     return current_user
+
+
+async def get_current_active_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    session: Session = Depends(get_session),
+) -> User | None:
+    if not credentials or credentials.scheme.lower() != "bearer":
+        return None
+    try:
+        user = await get_current_user(credentials, session)
+        if not user.is_active:
+            return None
+        return user
+    except HTTPException:
+        return None
 
 
 async def get_current_admin_user(

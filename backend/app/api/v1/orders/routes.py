@@ -8,7 +8,9 @@ from sqlmodel import Session, select
 from app.db import get_session
 from app.models import Order, OrderItem, CartItem, Product, User
 from app.api.v1.auth.dependencies import get_current_active_user
-from app.api.v1.orders.schemas import OrderSchema, OrderCreateSchema, OrderDetailSchema
+from app.core.ghana_shipping import delivery_fee_ghs, normalize_region_slug
+
+from app.api.v1.orders.schemas import OrderSchema, OrderCreateSchema, OrderDetailSchema, OrderListItem
 from app.api.v1.orders.services import (
     create_order_from_cart,
     get_user_orders,
@@ -21,13 +23,29 @@ from app.api.v1.orders.services import (
 router = APIRouter()
 
 
-@router.get("/", response_model=List[OrderSchema])
+def _order_to_list_item(session: Session, order: Order) -> OrderListItem:
+    base = OrderSchema.model_validate(order)
+    name = None
+    img = None
+    first = session.exec(
+        select(OrderItem).where(OrderItem.order_id == order.id).order_by(OrderItem.id)
+    ).first()
+    if first:
+        p = session.exec(select(Product).where(Product.id == first.product_id)).first()
+        if p:
+            name = p.name
+            img = p.image_url
+    return OrderListItem(**base.model_dump(), preview_product_name=name, preview_image_url=img)
+
+
+@router.get("/", response_model=List[OrderListItem])
 async def list_orders(
     current_user=Depends(get_current_active_user),
     session: Session = Depends(get_session)
 ):
     """Get current user's orders."""
-    return await get_user_orders(session, current_user.id)
+    orders = await get_user_orders(session, current_user.id)
+    return [_order_to_list_item(session, o) for o in orders]
 
 
 @router.get("/{order_id}", response_model=OrderDetailSchema)
@@ -65,8 +83,8 @@ async def create_order(
             detail="Cart is empty"
         )
 
-    # Calculate total and verify stock
-    total_price = 0
+    # Calculate subtotal and verify stock
+    subtotal = 0.0
     for item in cart_items:
         product = session.exec(
             select(Product).where(Product.id == item.product_id)
@@ -81,10 +99,23 @@ async def create_order(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for {product.name}"
             )
-        total_price += product.price * item.quantity
+        subtotal += product.price * item.quantity
+
+    try:
+        region_slug = (
+            normalize_region_slug(order_data.shipping_region)
+            if order_data.shipping_method == "delivery"
+            else None
+        )
+        fee = delivery_fee_ghs(order_data.shipping_method, region_slug)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Choose a valid Ghana region for delivery.",
+        )
 
     return await create_order_from_cart(
-        session, current_user.id, total_price, order_data, cart_items
+        session, current_user.id, subtotal, fee, order_data, cart_items
     )
 
 

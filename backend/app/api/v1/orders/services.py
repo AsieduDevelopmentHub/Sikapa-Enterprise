@@ -20,16 +20,32 @@ invoice_service = InvoiceService()
 async def create_order_from_cart(
     session: Session,
     user_id: int,
-    total_price: float,
+    subtotal: float,
+    delivery_fee: float,
     order_data: OrderCreateSchema,
     cart_items: list[CartItem]
 ) -> Order:
     """Create order from cart items."""
+    total_price = round(float(subtotal) + float(delivery_fee), 2)
+    region_key = (
+        (order_data.shipping_region or "").strip().lower().replace(" ", "-")
+        if order_data.shipping_region
+        else None
+    )
+    provider = order_data.shipping_provider
+    if order_data.shipping_method == "pickup":
+        provider = provider or "Local pickup (store)"
+        region_key = None
     order = Order(
         user_id=user_id,
         total_price=total_price,
+        subtotal_amount=round(float(subtotal), 2),
+        delivery_fee=round(float(delivery_fee), 2),
+        shipping_method=order_data.shipping_method,
+        shipping_region=region_key,
         status="pending",
         shipping_address=order_data.shipping_address,
+        shipping_provider=provider,
         notes=order_data.notes
     )
     session.add(order)
@@ -119,9 +135,15 @@ async def create_invoice_for_order(
     payment_method: str = "card"
 ) -> Invoice:
     """Create an invoice record for an order."""
-    subtotal = order.total_price
+    if order.subtotal_amount is not None:
+        line_subtotal = float(order.subtotal_amount)
+        shipping_fee = float(order.delivery_fee or 0)
+    else:
+        line_subtotal = float(order.total_price)
+        shipping_fee = float(shipping)
+    subtotal = line_subtotal
     tax = round(subtotal * tax_rate, 2)
-    total = round(subtotal + tax + shipping, 2)
+    total = round(subtotal + tax + shipping_fee, 2)
     invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{order.id}-{uuid.uuid4().hex[:8]}"
 
     invoice = Invoice(
@@ -129,7 +151,7 @@ async def create_invoice_for_order(
         invoice_number=invoice_number,
         subtotal=subtotal,
         tax=tax,
-        shipping=shipping,
+        shipping=shipping_fee,
         total=total,
         payment_method=payment_method,
         status="pending",
