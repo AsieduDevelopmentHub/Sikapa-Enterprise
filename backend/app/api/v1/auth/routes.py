@@ -31,6 +31,7 @@ from app.api.v1.auth.services import (
     request_password_reset,
     reset_password,
     update_user_profile,
+    resend_email_verification,
     change_password,
     delete_user_account,
     setup_two_fa_totp,
@@ -221,21 +222,21 @@ def update_profile_endpoint(
     session: Session = Depends(get_session)
 ):
     """Update user profile information."""
-    updated_user = update_user_profile(
-        session,
-        current_user.id,
-        username=request.username,
-        name=request.name,
-        phone=request.phone,
-        shipping_region=request.shipping_region,
-        shipping_city=request.shipping_city,
-        shipping_address_line1=request.shipping_address_line1,
-        shipping_address_line2=request.shipping_address_line2,
-        shipping_landmark=request.shipping_landmark,
-        shipping_contact_name=request.shipping_contact_name,
-        shipping_contact_phone=request.shipping_contact_phone,
-    )
+    patch = request.model_dump(exclude_unset=True)
+    updated_user = update_user_profile(session, current_user.id, patch)
     return UserProfileResponse.model_validate(updated_user)
+
+
+@router.post("/resend-email-verification")
+@auth_limiter
+def resend_email_verification_endpoint(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    """Send a new email verification code to the address on file."""
+    resend_email_verification(session, current_user.id)
+    return {"message": "Verification code sent"}
 
 
 # ============ PASSWORD MANAGEMENT ============

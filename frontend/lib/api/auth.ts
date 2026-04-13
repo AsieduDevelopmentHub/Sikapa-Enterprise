@@ -163,6 +163,12 @@ export async function authTwoFaDisable(
   });
 }
 
+export async function authResendEmailVerification(accessToken: string): Promise<{ message: string }> {
+  return apiFetchJsonAuth<{ message: string }>(accessToken, V1.auth.resendEmailVerification, {
+    method: "POST",
+  });
+}
+
 export async function authVerifyEmail(email: string, code: string): Promise<{
   message: string;
   email: string;
@@ -181,6 +187,7 @@ export async function authUpdateProfile(
     username?: string | null;
     name?: string | null;
     phone?: string | null;
+    email?: string | null;
     shipping_region?: string | null;
     shipping_city?: string | null;
     shipping_address_line1?: string | null;
