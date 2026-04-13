@@ -38,12 +38,12 @@ const DIMENSIONS: Record<
 
 /** Fixed slot for nav logos (height + width cap match original bar layout). */
 const NAV_LOGO_FRAME =
-  "relative h-[2.625rem] w-[min(168px,44vw)] shrink-0 overflow-visible sm:h-[2.25rem] sm:w-[min(178px,46vw)]";
+  "relative h-[3.25rem] w-[min(200px,44vw)] shrink-0 overflow-visible sm:h-[3.25rem] sm:w-[min(200px,46vw)]";
 
 /** Intrinsic size of `public/assets/logos/navigation.png` — update when the file changes. */
 const NAV_LIGHT_PX = { w: 877, h: 285 } as const;
 /** Intrinsic size of `public/assets/logos/navigation_darkmode.png` — update when the file changes. */
-const NAV_DARK_PX = { w: 1536, h: 924 } as const;
+const NAV_DARK_PX = { w: 1111, h: 391 } as const;
 
 /**
  * Header slot is height-limited; mismatched aspects → different drawn widths under `object-contain`.
