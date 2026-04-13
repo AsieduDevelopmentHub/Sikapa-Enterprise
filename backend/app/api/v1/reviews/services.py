@@ -4,8 +4,37 @@ Reviews business logic
 from fastapi import HTTPException, status
 from sqlmodel import Session, select, func
 
-from app.models import Review, Product
-from app.api.v1.reviews.schemas import ReviewCreateSchema
+from app.models import Review, Product, Order, OrderItem, User
+from app.api.v1.reviews.schemas import ReviewCreateSchema, ReviewPublic
+
+
+def _reviewer_first_name(user: User | None) -> str:
+    if user and (user.first_name or "").strip():
+        return (user.first_name or "").strip()
+    if user and user.email:
+        return user.email.split("@")[0]
+    return "Customer"
+
+
+def user_has_paid_purchase_for_product(session: Session, user_id: int, product_id: int) -> bool:
+    stmt = (
+        select(OrderItem.id)
+        .join(Order, OrderItem.order_id == Order.id)
+        .where(Order.user_id == user_id)
+        .where(OrderItem.product_id == product_id)
+        .where(Order.payment_status == "paid")
+    )
+    row = session.exec(stmt).first()
+    return row is not None
+
+
+async def can_user_write_review(session: Session, user_id: int, product_id: int) -> bool:
+    if not user_has_paid_purchase_for_product(session, user_id, product_id):
+        return False
+    existing = session.exec(
+        select(Review.id).where(Review.user_id == user_id, Review.product_id == product_id)
+    ).first()
+    return existing is None
 
 
 async def create_review(
@@ -23,6 +52,12 @@ async def create_review(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found"
+        )
+
+    if not user_has_paid_purchase_for_product(session, user_id, review_data.product_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only review products you have purchased.",
         )
 
     # Check if user already reviewed this product
@@ -44,7 +79,8 @@ async def create_review(
         product_id=review_data.product_id,
         rating=review_data.rating,
         title=review_data.title,
-        content=review_data.content
+        content=review_data.content,
+        verified_purchase=True,
     )
     session.add(review)
     session.commit()
@@ -76,6 +112,35 @@ async def get_product_reviews(
         .limit(limit)
     ).all()
     return reviews
+
+
+async def list_product_reviews_public(
+    session: Session,
+    product_id: int,
+    skip: int = 0,
+    limit: int = 10,
+) -> list[ReviewPublic]:
+    reviews = await get_product_reviews(session, product_id, skip=skip, limit=limit)
+    if not reviews:
+        return []
+    user_ids = list({r.user_id for r in reviews})
+    users = session.exec(select(User).where(User.id.in_(user_ids))).all()
+    by_id = {u.id: u for u in users if u.id is not None}
+    out: list[ReviewPublic] = []
+    for r in reviews:
+        u = by_id.get(r.user_id)
+        out.append(
+            ReviewPublic(
+                id=r.id,
+                product_id=r.product_id,
+                rating=r.rating,
+                title=r.title,
+                content=r.content,
+                created_at=r.created_at,
+                reviewer_name=_reviewer_first_name(u),
+            )
+        )
+    return out
 
 
 async def get_user_reviews(session: Session, user_id: int) -> list[Review]:

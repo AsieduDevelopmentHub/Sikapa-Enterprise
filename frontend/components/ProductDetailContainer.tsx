@@ -26,7 +26,7 @@ export function ProductDetailContainer({ id }: { id: string }) {
 
   if (!resolved) {
     return (
-      <div className="bg-sikapa-cream px-4 py-10 text-center text-small text-sikapa-text-secondary">
+      <div className="bg-sikapa-cream px-4 py-10 text-center text-small text-sikapa-text-secondary dark:bg-zinc-950 dark:text-zinc-400">
         {loading ? "Loading product…" : "Product not found."}
       </div>
     );

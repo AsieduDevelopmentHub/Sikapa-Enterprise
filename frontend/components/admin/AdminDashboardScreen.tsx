@@ -57,7 +57,7 @@ export function AdminDashboardScreen() {
     );
   }
 
-  if (!user.is_admin) {
+  if (user.is_admin !== true) {
     return (
       <main className="bg-sikapa-cream">
         <ScreenHeader variant="inner" title="Admin" left="back" backHref="/account" right="none" />

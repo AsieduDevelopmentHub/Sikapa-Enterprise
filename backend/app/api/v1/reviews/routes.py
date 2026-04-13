@@ -1,39 +1,69 @@
 """
 Reviews API routes
 """
+from __future__ import annotations
+
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session
 
-from app.api.v1.auth.dependencies import get_current_active_user
+from app.api.v1.auth.dependencies import get_current_active_user, get_current_active_user_optional
 from app.db import get_session
 from app.models import User
-from app.api.v1.reviews.schemas import ReviewSchema, ReviewCreateSchema
+from app.api.v1.reviews.schemas import (
+    ReviewSchema,
+    ReviewCreateSchema,
+    ReviewWriteEligibility,
+    ReviewPublic,
+)
 from app.api.v1.reviews.services import (
     create_review,
-    get_product_reviews,
+    list_product_reviews_public,
     get_user_reviews,
-    delete_review
+    delete_review,
+    can_user_write_review,
+    _reviewer_first_name,
 )
 
 router = APIRouter()
 
 
-@router.post("", response_model=ReviewSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ReviewPublic, status_code=status.HTTP_201_CREATED)
 async def create_review_endpoint(
     review_data: ReviewCreateSchema,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new review for a product."""
-    return await create_review(
+    row = await create_review(
         session=session,
         user_id=current_user.id,
         review_data=review_data
     )
+    return ReviewPublic(
+        id=row.id,
+        product_id=row.product_id,
+        rating=row.rating,
+        title=row.title,
+        content=row.content,
+        created_at=row.created_at,
+        reviewer_name=_reviewer_first_name(current_user),
+    )
 
 
-@router.get("/product/{product_id}", response_model=List[ReviewSchema])
+@router.get("/product/{product_id}/can-review", response_model=ReviewWriteEligibility)
+async def review_write_eligibility(
+    product_id: int,
+    session: Session = Depends(get_session),
+    current_user: User | None = Depends(get_current_active_user_optional),
+):
+    if not current_user:
+        return ReviewWriteEligibility(can_review=False)
+    ok = await can_user_write_review(session, current_user.id, product_id)
+    return ReviewWriteEligibility(can_review=ok)
+
+
+@router.get("/product/{product_id}", response_model=List[ReviewPublic])
 async def get_product_reviews_endpoint(
     product_id: int,
     skip: int = Query(0, ge=0),
@@ -41,11 +71,11 @@ async def get_product_reviews_endpoint(
     session: Session = Depends(get_session)
 ):
     """Get all reviews for a product."""
-    return await get_product_reviews(
+    return await list_product_reviews_public(
         session=session,
         product_id=product_id,
         skip=skip,
-        limit=limit
+        limit=limit,
     )
 
 

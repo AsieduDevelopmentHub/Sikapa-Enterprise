@@ -21,7 +21,7 @@ export function HomeCategoryRails() {
   }, [categories]);
 
   return (
-    <section className="scroll-mt-20 bg-sikapa-cream py-4 pb-6" aria-label="Shop by category">
+    <section className="scroll-mt-20 bg-sikapa-cream py-4 pb-6 dark:bg-zinc-950" aria-label="Shop by category">
       {homeRailCategoryKeys.map((key) => {
         const railProducts = getProductsForHomeRail(key);
         if (railProducts.length === 0) return null;
@@ -36,7 +36,7 @@ export function HomeCategoryRails() {
         return (
           <div key={key} className="mb-8 last:mb-0">
             <div className="mb-3 flex items-center justify-between px-4">
-              <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+              <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
                 {title}
               </h2>
               <Link
