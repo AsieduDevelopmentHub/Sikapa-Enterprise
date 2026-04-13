@@ -2,6 +2,7 @@
 Paystack payment endpoints: initialize checkout, verify payment, webhook.
 """
 from typing import Annotated, Optional
+import os
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlmodel import Session
@@ -18,6 +19,13 @@ from app.api.v1.payments.schemas import (
 from app.api.v1.payments import services as payment_services
 
 router = APIRouter()
+
+
+def _webhook_allowlist() -> set[str]:
+    raw = os.getenv("PAYSTACK_WEBHOOK_IP_ALLOWLIST", "").strip()
+    if not raw:
+        return set()
+    return {x.strip() for x in raw.split(",") if x.strip()}
 
 
 @router.post(
@@ -84,6 +92,14 @@ async def paystack_webhook(request: Request, session: Session = Depends(get_sess
     Paystack server webhook. Configure the same URL in the Paystack dashboard.
     Verifies `x-paystack-signature` (HMAC SHA512 of raw body with secret key).
     """
+    allowlist = _webhook_allowlist()
+    if allowlist:
+        src = request.client.host if request.client else None
+        if not src or src not in allowlist:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Webhook source not allowed",
+            )
     raw = await request.body()
     sig = request.headers.get("x-paystack-signature")
     if not payment_services.verify_paystack_signature(raw, sig):

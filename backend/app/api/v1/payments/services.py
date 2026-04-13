@@ -17,10 +17,12 @@ from sqlmodel import Session, select
 from sqlalchemy import text
 
 from app.db import DATABASE_URL, apply_postgres_session_user
-from app.models import Order, Invoice, PaystackInitIdempotency, PaystackTransaction
+from app.models import Order, Invoice, PaystackInitIdempotency, PaystackTransaction, User
 from app.core import paystack_client
+from app.core.email_service import EmailService
 
 logger = logging.getLogger(__name__)
+email_service = EmailService()
 
 # Allowed mismatch between Paystack subunits and float-derived order total (rounding).
 _AMOUNT_SUBUNIT_TOLERANCE = 1
@@ -317,7 +319,33 @@ def _apply_successful_payment(session: Session, order: Order, reference: str) ->
 
     session.commit()
     session.refresh(order)
+    _send_order_confirmation_once(session, order)
     return order
+
+
+def _send_order_confirmation_once(session: Session, order: Order) -> None:
+    """
+    Send order confirmation once, after payment is confirmed as paid.
+    Uses `confirmation_email_sent_at` as the idempotency guard.
+    """
+    if order.confirmation_email_sent_at is not None:
+        return
+    user = session.get(User, order.user_id)
+    if not user or not user.email:
+        return
+    sent = email_service.send_order_confirmation(
+        user.email,
+        order.id,
+        order.total_price,
+        user.name or user.username or user.email,
+    )
+    if not sent:
+        logger.warning("Order confirmation email failed for order %s", order.id)
+        return
+    order.confirmation_email_sent_at = datetime.utcnow()
+    order.updated_at = datetime.utcnow()
+    session.add(order)
+    session.commit()
 
 
 def verify_paystack_reference(
@@ -346,6 +374,7 @@ def verify_paystack_reference(
         )
 
     if order.payment_status == "paid":
+        _send_order_confirmation_once(session, order)
         return _serialize_verify(order, reference, already=True)
 
     raw = paystack_client.verify_transaction(reference)
@@ -482,6 +511,8 @@ def handle_paystack_webhook(session: Session, payload: bytes) -> bool:
             logger.info("Webhook: unknown reference %s", reference)
             return True
         if order.payment_status == "paid":
+            logger.info("Webhook duplicate charge.success for paid order %s", order.id)
+            _send_order_confirmation_once(session, order)
             return True
         if data.get("status") != "success":
             return True

@@ -25,6 +25,7 @@ import {
 type Panel =
   | "home"
   | "settings"
+  | "address"
   | "appearance"
   | "security"
   | "notifications"
@@ -71,6 +72,14 @@ export function AccountSignedInHub() {
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
   const [profileBusy, setProfileBusy] = useState(false);
+  const [shipRegion, setShipRegion] = useState("");
+  const [shipCity, setShipCity] = useState("");
+  const [shipLine1, setShipLine1] = useState("");
+  const [shipLine2, setShipLine2] = useState("");
+  const [shipLandmark, setShipLandmark] = useState("");
+  const [shipContactName, setShipContactName] = useState("");
+  const [shipContactPhone, setShipContactPhone] = useState("");
+  const [shipBusy, setShipBusy] = useState(false);
 
   const [curPw, setCurPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -96,6 +105,13 @@ export function AccountSignedInHub() {
     setName(u.name ?? "");
     setUsername(u.username ?? "");
     setPhone(u.phone ?? "");
+    setShipRegion(u.shipping_region ?? "");
+    setShipCity(u.shipping_city ?? "");
+    setShipLine1(u.shipping_address_line1 ?? "");
+    setShipLine2(u.shipping_address_line2 ?? "");
+    setShipLandmark(u.shipping_landmark ?? "");
+    setShipContactName(u.shipping_contact_name ?? u.name ?? "");
+    setShipContactPhone(u.shipping_contact_phone ?? u.phone ?? "");
     if (!u.email_verified && u.email) setInboxEmail(u.email);
   }, [u]);
 
@@ -207,6 +223,55 @@ export function AccountSignedInHub() {
     }
   }
 
+  async function saveShippingProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setBanner(null);
+    if (!shipRegion.trim() || !shipCity.trim() || !shipLine1.trim()) {
+      setBanner({ type: "err", text: "Region, city, and address line 1 are required." });
+      return;
+    }
+    setShipBusy(true);
+    try {
+      await authUpdateProfile(token, {
+        shipping_region: sanitizePlainText(shipRegion, 80) || null,
+        shipping_city: sanitizePlainText(shipCity, 120) || null,
+        shipping_address_line1: sanitizePlainText(shipLine1, 255) || null,
+        shipping_address_line2: sanitizePlainText(shipLine2, 255) || null,
+        shipping_landmark: sanitizePlainText(shipLandmark, 255) || null,
+        shipping_contact_name: sanitizePlainText(shipContactName, 120) || null,
+        shipping_contact_phone: sanitizePlainText(shipContactPhone, 32) || null,
+      });
+      await refreshProfile();
+      setBanner({ type: "ok", text: "Shipping profile updated." });
+    } catch (err) {
+      setBanner({ type: "err", text: err instanceof Error ? err.message : "Could not save shipping profile" });
+    } finally {
+      setShipBusy(false);
+    }
+  }
+
+  async function clearShippingProfile() {
+    setBanner(null);
+    setShipBusy(true);
+    try {
+      await authUpdateProfile(token, {
+        shipping_region: "",
+        shipping_city: "",
+        shipping_address_line1: "",
+        shipping_address_line2: "",
+        shipping_landmark: "",
+        shipping_contact_name: "",
+        shipping_contact_phone: "",
+      });
+      await refreshProfile();
+      setBanner({ type: "ok", text: "Shipping profile cleared." });
+    } catch (err) {
+      setBanner({ type: "err", text: err instanceof Error ? err.message : "Could not clear shipping profile" });
+    } finally {
+      setShipBusy(false);
+    }
+  }
+
   if (!user || !accessToken) return null;
 
   return (
@@ -256,6 +321,11 @@ export function AccountSignedInHub() {
 
           <div className="space-y-2">
             <NavRow label="Profile & settings" hint="Name, username, phone" onClick={() => setPanel("settings")} />
+            <NavRow
+              label="Address & contact"
+              hint="Default shipping details for faster checkout"
+              onClick={() => setPanel("address")}
+            />
             <NavRow label="Appearance" hint="Light, dark, or system" onClick={() => setPanel("appearance")} />
             <NavRow label="Security" hint="Password and two-step sign-in" onClick={() => setPanel("security")} />
             <NavRow label="Notifications" hint="How we reach you" onClick={() => setPanel("notifications")} />
@@ -369,6 +439,76 @@ export function AccountSignedInHub() {
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {panel === "address" && (
+        <section className="rounded-[12px] bg-white p-5 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+          <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
+            Default shipping profile
+          </h2>
+          <p className="mt-1 text-small text-sikapa-text-secondary dark:text-zinc-400">
+            Used to prefill checkout. You can still override contact per order.
+          </p>
+          <form onSubmit={saveShippingProfile} className="mt-4 space-y-3">
+            <input
+              value={shipRegion}
+              onChange={(e) => setShipRegion(e.target.value)}
+              placeholder="Region"
+              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+            />
+            <input
+              value={shipCity}
+              onChange={(e) => setShipCity(e.target.value)}
+              placeholder="City / town"
+              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+            />
+            <input
+              value={shipLine1}
+              onChange={(e) => setShipLine1(e.target.value)}
+              placeholder="Address line 1"
+              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+            />
+            <input
+              value={shipLine2}
+              onChange={(e) => setShipLine2(e.target.value)}
+              placeholder="Address line 2 (optional)"
+              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+            />
+            <input
+              value={shipLandmark}
+              onChange={(e) => setShipLandmark(e.target.value)}
+              placeholder="Landmark (optional)"
+              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+            />
+            <input
+              value={shipContactName}
+              onChange={(e) => setShipContactName(e.target.value)}
+              placeholder="Default contact name"
+              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+            />
+            <input
+              value={shipContactPhone}
+              onChange={(e) => setShipContactPhone(e.target.value)}
+              placeholder="Default contact phone"
+              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+            />
+            <button
+              type="submit"
+              disabled={shipBusy}
+              className="sikapa-btn-gold sikapa-tap w-full rounded-[10px] py-2.5 text-small font-semibold text-white disabled:opacity-50"
+            >
+              {shipBusy ? "Saving…" : "Save shipping profile"}
+            </button>
+            <button
+              type="button"
+              disabled={shipBusy}
+              onClick={() => void clearShippingProfile()}
+              className="w-full rounded-[10px] border border-sikapa-gray-soft py-2.5 text-small font-semibold text-sikapa-text-primary disabled:opacity-50 dark:border-white/10 dark:text-zinc-100"
+            >
+              Clear saved address
+            </button>
+          </form>
         </section>
       )}
 

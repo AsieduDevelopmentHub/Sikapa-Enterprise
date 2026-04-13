@@ -64,9 +64,12 @@ class OrderSchema(BaseModel):
     delivery_fee: float = Field(default=0.0, ge=0)
     shipping_method: Optional[str] = None
     shipping_region: Optional[str] = None
+    shipping_city: Optional[str] = None
     status: str
     shipping_address: Optional[str] = None
     shipping_provider: Optional[str] = None
+    shipping_contact_name: Optional[str] = None
+    shipping_contact_phone: Optional[str] = None
     tracking_number: Optional[str] = None
     estimated_delivery: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
@@ -75,6 +78,7 @@ class OrderSchema(BaseModel):
     notes: Optional[str] = None
     paystack_reference: Optional[str] = None
     payment_status: str = "pending"
+    confirmation_email_sent_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -98,7 +102,10 @@ class OrderCreateSchema(BaseModel):
     notes: Optional[str] = None
     shipping_method: Literal["pickup", "delivery"] = "pickup"
     shipping_region: Optional[str] = None
+    shipping_city: Optional[str] = None
     shipping_provider: Optional[str] = None
+    shipping_contact_name: Optional[str] = None
+    shipping_contact_phone: Optional[str] = None
 
     @field_validator("shipping_address", mode="before")
     @classmethod
@@ -117,14 +124,32 @@ class OrderCreateSchema(BaseModel):
             return None
         return sanitize_plain_text(str(v), max_length=120, single_line=True)
 
+    @field_validator("shipping_city", "shipping_contact_name", mode="before")
+    @classmethod
+    def _sanitize_short_fields(cls, v):
+        return sanitize_plain_text(v, max_length=120, single_line=True)
+
+    @field_validator("shipping_contact_phone", mode="before")
+    @classmethod
+    def _sanitize_contact_phone(cls, v):
+        if v is None:
+            return None
+        return sanitize_plain_text(v, max_length=32, single_line=True)
+
     @model_validator(mode="after")
     def _delivery_rules(self):
         if self.shipping_method == "delivery":
             if not (self.shipping_region or "").strip():
                 raise ValueError("Choose a region for delivery.")
+            if not (self.shipping_city or "").strip():
+                raise ValueError("Enter a city/town for delivery.")
             if not (self.shipping_provider or "").strip():
                 raise ValueError("Choose a courier or delivery service.")
             if not (self.shipping_address or "").strip():
                 raise ValueError("Enter a delivery address.")
+            if not (self.shipping_contact_name or "").strip():
+                raise ValueError("Enter a contact name for delivery.")
+            if not (self.shipping_contact_phone or "").strip():
+                raise ValueError("Enter a contact phone for delivery.")
         return self
 

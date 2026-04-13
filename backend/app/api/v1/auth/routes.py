@@ -227,6 +227,13 @@ def update_profile_endpoint(
         username=request.username,
         name=request.name,
         phone=request.phone,
+        shipping_region=request.shipping_region,
+        shipping_city=request.shipping_city,
+        shipping_address_line1=request.shipping_address_line1,
+        shipping_address_line2=request.shipping_address_line2,
+        shipping_landmark=request.shipping_landmark,
+        shipping_contact_name=request.shipping_contact_name,
+        shipping_contact_phone=request.shipping_contact_phone,
     )
     return UserProfileResponse.model_validate(updated_user)
 

@@ -331,6 +331,13 @@ def update_user_profile(
     username: str = None,
     name: str = None,
     phone: str = None,
+    shipping_region: str = None,
+    shipping_city: str = None,
+    shipping_address_line1: str = None,
+    shipping_address_line2: str = None,
+    shipping_landmark: str = None,
+    shipping_contact_name: str = None,
+    shipping_contact_phone: str = None,
 ) -> User:
     """Update user profile information."""
     user = session.get(User, user_id)
@@ -361,6 +368,20 @@ def update_user_profile(
         user.last_name = None
     if phone is not None:
         user.phone = phone
+    if shipping_region is not None:
+        user.shipping_region = shipping_region
+    if shipping_city is not None:
+        user.shipping_city = shipping_city
+    if shipping_address_line1 is not None:
+        user.shipping_address_line1 = shipping_address_line1
+    if shipping_address_line2 is not None:
+        user.shipping_address_line2 = shipping_address_line2
+    if shipping_landmark is not None:
+        user.shipping_landmark = shipping_landmark
+    if shipping_contact_name is not None:
+        user.shipping_contact_name = shipping_contact_name
+    if shipping_contact_phone is not None:
+        user.shipping_contact_phone = shipping_contact_phone
 
     user.updated_at = datetime.utcnow()
     session.add(user)

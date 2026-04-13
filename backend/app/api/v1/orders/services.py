@@ -43,9 +43,12 @@ async def create_order_from_cart(
         delivery_fee=round(float(delivery_fee), 2),
         shipping_method=order_data.shipping_method,
         shipping_region=region_key,
+        shipping_city=order_data.shipping_city,
         status="pending",
         shipping_address=order_data.shipping_address,
         shipping_provider=provider,
+        shipping_contact_name=order_data.shipping_contact_name,
+        shipping_contact_phone=order_data.shipping_contact_phone,
         notes=order_data.notes
     )
     session.add(order)
@@ -78,7 +81,6 @@ async def create_order_from_cart(
     session.refresh(order)
 
     invoice = await create_invoice_for_order(session, order)
-    await send_order_confirmation_email(session, order, user_id)
 
     for cart_item in cart_items:
         session.delete(cart_item)
