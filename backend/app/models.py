@@ -48,6 +48,7 @@ class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     hashed_password: str
     email_verified: bool = False
+    email_is_placeholder: bool = Field(default=False)
     phone: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -70,6 +71,7 @@ class UserCreate(UserBase):
 class UserRead(UserBase):
     id: int
     email_verified: bool
+    email_is_placeholder: bool = False
     phone: Optional[str] = None
     # Backward-compat fields; deprecated in favor of `name`.
     first_name: Optional[str] = None

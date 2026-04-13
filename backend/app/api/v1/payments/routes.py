@@ -17,8 +17,20 @@ from app.api.v1.payments.schemas import (
     PaystackWebhookAck,
 )
 from app.api.v1.payments import services as payment_services
+from app.core.placeholder_email import ensure_paystack_customer_email
 
 router = APIRouter()
+
+
+def _webhook_client_ip(request: Request) -> str | None:
+    """Client IP for webhook allowlist (honour reverse-proxy headers on Render/nginx)."""
+    xff = request.headers.get("x-forwarded-for") or request.headers.get("X-Forwarded-For")
+    if xff:
+        return xff.split(",")[0].strip()
+    xri = request.headers.get("x-real-ip") or request.headers.get("X-Real-IP")
+    if xri:
+        return xri.strip()
+    return request.client.host if request.client else None
 
 
 def _webhook_allowlist() -> set[str]:
@@ -43,16 +55,12 @@ def paystack_initialize(
     Start a Paystack transaction for an order. Client should redirect the
     shopper to `authorization_url`, then call verify (or rely on webhook).
     """
-    if not current_user.email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Add an email to your account before starting payment.",
-        )
+    pay_email = ensure_paystack_customer_email(session, current_user)
 
     data = payment_services.initialize_paystack_for_order(
         session,
         current_user.id,
-        current_user.email,
+        pay_email,
         payload.order_id,
         str(payload.callback_url),
         idempotency_key=idempotency_key,
@@ -94,7 +102,7 @@ async def paystack_webhook(request: Request, session: Session = Depends(get_sess
     """
     allowlist = _webhook_allowlist()
     if allowlist:
-        src = request.client.host if request.client else None
+        src = _webhook_client_ip(request)
         if not src or src not in allowlist:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

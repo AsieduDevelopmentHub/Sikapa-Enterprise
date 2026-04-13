@@ -14,6 +14,7 @@ export type UserProfile = {
   username: string;
   name: string;
   email?: string | null;
+  email_is_placeholder?: boolean;
   phone?: string | null;
   shipping_region?: string | null;
   shipping_city?: string | null;

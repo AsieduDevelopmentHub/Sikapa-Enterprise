@@ -7,6 +7,8 @@ from urllib.parse import quote
 import resend
 from dotenv import load_dotenv
 
+from app.core.placeholder_email import is_undeliverable_placeholder_email
+
 # Load environment variables
 load_dotenv()
 
@@ -49,6 +51,10 @@ class EmailService:
         """
         if from_email is None:
             from_email = default_from_email
+
+        if to_email and is_undeliverable_placeholder_email(to_email):
+            print(f"[INFO] Skipping email to synthetic/placeholder address: {to_email}")
+            return "skipped-placeholder"
 
         if not email_enabled or not resend_api_key:
             print(f"[DEBUG] Would send email to {to_email}: {subject}")

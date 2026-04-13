@@ -131,6 +131,7 @@ class UserProfileResponse(BaseModel):
     shipping_contact_name: Optional[str] = None
     shipping_contact_phone: Optional[str] = None
     email_verified: bool
+    email_is_placeholder: bool = False
     two_fa_enabled: bool
     two_fa_method: Optional[str] = None
     is_active: bool
