@@ -10,7 +10,7 @@ export function publicSiteBaseUrl(): string {
   return v && /^https?:\/\//i.test(v) ? v.replace(/\/$/, "") : "";
 }
 
-/** Terms of service — full URL or path. */
+/** Terms of service — defaults to in-app `/terms` (see `app/terms/page.tsx`). */
 export function termsUrl(): string {
   const v = process.env.NEXT_PUBLIC_TERMS_URL?.trim();
   if (v) return v;
@@ -18,7 +18,7 @@ export function termsUrl(): string {
   return base ? `${base}/terms` : "/terms";
 }
 
-/** Privacy policy — full URL or path. */
+/** Privacy policy — defaults to in-app `/privacy` (see `app/privacy/page.tsx`). */
 export function privacyUrl(): string {
   const v = process.env.NEXT_PUBLIC_PRIVACY_URL?.trim();
   if (v) return v;
