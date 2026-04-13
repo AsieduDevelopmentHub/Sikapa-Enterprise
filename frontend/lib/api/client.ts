@@ -75,6 +75,38 @@ export async function apiFetchJson<T>(path: string, init?: RequestInit): Promise
   return parseJsonResponse<T>(res);
 }
 
+/** Authorized binary response (e.g. PDF). Retries once on 401 after refresh. */
+export async function apiFetchBlobAuth(
+  accessToken: string | null | undefined,
+  path: string,
+  init?: RequestInit
+): Promise<Blob> {
+  if (!accessToken?.trim()) {
+    throw new Error("Not authenticated");
+  }
+  const url = `${getApiV1Base()}${path.startsWith("/") ? path : `/${path}`}`;
+  const doFetch = (tok: string) =>
+    fetch(url, {
+      ...init,
+      headers: {
+        Accept: "*/*",
+        Authorization: `Bearer ${tok.trim()}`,
+        ...init?.headers,
+      },
+    });
+
+  let res = await doFetch(accessToken);
+  if (res.status === 401 && typeof window !== "undefined") {
+    const next = await refreshAccessTokenOnce();
+    if (next) res = await doFetch(next);
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(parseApiErrorBody(res.status, text));
+  }
+  return res.blob();
+}
+
 export async function apiFetchJsonAuth<T>(
   accessToken: string | null | undefined,
   path: string,

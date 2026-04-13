@@ -2,7 +2,6 @@
 Orders schemas
 """
 from datetime import datetime
-from typing import List
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -17,6 +16,22 @@ class OrderItemSchema(BaseModel):
     quantity: int = Field(gt=0)
     price_at_purchase: float = Field(ge=0)
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class OrderItemLineSchema(BaseModel):
+    """Order line with product display fields for customer order detail."""
+
+    id: int
+    order_id: int
+    product_id: int
+    quantity: int = Field(gt=0)
+    price_at_purchase: float = Field(ge=0)
+    created_at: datetime
+    product_name: Optional[str] = None
+    product_image_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -68,13 +83,14 @@ class OrderSchema(BaseModel):
 
 
 class OrderDetailSchema(OrderSchema):
-    items: list[OrderItemSchema] = []
+    items: list[OrderItemLineSchema] = []
     invoice: Optional[InvoiceSchema] = None
 
 
 class OrderListItem(OrderSchema):
     preview_product_name: Optional[str] = None
     preview_image_url: Optional[str] = None
+    line_count: int = 0
 
 
 class OrderCreateSchema(BaseModel):

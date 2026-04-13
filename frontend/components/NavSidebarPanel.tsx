@@ -27,17 +27,20 @@ const ADMIN_LINK = {
 } as const;
 
 export function NavSidebarPanel() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const { open, closeDrawer } = useNavDrawer();
   const pathname = usePathname() || "/";
 
+  /** Admin entry points must not appear unless the session is authenticated and the server marked the user as admin. */
+  const showAdminLink = Boolean(user && accessToken && user.is_admin === true);
+
   const links = useMemo(() => {
-    if (!user?.is_admin) return BASE_LINKS;
+    if (!showAdminLink) return BASE_LINKS;
     const i = BASE_LINKS.findIndex((l) => l.href === "/account");
     const next = [...BASE_LINKS];
     next.splice(i + 1, 0, ADMIN_LINK);
     return next;
-  }, [user?.is_admin]);
+  }, [showAdminLink]);
 
   useEffect(() => {
     closeDrawer();
