@@ -5,15 +5,15 @@ type Size = "sm" | "md";
 const sizes = {
   sm: {
     wrap: "gap-0.5",
-    from: "text-[10px] text-sikapa-text-secondary",
-    strike: "text-[11px] font-medium text-sikapa-text-muted line-through",
+    from: "text-[10px] text-sikapa-text-secondary dark:text-zinc-400",
+    strike: "text-[11px] font-medium text-sikapa-text-muted line-through dark:text-zinc-500",
     to: "text-small font-semibold text-sikapa-gold",
     single: "text-small font-semibold text-sikapa-gold",
   },
   md: {
     wrap: "gap-1",
-    from: "text-small text-sikapa-text-secondary",
-    strike: "text-body font-medium text-sikapa-text-muted line-through",
+    from: "text-small text-sikapa-text-secondary dark:text-zinc-400",
+    strike: "text-body font-medium text-sikapa-text-muted line-through dark:text-zinc-500",
     to: "text-[1.125rem] font-semibold text-sikapa-gold",
     single: "text-[1.125rem] font-semibold text-sikapa-gold",
   },

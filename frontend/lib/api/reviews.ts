@@ -1,4 +1,5 @@
-import { apiFetchJson, apiFetchJsonAuth } from "@/lib/api/client";
+import { apiFetchJson, apiFetchJsonAuth, getApiV1Base } from "@/lib/api/client";
+import { parseApiErrorBody } from "@/lib/api/error-message";
 import { V1 } from "@/lib/api/v1-paths";
 
 export type ReviewRow = {
@@ -7,9 +8,25 @@ export type ReviewRow = {
   user_id: number;
   rating: number;
   title: string;
-  content: string;
+  content: string | null;
   created_at: string;
+  reviewer_name?: string;
 };
+
+export async function reviewsWriteEligibility(
+  productId: number,
+  accessToken?: string | null
+): Promise<{ can_review: boolean }> {
+  const url = `${getApiV1Base()}${V1.reviews.canReview(productId)}`;
+  const headers: HeadersInit = { Accept: "application/json" };
+  if (accessToken?.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(parseApiErrorBody(res.status, text));
+  }
+  return res.json() as Promise<{ can_review: boolean }>;
+}
 
 export async function reviewsForProduct(
   productId: number,

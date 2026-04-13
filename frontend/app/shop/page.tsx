@@ -4,7 +4,7 @@ import { ShopScreen } from "@/components/ShopScreen";
 
 function ShopFallback() {
   return (
-    <div className="space-y-3 bg-sikapa-cream px-4 py-4" aria-hidden>
+    <div className="space-y-3 bg-sikapa-cream px-4 py-4 dark:bg-zinc-950" aria-hidden>
       <div className="sikapa-skeleton h-12 w-full rounded-[10px]" />
       <div className="sikapa-skeleton h-10 w-[72%] rounded-full" />
       <div className="sikapa-skeleton h-40 w-full rounded-[10px]" />
@@ -15,7 +15,7 @@ function ShopFallback() {
 
 export default function ShopPage() {
   return (
-    <main className="bg-sikapa-cream">
+    <main className="bg-sikapa-cream dark:bg-zinc-950">
       <ScreenHeader
         variant="inner"
         title="Shop Products"

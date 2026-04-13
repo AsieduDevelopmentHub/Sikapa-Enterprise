@@ -1,4 +1,5 @@
 import { apiFetchJson, apiFetchJsonAuth, getApiV1Base } from "@/lib/api/client";
+import { parseApiErrorBody } from "@/lib/api/error-message";
 import { V1 } from "@/lib/api/v1-paths";
 
 export type TokenResponse = {
@@ -66,7 +67,7 @@ export async function authLogin(email: string, password: string): Promise<TokenR
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    throw new Error(parseApiErrorBody(res.status, text));
   }
   return res.json() as Promise<TokenResponse>;
 }
