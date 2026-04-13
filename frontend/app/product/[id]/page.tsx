@@ -7,7 +7,7 @@ export default async function ProductPage({ params }: Props) {
   const { id } = await params;
 
   return (
-    <main className="min-h-screen bg-sikapa-cream">
+    <main className="min-h-screen bg-sikapa-cream dark:bg-zinc-950">
       <ScreenHeader
         variant="inner"
         title="Product"

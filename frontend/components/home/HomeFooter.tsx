@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NewsletterFooterForm } from "@/components/home/NewsletterFooterForm";
 import { SIKAPA_LOCATION_LINE } from "@/lib/site";
 
 const primary = [
@@ -19,7 +20,7 @@ const onPage = [
 
 export function HomeFooter() {
   return (
-    <footer className="border-t border-sikapa-gray-soft bg-[#2a2422] px-4 py-8 text-sikapa-gray-soft">
+    <footer className="border-t border-sikapa-gray-soft bg-[#2a2422] px-4 py-8 text-sikapa-gray-soft dark:border-white/10">
       <div className="mx-auto max-w-mobile">
         <p className="font-serif text-small font-semibold tracking-[0.12em] text-white">SIKAPA</p>
         <p className="mt-1 text-[11px] leading-relaxed text-white/60">
@@ -54,6 +55,8 @@ export function HomeFooter() {
             ))}
           </ul>
         </nav>
+
+        <NewsletterFooterForm />
 
         <p className="mt-8 border-t border-white/10 pt-6 text-center text-[10px] text-white/45">
           © {new Date().getFullYear()} Sikapa Enterprise. All rights reserved.

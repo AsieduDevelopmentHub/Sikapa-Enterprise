@@ -1,3 +1,4 @@
+import { parseApiErrorBody } from "@/lib/api/error-message";
 import { V1 } from "@/lib/api/v1-paths";
 
 const STORAGE_ACCESS = "sikapa_access_token";
@@ -69,9 +70,41 @@ export async function apiFetchJson<T>(path: string, init?: RequestInit): Promise
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    throw new Error(parseApiErrorBody(res.status, text));
   }
   return parseJsonResponse<T>(res);
+}
+
+/** Authorized binary response (e.g. PDF). Retries once on 401 after refresh. */
+export async function apiFetchBlobAuth(
+  accessToken: string | null | undefined,
+  path: string,
+  init?: RequestInit
+): Promise<Blob> {
+  if (!accessToken?.trim()) {
+    throw new Error("Not authenticated");
+  }
+  const url = `${getApiV1Base()}${path.startsWith("/") ? path : `/${path}`}`;
+  const doFetch = (tok: string) =>
+    fetch(url, {
+      ...init,
+      headers: {
+        Accept: "*/*",
+        Authorization: `Bearer ${tok.trim()}`,
+        ...init?.headers,
+      },
+    });
+
+  let res = await doFetch(accessToken);
+  if (res.status === 401 && typeof window !== "undefined") {
+    const next = await refreshAccessTokenOnce();
+    if (next) res = await doFetch(next);
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(parseApiErrorBody(res.status, text));
+  }
+  return res.blob();
 }
 
 export async function apiFetchJsonAuth<T>(
@@ -101,7 +134,7 @@ export async function apiFetchJsonAuth<T>(
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    throw new Error(parseApiErrorBody(res.status, text));
   }
   return parseJsonResponse<T>(res);
 }

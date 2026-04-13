@@ -14,6 +14,7 @@ export type MockProduct = {
   categoryLabel: string;
   /** Short detail copy for product page. */
   description: string;
+  in_stock?: number;
 };
 
 export const CATEGORIES: {

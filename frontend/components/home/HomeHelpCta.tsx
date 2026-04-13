@@ -7,7 +7,7 @@ export function HomeHelpCta() {
   return (
     <section
       id="need-help"
-      className="scroll-mt-20 bg-white px-4 py-6"
+      className="scroll-mt-20 bg-white px-4 py-6 dark:bg-zinc-950"
       aria-labelledby="help-heading"
     >
       <div className="mx-auto max-w-mobile">

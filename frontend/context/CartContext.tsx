@@ -12,6 +12,7 @@ import {
 } from "react";
 import { CartAuthModal } from "@/components/cart/CartAuthModal";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import { useCatalog } from "@/context/CatalogContext";
 import {
   cartAddItem,
@@ -38,11 +39,11 @@ type CartContextValue = {
   total: number;
   formatTotal: () => string;
   cartSyncing: boolean;
+  cartActionError: string | null;
+  clearCartActionError: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-
-const SHIPPING_FLAT = 25;
 
 function mergePendingIntoLines(
   base: CartLine[],
@@ -63,9 +64,11 @@ function mergePendingIntoLines(
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user, accessToken, loading: authLoading } = useAuth();
-  const { getProduct } = useCatalog();
+  const { getProduct, source } = useCatalog();
+  const { showToast } = useToast();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [cartSyncing, setCartSyncing] = useState(false);
+  const [cartActionError, setCartActionError] = useState<string | null>(null);
   const [cartAuthOpen, setCartAuthOpen] = useState(false);
   const pendingAddRef = useRef<{ productId: string; qty: number } | null>(null);
   const prevHadUserRef = useRef(false);
@@ -95,6 +98,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [getProduct]
   );
 
+  const clearCartActionError = useCallback(() => setCartActionError(null), []);
+
   const addProduct = useCallback(
     (productId: string, qty = 1) => {
       if (authLoading) return;
@@ -104,6 +109,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (!accessToken) return;
+      setCartActionError(null);
+      if (source === "mock") {
+        addProductInternal(productId, qty);
+        setCartActionError(
+          "Live catalog is offline, so your bag is saved on this device only. Reconnect the shop to sync purchases."
+        );
+        return;
+      }
+      const snapshot = linesRef.current;
       addProductInternal(productId, qty);
       void (async () => {
         try {
@@ -116,12 +130,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
               l.product.id === productId ? { ...l, serverLineId: row.id } : l
             )
           );
+          showToast("Added to bag");
         } catch (e) {
-          console.warn("[Sikapa] cart add failed", e);
+          setLines(snapshot);
+          setCartActionError(e instanceof Error ? e.message : "Could not add to bag.");
         }
       })();
     },
-    [user, accessToken, authLoading, addProductInternal]
+    [user, accessToken, authLoading, addProductInternal, source, showToast]
   );
 
   useEffect(() => {
@@ -137,7 +153,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         const pending = pendingAddRef.current;
         pendingAddRef.current = null;
-        const merged = mergePendingIntoLines(linesRef.current, pending, getProductRef.current);
+        const merged = mergePendingIntoLines([], pending, getProductRef.current);
         if (pending) setCartAuthOpen(false);
 
         for (const line of merged) {
@@ -236,8 +252,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [lines]
   );
 
-  const shipping = lines.length > 0 ? SHIPPING_FLAT : 0;
-  const total = subtotal + shipping;
+  const shipping = 0;
+  const total = subtotal;
 
   const value = useMemo<CartContextValue>(
     () => ({
@@ -250,8 +266,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
       total,
       formatTotal: () => formatGhs(total),
       cartSyncing,
+      cartActionError,
+      clearCartActionError,
     }),
-    [lines, addProduct, setQuantity, removeLine, subtotal, shipping, total, cartSyncing]
+    [
+      lines,
+      addProduct,
+      setQuantity,
+      removeLine,
+      subtotal,
+      shipping,
+      total,
+      cartSyncing,
+      cartActionError,
+      clearCartActionError,
+    ]
   );
 
   return (

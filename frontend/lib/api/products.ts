@@ -21,6 +21,7 @@ export type ApiProductRow = {
   category?: string | null;
   avg_rating?: number;
   review_count?: number;
+  in_stock?: number;
 };
 
 export type ApiProductListResponse = {
@@ -118,6 +119,7 @@ export function mapApiProductToMock(row: ApiProductRow, categories: ApiCategoryR
     category: slug,
     categoryLabel: label,
     description: row.description?.trim() || "Product details from Sikapa catalog.",
+    in_stock: typeof row.in_stock === "number" ? row.in_stock : undefined,
   };
 }
 

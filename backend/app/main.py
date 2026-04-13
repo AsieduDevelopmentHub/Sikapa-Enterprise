@@ -2,13 +2,19 @@ import logging
 import time
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.routes import router as api_v1_router
+from app.core.http_errors import (
+    integrity_error_handler,
+    request_validation_exception_handler,
+)
 from app.core.rate_limit import limiter
 from app.db import create_db_and_tables
 import os
@@ -26,9 +32,12 @@ app = FastAPI(
     title="Sikapa Enterprise API",
     description="Secure API for product browsing, authentication, and orders with HTTPS/TLS encryption.",
     version="0.1.0",
-    docs_url="/docs",  # Only available in development
-    redoc_url="/redoc"  # Only available in development
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
+
+app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+app.add_exception_handler(IntegrityError, integrity_error_handler)
 
 # Rate Limiting (shared instance for SlowAPIMiddleware + route decorators)
 app.state.limiter = limiter
