@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
@@ -10,8 +10,11 @@ import { ordersCreate } from "@/lib/api/orders";
 import { paystackInitialize } from "@/lib/api/payments";
 import {
   DELIVERY_COURIER_OPTIONS,
+  GHANA_CITY_OTHER,
   GHANA_REGIONS,
+  citiesForRegion,
   deliveryFeeFor,
+  splitCityForRegion,
   type ShippingMethodClient,
 } from "@/lib/ghana-shipping";
 import { formatGhs } from "@/lib/mock-data";
@@ -32,7 +35,10 @@ export function CartPageClient() {
   const [shippingMethod, setShippingMethod] = useState<ShippingMethodClient>("pickup");
   const [shippingRegion, setShippingRegion] = useState<string>(GHANA_REGIONS[0]?.slug ?? "greater-accra");
   const [shippingProvider, setShippingProvider] = useState<string>(DELIVERY_COURIER_OPTIONS[0] ?? "Station driver");
-  const [shippingCity, setShippingCity] = useState("");
+  const [cityPick, setCityPick] = useState(
+    () => citiesForRegion(GHANA_REGIONS[0]?.slug ?? "greater-accra")[0] ?? GHANA_CITY_OTHER,
+  );
+  const [cityOther, setCityOther] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
   const [useDefaultContact, setUseDefaultContact] = useState(true);
   const [shippingContactName, setShippingContactName] = useState("");
@@ -40,17 +46,54 @@ export function CartPageClient() {
   const [orderNotes, setOrderNotes] = useState("");
   const n = lines.reduce((s, l) => s + l.quantity, 0);
 
-  const deliveryFee = useMemo(
-    () => deliveryFeeFor(shippingMethod, shippingMethod === "delivery" ? shippingRegion : null),
-    [shippingMethod, shippingRegion]
+  const hasSavedShipping = useMemo(
+    () =>
+      !!(
+        user?.shipping_region?.trim() &&
+        user?.shipping_city?.trim() &&
+        user?.shipping_address_line1?.trim()
+      ),
+    [user]
   );
+
+  const [useSavedShipping, setUseSavedShipping] = useState(false);
+
+  useEffect(() => {
+    setUseSavedShipping(!!hasSavedShipping);
+  }, [hasSavedShipping]);
+
+  const deliveryFee = useMemo(() => {
+    const regionForFee =
+      shippingMethod === "delivery"
+        ? useSavedShipping && hasSavedShipping
+          ? user?.shipping_region ?? null
+          : shippingRegion
+        : null;
+    return deliveryFeeFor(shippingMethod, regionForFee);
+  }, [shippingMethod, shippingRegion, useSavedShipping, hasSavedShipping, user?.shipping_region]);
 
   const checkoutTotal = subtotal + deliveryFee;
 
+  const onRegionChange = useCallback((slug: string) => {
+    setShippingRegion(slug);
+    const list = citiesForRegion(slug);
+    setCityPick(list[0] ?? GHANA_CITY_OTHER);
+    setCityOther("");
+  }, []);
+
   useEffect(() => {
     if (!user) return;
-    if (user.shipping_region) setShippingRegion(user.shipping_region);
-    if (user.shipping_city) setShippingCity(user.shipping_city);
+    const reg = user.shipping_region?.trim() || GHANA_REGIONS[0]?.slug || "greater-accra";
+    if (user.shipping_region?.trim()) setShippingRegion(user.shipping_region.trim());
+    const { pick, other } = splitCityForRegion(reg, user.shipping_city);
+    if (user.shipping_city?.trim() || user.shipping_address_line1?.trim()) {
+      setCityPick(pick);
+      setCityOther(other);
+    } else {
+      const list = citiesForRegion(reg);
+      setCityPick(list[0] ?? GHANA_CITY_OTHER);
+      setCityOther("");
+    }
     const line1 = user.shipping_address_line1?.trim() || "";
     const line2 = user.shipping_address_line2?.trim() || "";
     const landmark = user.shipping_landmark?.trim() || "";
@@ -67,20 +110,43 @@ export function CartPageClient() {
     }
     const notesTrim = sanitizeMultiline(orderNotes, 2000).trim();
     let addr: string | null = null;
+    let effRegion = "";
+    let effCity = "";
     if (shippingMethod === "delivery") {
-      const raw = sanitizeMultiline(shippingAddress, 2000);
-      const addrErr = validateShippingAddress(raw);
-      if (addrErr) {
-        setCheckoutMsg(addrErr);
-        return;
+      const usingSaved = useSavedShipping && hasSavedShipping;
+      if (usingSaved) {
+        effRegion = (user.shipping_region ?? "").trim();
+        effCity = (user.shipping_city ?? "").trim();
+        addr = [
+          user.shipping_address_line1,
+          user.shipping_address_line2,
+          user.shipping_landmark ? `Landmark: ${user.shipping_landmark}` : "",
+        ]
+          .filter(Boolean)
+          .join(", ");
+        const rawSaved = sanitizeMultiline(addr, 2000);
+        const addrErrSaved = validateShippingAddress(rawSaved);
+        if (addrErrSaved) {
+          setCheckoutMsg(addrErrSaved);
+          return;
+        }
+      } else {
+        effRegion = shippingRegion.trim();
+        effCity = (cityPick === GHANA_CITY_OTHER ? cityOther : cityPick).trim();
+        const raw = sanitizeMultiline(shippingAddress, 2000);
+        const addrErr = validateShippingAddress(raw);
+        if (addrErr) {
+          setCheckoutMsg(addrErr);
+          return;
+        }
+        addr = raw;
       }
-      addr = raw;
-      if (!shippingRegion.trim()) {
+      if (!effRegion) {
         setCheckoutMsg("Choose your region for delivery.");
         return;
       }
-      if (!shippingCity.trim()) {
-        setCheckoutMsg("Enter your city or town for delivery.");
+      if (!effCity) {
+        setCheckoutMsg("Choose or enter your city for delivery.");
         return;
       }
       if (!shippingProvider.trim()) {
@@ -110,8 +176,8 @@ export function CartPageClient() {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const order = await ordersCreate(accessToken, {
         shipping_method: shippingMethod,
-        shipping_region: shippingMethod === "delivery" ? shippingRegion : null,
-        shipping_city: shippingMethod === "delivery" ? shippingCity.trim() : null,
+        shipping_region: shippingMethod === "delivery" ? effRegion : null,
+        shipping_city: shippingMethod === "delivery" ? effCity : null,
         shipping_provider: shippingMethod === "delivery" ? shippingProvider.trim() : null,
         shipping_contact_name:
           shippingMethod === "delivery"
@@ -245,7 +311,34 @@ export function CartPageClient() {
                 </label>
               </fieldset>
 
-              {shippingMethod === "delivery" && (
+              {shippingMethod === "delivery" && hasSavedShipping && (
+                <label className="flex cursor-pointer items-start gap-2 text-body text-sikapa-text-secondary dark:text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={useSavedShipping}
+                    onChange={(e) => setUseSavedShipping(e.target.checked)}
+                    className="accent-sikapa-gold mt-1"
+                  />
+                  <span>
+                    <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">Use my saved address</span>
+                    <span className="mt-1 block text-small leading-relaxed text-sikapa-text-muted dark:text-zinc-500">
+                      From your account: {user.shipping_region} · {user.shipping_city}
+                    </span>
+                  </span>
+                </label>
+              )}
+
+              {shippingMethod === "delivery" && useSavedShipping && hasSavedShipping && (
+                <div className="rounded-[10px] bg-sikapa-cream/80 px-3 py-2.5 text-small text-sikapa-text-secondary dark:bg-zinc-800 dark:text-zinc-300">
+                  <p className="font-medium text-sikapa-text-primary dark:text-zinc-100">Delivering to</p>
+                  <p className="mt-1">
+                    {[user.shipping_address_line1, user.shipping_address_line2].filter(Boolean).join(", ")}
+                  </p>
+                  {user.shipping_landmark?.trim() ? <p className="mt-0.5">Landmark: {user.shipping_landmark}</p> : null}
+                </div>
+              )}
+
+              {shippingMethod === "delivery" && (!hasSavedShipping || !useSavedShipping) && (
                 <>
                   <div>
                     <label htmlFor="cart-region" className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
@@ -254,7 +347,7 @@ export function CartPageClient() {
                     <select
                       id="cart-region"
                       value={shippingRegion}
-                      onChange={(e) => setShippingRegion(e.target.value)}
+                      onChange={(e) => onRegionChange(e.target.value)}
                       className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
                     >
                       {GHANA_REGIONS.map((r) => (
@@ -268,14 +361,36 @@ export function CartPageClient() {
                     <label htmlFor="cart-city" className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
                       City / town
                     </label>
-                    <input
+                    <select
                       id="cart-city"
-                      value={shippingCity}
-                      onChange={(e) => setShippingCity(e.target.value)}
+                      value={cityPick}
+                      onChange={(e) => {
+                        setCityPick(e.target.value);
+                        if (e.target.value !== GHANA_CITY_OTHER) setCityOther("");
+                      }}
                       className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-                      placeholder="e.g. Kumasi"
-                    />
+                    >
+                      {citiesForRegion(shippingRegion).map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    {cityPick === GHANA_CITY_OTHER && (
+                      <input
+                        id="cart-city-other"
+                        value={cityOther}
+                        onChange={(e) => setCityOther(e.target.value)}
+                        placeholder="Enter your city or town"
+                        className="mt-2 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                      />
+                    )}
                   </div>
+                </>
+              )}
+
+              {shippingMethod === "delivery" && (
+                <>
                   <div>
                     <label htmlFor="cart-courier" className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
                       Courier / service
@@ -338,20 +453,22 @@ export function CartPageClient() {
                       </div>
                     </div>
                   )}
-                  <div>
-                    <label htmlFor="cart-ship-addr" className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                      Delivery address <span className="text-sikapa-crimson">*</span>
-                    </label>
-                    <textarea
-                      id="cart-ship-addr"
-                      required={shippingMethod === "delivery"}
-                      rows={4}
-                      value={shippingAddress}
-                      onChange={(e) => setShippingAddress(e.target.value)}
-                      placeholder="Example: 22 Oxford Street Osu Accra (write naturally — commas optional)"
-                      className="mt-1 w-full resize-y rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body text-sikapa-text-primary ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-                    />
-                  </div>
+                  {(!hasSavedShipping || !useSavedShipping) && (
+                    <div>
+                      <label htmlFor="cart-ship-addr" className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                        Delivery address <span className="text-sikapa-crimson">*</span>
+                      </label>
+                      <textarea
+                        id="cart-ship-addr"
+                        required={shippingMethod === "delivery"}
+                        rows={4}
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        placeholder="Example: 22 Oxford Street Osu Accra (write naturally — commas optional)"
+                        className="mt-1 w-full resize-y rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body text-sikapa-text-primary ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                      />
+                    </div>
+                  )}
                 </>
               )}
 

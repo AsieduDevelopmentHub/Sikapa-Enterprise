@@ -1,3 +1,70 @@
+/** Use in selects when the customer’s town is not listed. */
+export const GHANA_CITY_OTHER = "Other";
+
+/**
+ * Major cities / towns per region (ends with "Other" → show free-text city field).
+ * Slugs must match `GHANA_REGIONS[].slug`.
+ */
+export const GHANA_CITIES_BY_REGION: Record<string, string[]> = {
+  "greater-accra": [
+    "Accra",
+    "Tema",
+    "Madina",
+    "East Legon",
+    "Osu",
+    "Ridge",
+    "Adabraka",
+    "Dansoman",
+    "Achimota",
+    "Nungua",
+    "Ashaiman",
+    "Kasoa",
+    "Spintex",
+    "Haatso",
+    "Other",
+  ],
+  ashanti: [
+    "Kumasi",
+    "Obuasi",
+    "Mampong",
+    "Konongo",
+    "Ejisu",
+    "Bekwai",
+    "Nkawie",
+    "Tafo",
+    "Other",
+  ],
+  western: ["Takoradi", "Tarkwa", "Axim", "Elubo", "Prestea", "Other"],
+  central: ["Cape Coast", "Kasoa", "Winneba", "Mankessim", "Saltpond", "Elmina", "Other"],
+  eastern: ["Koforidua", "Nkawkaw", "Akim Oda", "Somanya", "Aburi", "Other"],
+  volta: ["Ho", "Hohoe", "Keta", "Aflao", "Sogakope", "Kpando", "Other"],
+  northern: ["Tamale", "Yendi", "Savelugu", "Bimbilla", "Other"],
+  "upper-east": ["Bolgatanga", "Navrongo", "Bawku", "Other"],
+  "upper-west": ["Wa", "Lawra", "Tumu", "Other"],
+  bono: ["Sunyani", "Berekum", "Dormaa Ahenkro", "Wenchi", "Other"],
+  "bono-east": ["Techiman", "Kintampo", "Atebubu", "Other"],
+  ahafo: ["Goaso", "Duayaw Nkwanta", "Other"],
+  "western-north": ["Sefwi Wiawso", "Bibiani", "Enchi", "Other"],
+  oti: ["Dambai", "Kadjebi", "Nkwanta", "Other"],
+  "north-east": ["Nalerigu", "Gambaga", "Other"],
+  savannah: ["Damongo", "Salaga", "Other"],
+};
+
+export function citiesForRegion(regionSlug: string): string[] {
+  return GHANA_CITIES_BY_REGION[regionSlug] ?? ["Other"];
+}
+
+export function splitCityForRegion(regionSlug: string, savedCity: string | null | undefined): {
+  pick: string;
+  other: string;
+} {
+  const c = (savedCity ?? "").trim();
+  if (!c) return { pick: citiesForRegion(regionSlug)[0] ?? GHANA_CITY_OTHER, other: "" };
+  const list = citiesForRegion(regionSlug);
+  if (list.includes(c)) return { pick: c, other: "" };
+  return { pick: GHANA_CITY_OTHER, other: c };
+}
+
 export const GHANA_REGIONS: { slug: string; label: string; feeGhs: number }[] = [
   { slug: "greater-accra", label: "Greater Accra", feeGhs: 15 },
   { slug: "ashanti", label: "Ashanti", feeGhs: 25 },

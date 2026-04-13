@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AccountTwoFactorPanel } from "@/components/account/AccountTwoFactorPanel";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -15,6 +15,13 @@ import {
 import { newsletterSubscribe } from "@/lib/api/subscriptions";
 import type { WishlistItemRead } from "@/lib/api/wishlist";
 import { wishlistList } from "@/lib/api/wishlist";
+import {
+  GHANA_CITY_OTHER,
+  GHANA_REGIONS,
+  citiesForRegion,
+  splitCityForRegion,
+} from "@/lib/ghana-shipping";
+import { formatGhs } from "@/lib/mock-data";
 import {
   sanitizeDigits,
   sanitizePlainText,
@@ -75,13 +82,20 @@ export function AccountSignedInHub() {
   const [phone, setPhone] = useState("");
   const [profileBusy, setProfileBusy] = useState(false);
   const [shipRegion, setShipRegion] = useState("");
-  const [shipCity, setShipCity] = useState("");
+  const [cityPick, setCityPick] = useState(
+    () => citiesForRegion(GHANA_REGIONS[0]?.slug ?? "greater-accra")[0] ?? GHANA_CITY_OTHER,
+  );
+  const [cityOther, setCityOther] = useState("");
   const [shipLine1, setShipLine1] = useState("");
   const [shipLine2, setShipLine2] = useState("");
   const [shipLandmark, setShipLandmark] = useState("");
   const [shipContactName, setShipContactName] = useState("");
   const [shipContactPhone, setShipContactPhone] = useState("");
   const [shipBusy, setShipBusy] = useState(false);
+  const [addressFormOpen, setAddressFormOpen] = useState(false);
+  const [showInlineEmailVerify, setShowInlineEmailVerify] = useState(false);
+  const [inlineVerifyCode, setInlineVerifyCode] = useState("");
+  const [inlineVerifyBusy, setInlineVerifyBusy] = useState(false);
 
   const [curPw, setCurPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -105,19 +119,37 @@ export function AccountSignedInHub() {
   const token = accessToken as string;
   const u = user!;
 
+  const hasSavedAddress = useMemo(
+    () =>
+      !!(u.shipping_region?.trim() && u.shipping_city?.trim() && u.shipping_address_line1?.trim()),
+    [u.shipping_region, u.shipping_city, u.shipping_address_line1],
+  );
+
+  useEffect(() => {
+    if (panel !== "address") return;
+    setAddressFormOpen(!hasSavedAddress);
+  }, [panel, hasSavedAddress]);
+
   useEffect(() => {
     setName(u.name ?? "");
     setUsername(u.username ?? "");
     setProfileEmail(u.email ?? "");
     setPhone(u.phone ?? "");
-    setShipRegion(u.shipping_region ?? "");
-    setShipCity(u.shipping_city ?? "");
+    const regRaw = u.shipping_region?.trim();
+    const reg =
+      regRaw && GHANA_REGIONS.some((r) => r.slug === regRaw)
+        ? regRaw
+        : GHANA_REGIONS[0]?.slug ?? "greater-accra";
+    setShipRegion(reg);
+    const { pick, other } = splitCityForRegion(reg, u.shipping_city);
+    setCityPick(pick);
+    setCityOther(other);
     setShipLine1(u.shipping_address_line1 ?? "");
     setShipLine2(u.shipping_address_line2 ?? "");
     setShipLandmark(u.shipping_landmark ?? "");
     setShipContactName(u.shipping_contact_name ?? u.name ?? "");
     setShipContactPhone(u.shipping_contact_phone ?? u.phone ?? "");
-    if (!u.email_verified && u.email) setInboxEmail(u.email);
+    if (!u.email_verified && u.email && !u.email_is_placeholder) setInboxEmail(u.email);
   }, [u]);
 
   const loadWishlist = useCallback(async () => {
@@ -157,7 +189,7 @@ export function AccountSignedInHub() {
     }
     setProfileBusy(true);
     try {
-      await authUpdateProfile(token, {
+      const updated = await authUpdateProfile(token, {
         name: sanitizePlainText(name, 120) || null,
         username: sanitizePlainText(username, 50)?.toLowerCase() || null,
         phone: phone.trim() || null,
@@ -165,6 +197,13 @@ export function AccountSignedInHub() {
       });
       await refreshProfile();
       setBanner({ type: "ok", text: "Profile updated." });
+      if (updated.email && !updated.email_verified && !updated.email_is_placeholder) {
+        setShowInlineEmailVerify(true);
+        setInlineVerifyCode("");
+        setInboxEmail(updated.email);
+      } else {
+        setShowInlineEmailVerify(false);
+      }
     } catch (err) {
       setBanner({ type: "err", text: err instanceof Error ? err.message : "Update failed" });
     } finally {
@@ -245,7 +284,8 @@ export function AccountSignedInHub() {
   async function saveShippingProfile(e: React.FormEvent) {
     e.preventDefault();
     setBanner(null);
-    if (!shipRegion.trim() || !shipCity.trim() || !shipLine1.trim()) {
+    const cityEff = (cityPick === GHANA_CITY_OTHER ? cityOther : cityPick).trim();
+    if (!shipRegion.trim() || !cityEff || !shipLine1.trim()) {
       setBanner({ type: "err", text: "Region, city, and address line 1 are required." });
       return;
     }
@@ -253,7 +293,7 @@ export function AccountSignedInHub() {
     try {
       await authUpdateProfile(token, {
         shipping_region: sanitizePlainText(shipRegion, 80) || null,
-        shipping_city: sanitizePlainText(shipCity, 120) || null,
+        shipping_city: sanitizePlainText(cityEff, 120) || null,
         shipping_address_line1: sanitizePlainText(shipLine1, 255) || null,
         shipping_address_line2: sanitizePlainText(shipLine2, 255) || null,
         shipping_landmark: sanitizePlainText(shipLandmark, 255) || null,
@@ -262,6 +302,7 @@ export function AccountSignedInHub() {
       });
       await refreshProfile();
       setBanner({ type: "ok", text: "Shipping profile updated." });
+      setAddressFormOpen(false);
     } catch (err) {
       setBanner({ type: "err", text: err instanceof Error ? err.message : "Could not save shipping profile" });
     } finally {
@@ -283,6 +324,10 @@ export function AccountSignedInHub() {
         shipping_contact_phone: "",
       });
       await refreshProfile();
+      const list = citiesForRegion(GHANA_REGIONS[0]?.slug ?? "greater-accra");
+      setCityPick(list[0] ?? GHANA_CITY_OTHER);
+      setCityOther("");
+      setAddressFormOpen(true);
       setBanner({ type: "ok", text: "Shipping profile cleared." });
     } catch (err) {
       setBanner({ type: "err", text: err instanceof Error ? err.message : "Could not clear shipping profile" });
@@ -328,12 +373,20 @@ export function AccountSignedInHub() {
               {displayName}
             </h1>
             <p className="mt-0.5 text-small text-sikapa-text-secondary">
-              @{u.username}{u.email ? ` · ${u.email}` : ""}
+              @{u.username}
+              {u.email ? ` · ${u.email}` : ""}
+              {u.email_is_placeholder ? (
+                <span className="ml-1 text-sikapa-text-muted">(payment-only — add a real email in Profile)</span>
+              ) : null}
             </p>
             <p className="mt-2 text-small text-sikapa-text-secondary">
               Email{" "}
               <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">
-                {u.email_verified ? "verified" : "not verified yet"}
+                {u.email_is_placeholder
+                  ? "payment-only (no inbox)"
+                  : u.email_verified
+                    ? "verified"
+                    : "not verified yet"}
               </span>
             </p>
           </section>
@@ -353,7 +406,7 @@ export function AccountSignedInHub() {
             <NavRow label="Security" hint="Password and two-step sign-in" onClick={() => setPanel("security")} />
             <NavRow label="Notifications" hint="How we reach you" onClick={() => setPanel("notifications")} />
             <NavRow label="Wishlist" hint="Saved products" onClick={() => setPanel("wishlist")} />
-            {!!u.email && !u.email_verified && (
+            {!!u.email && !u.email_verified && !u.email_is_placeholder && (
               <NavRow label="Verify email" hint="Enter the code we sent you" onClick={() => setPanel("verify")} />
             )}
             <NavRow label="Newsletter" hint="Offers and updates" onClick={() => setPanel("newsletter")} />
@@ -426,8 +479,8 @@ export function AccountSignedInHub() {
                 className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
               />
               <p className="mt-1.5 text-small text-sikapa-text-secondary dark:text-zinc-400">
-                Optional for sign-in, but required for order emails and Paystack. After you add or change your email, we
-                send a verification code.
+                Optional for sign-in. Use a real address for order updates; payment can use an automatic placeholder if you
+                leave this blank. After you add or change a real email, we send a 6-digit code — enter it below.
               </p>
             </div>
             <div>
@@ -450,6 +503,57 @@ export function AccountSignedInHub() {
               {profileBusy ? "Saving…" : "Save"}
             </button>
           </form>
+
+          {showInlineEmailVerify && profileEmail.trim() && (
+            <div className="mt-5 rounded-[10px] border border-sikapa-gold/40 bg-sikapa-cream/60 p-4 dark:bg-zinc-800/80">
+              <p className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                Verify your email
+              </p>
+              <p className="mt-1 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                We sent a 6-digit code to <span className="font-medium">{profileEmail.trim()}</span>.
+              </p>
+              <form
+                className="mt-3 flex flex-col gap-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setBanner(null);
+                  const code = sanitizeDigits(inlineVerifyCode, 6);
+                  if (code.length < 6) {
+                    setBanner({ type: "err", text: "Enter the 6-digit code from your email." });
+                    return;
+                  }
+                  setInlineVerifyBusy(true);
+                  try {
+                    await authVerifyEmail(profileEmail.trim(), code);
+                    setInlineVerifyCode("");
+                    setShowInlineEmailVerify(false);
+                    await refreshProfile();
+                    setBanner({ type: "ok", text: "Email verified." });
+                  } catch (err) {
+                    setBanner({ type: "err", text: err instanceof Error ? err.message : "Verification failed" });
+                  } finally {
+                    setInlineVerifyBusy(false);
+                  }
+                }}
+              >
+                <input
+                  inputMode="numeric"
+                  value={inlineVerifyCode}
+                  onChange={(e) => setInlineVerifyCode(sanitizeDigits(e.target.value, 6))}
+                  placeholder="6-digit code"
+                  maxLength={6}
+                  className="w-full rounded-[10px] border-0 bg-white py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-900 dark:text-zinc-100 dark:ring-white/10"
+                />
+                <button
+                  type="submit"
+                  disabled={inlineVerifyBusy}
+                  className="rounded-[10px] border border-sikapa-gold py-2.5 text-small font-semibold text-sikapa-gold disabled:opacity-50"
+                >
+                  {inlineVerifyBusy ? "Verifying…" : "Confirm email"}
+                </button>
+              </form>
+            </div>
+          )}
         </section>
       )}
 
@@ -490,67 +594,154 @@ export function AccountSignedInHub() {
             Default shipping profile
           </h2>
           <p className="mt-1 text-small text-sikapa-text-secondary dark:text-zinc-400">
-            Used to prefill checkout. You can still override contact per order.
+            Used to prefill checkout. You can enter a different address at checkout when needed.
           </p>
-          <form onSubmit={saveShippingProfile} className="mt-4 space-y-3">
-            <input
-              value={shipRegion}
-              onChange={(e) => setShipRegion(e.target.value)}
-              placeholder="Region"
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <input
-              value={shipCity}
-              onChange={(e) => setShipCity(e.target.value)}
-              placeholder="City / town"
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <input
-              value={shipLine1}
-              onChange={(e) => setShipLine1(e.target.value)}
-              placeholder="Address line 1"
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <input
-              value={shipLine2}
-              onChange={(e) => setShipLine2(e.target.value)}
-              placeholder="Address line 2 (optional)"
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <input
-              value={shipLandmark}
-              onChange={(e) => setShipLandmark(e.target.value)}
-              placeholder="Landmark (optional)"
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <input
-              value={shipContactName}
-              onChange={(e) => setShipContactName(e.target.value)}
-              placeholder="Default contact name"
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <input
-              value={shipContactPhone}
-              onChange={(e) => setShipContactPhone(e.target.value)}
-              placeholder="Default contact phone"
-              className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            <button
-              type="submit"
-              disabled={shipBusy}
-              className="sikapa-btn-gold sikapa-tap w-full rounded-[10px] py-2.5 text-small font-semibold text-white disabled:opacity-50"
-            >
-              {shipBusy ? "Saving…" : "Save shipping profile"}
-            </button>
-            <button
-              type="button"
-              disabled={shipBusy}
-              onClick={() => void clearShippingProfile()}
-              className="w-full rounded-[10px] border border-sikapa-gray-soft py-2.5 text-small font-semibold text-sikapa-text-primary disabled:opacity-50 dark:border-white/10 dark:text-zinc-100"
-            >
-              Clear saved address
-            </button>
-          </form>
+
+          {hasSavedAddress && !addressFormOpen && (
+            <div className="mt-4 space-y-3">
+              <div className="rounded-[10px] bg-sikapa-cream/80 px-3 py-3 text-small text-sikapa-text-secondary dark:bg-zinc-800 dark:text-zinc-300">
+                <p className="font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                  {GHANA_REGIONS.find((r) => r.slug === u.shipping_region)?.label ?? u.shipping_region} ·{" "}
+                  {u.shipping_city}
+                </p>
+                <p className="mt-2 text-sikapa-text-primary dark:text-zinc-100">{u.shipping_address_line1}</p>
+                {u.shipping_address_line2?.trim() ? <p className="mt-1">{u.shipping_address_line2}</p> : null}
+                {u.shipping_landmark?.trim() ? <p className="mt-1">Landmark: {u.shipping_landmark}</p> : null}
+                <p className="mt-2 text-sikapa-text-muted dark:text-zinc-500">
+                  Contact: {(u.shipping_contact_name || u.name || "—").trim()} ·{" "}
+                  {(u.shipping_contact_phone || u.phone || "—").trim()}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={shipBusy}
+                onClick={() => setAddressFormOpen(true)}
+                className="sikapa-btn-gold sikapa-tap w-full rounded-[10px] py-2.5 text-small font-semibold text-white disabled:opacity-50"
+              >
+                Edit address
+              </button>
+              <button
+                type="button"
+                disabled={shipBusy}
+                onClick={() => void clearShippingProfile()}
+                className="w-full rounded-[10px] border border-sikapa-gray-soft py-2.5 text-small font-semibold text-sikapa-text-primary disabled:opacity-50 dark:border-white/10 dark:text-zinc-100"
+              >
+                Remove saved address
+              </button>
+            </div>
+          )}
+
+          {(!hasSavedAddress || addressFormOpen) && (
+            <form onSubmit={saveShippingProfile} className="mt-4 space-y-3">
+              {hasSavedAddress && addressFormOpen && (
+                <button
+                  type="button"
+                  className="text-small font-semibold text-sikapa-gold"
+                  onClick={() => setAddressFormOpen(false)}
+                >
+                  ← Back to summary
+                </button>
+              )}
+              <div>
+                <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="addr-region">
+                  Region
+                </label>
+                <select
+                  id="addr-region"
+                  value={shipRegion}
+                  onChange={(e) => {
+                    const slug = e.target.value;
+                    setShipRegion(slug);
+                    const list = citiesForRegion(slug);
+                    setCityPick(list[0] ?? GHANA_CITY_OTHER);
+                    setCityOther("");
+                  }}
+                  className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                >
+                  {GHANA_REGIONS.map((r) => (
+                    <option key={r.slug} value={r.slug}>
+                      {r.label} — {formatGhs(r.feeGhs)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200" htmlFor="addr-city">
+                  City / town
+                </label>
+                <select
+                  id="addr-city"
+                  value={cityPick}
+                  onChange={(e) => {
+                    setCityPick(e.target.value);
+                    if (e.target.value !== GHANA_CITY_OTHER) setCityOther("");
+                  }}
+                  className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                >
+                  {citiesForRegion(shipRegion).map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                {cityPick === GHANA_CITY_OTHER && (
+                  <input
+                    value={cityOther}
+                    onChange={(e) => setCityOther(e.target.value)}
+                    placeholder="Enter your city or town"
+                    className="mt-2 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                  />
+                )}
+              </div>
+              <input
+                value={shipLine1}
+                onChange={(e) => setShipLine1(e.target.value)}
+                placeholder="Address line 1"
+                className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              />
+              <input
+                value={shipLine2}
+                onChange={(e) => setShipLine2(e.target.value)}
+                placeholder="Address line 2 (optional)"
+                className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              />
+              <input
+                value={shipLandmark}
+                onChange={(e) => setShipLandmark(e.target.value)}
+                placeholder="Landmark (optional)"
+                className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              />
+              <input
+                value={shipContactName}
+                onChange={(e) => setShipContactName(e.target.value)}
+                placeholder="Default contact name"
+                className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              />
+              <input
+                value={shipContactPhone}
+                onChange={(e) => setShipContactPhone(e.target.value)}
+                placeholder="Default contact phone"
+                className="w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              />
+              <button
+                type="submit"
+                disabled={shipBusy}
+                className="sikapa-btn-gold sikapa-tap w-full rounded-[10px] py-2.5 text-small font-semibold text-white disabled:opacity-50"
+              >
+                {shipBusy ? "Saving…" : "Save shipping profile"}
+              </button>
+              {hasSavedAddress && (
+                <button
+                  type="button"
+                  disabled={shipBusy}
+                  onClick={() => void clearShippingProfile()}
+                  className="w-full rounded-[10px] border border-sikapa-gray-soft py-2.5 text-small font-semibold text-sikapa-text-primary disabled:opacity-50 dark:border-white/10 dark:text-zinc-100"
+                >
+                  Clear saved address
+                </button>
+              )}
+            </form>
+          )}
         </section>
       )}
 
@@ -693,7 +884,7 @@ export function AccountSignedInHub() {
               </button>
               <button
                 type="button"
-                disabled={resendBusy || !u.email || u.email_verified}
+                disabled={resendBusy || !u.email || u.email_verified || !!u.email_is_placeholder}
                 onClick={async () => {
                   setBanner(null);
                   setResendBusy(true);

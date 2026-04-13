@@ -99,6 +99,7 @@ def register_user(
         first_name=name,
         last_name=None,
         email_verified=False,
+        email_is_placeholder=False,
     )
     session.add(user)
     session.commit()
@@ -222,6 +223,11 @@ def verify_email(session: Session, email: str, code: str) -> User:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP code"
         )
+    if user.email_is_placeholder:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account uses a payment-only email. Add a real email in your profile to verify.",
+        )
     apply_postgres_session_user(session, user.id)
 
     # Find valid OTP code
@@ -341,6 +347,8 @@ def _issue_email_verification_otp(session: Session, user: User) -> None:
     """Create a new email verification OTP and send mail. User row must already include the target email."""
     if not user.email:
         return
+    if user.email_is_placeholder:
+        return
     apply_postgres_session_user(session, user.id)
     _invalidate_email_verification_otps(session, user.id)
     otp_code = generate_otp_code()
@@ -366,6 +374,11 @@ def resend_email_verification(session: Session, user_id: int) -> None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Add an email to your profile first",
+        )
+    if user.email_is_placeholder:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Add a real email address in your profile to receive verification codes",
         )
     if user.email_verified:
         raise HTTPException(
@@ -415,6 +428,7 @@ def update_user_profile(session: Session, user_id: int, patch: dict) -> User:
         if new_email is None:
             user.email = None
             user.email_verified = False
+            user.email_is_placeholder = False
         else:
             ne = new_email.strip().lower()
             if ne == old_norm:
@@ -428,6 +442,7 @@ def update_user_profile(session: Session, user_id: int, patch: dict) -> User:
                     )
                 user.email = ne
                 user.email_verified = False
+                user.email_is_placeholder = False
 
     if "shipping_region" in patch:
         user.shipping_region = patch["shipping_region"]

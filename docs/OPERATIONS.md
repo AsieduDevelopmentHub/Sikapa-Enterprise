@@ -89,9 +89,19 @@ See [ENVIRONMENT.md](./ENVIRONMENT.md).
 - Orders can be created in `pending` state before checkout redirection.
 - A payment is treated as confirmed only after Paystack verify/webhook reports success and amount/currency checks pass.
 - Order confirmation email is sent only after successful payment confirmation.
+- **Users without a real email:** the API can assign a synthetic address (`PLACEHOLDER_EMAIL_DOMAIN`, see `backend/.env.example`). Outbound mail to that domain is skipped so you stay within provider limits. Shoppers should add a real email in Profile for receipts.
+- **Paystack / IP errors:** payment initialization and the browser call your **backend**, not Paystack IPs directly. You do **not** put Paystack IPs in the frontend. If you see “IP not allowed”, it is usually Paystack dashboard restrictions, wrong keys, or your **webhook** allowlist — not the shopper’s IP.
 - Optional webhook source hardening:
   - Set `PAYSTACK_WEBHOOK_IP_ALLOWLIST` (comma-separated IPs) to reject unexpected webhook sources.
-  - Leave it empty for local development.
+  - Behind **Render / nginx**, the client IP is taken from `X-Forwarded-For` / `X-Real-IP` first, then the socket IP.
+  - Leave allowlist **empty** for local development (or you will block webhooks).
+
+## GitHub Actions: auto PR `frontend` → `main`
+
+If the workflow fails with *“GitHub Actions is not permitted to create or approve pull requests”*, either:
+
+- Enable **Workflow permissions** in the org/repo so `GITHUB_TOKEN` can open PRs, or
+- Add a repository secret **`GH_ACTIONS_PR_TOKEN`**: a fine-grained PAT with **Contents** and **Pull requests** write access to this repo (the auto-merge job uses this token for `gh pr create` and enable-automerge).
 
 ---
 
