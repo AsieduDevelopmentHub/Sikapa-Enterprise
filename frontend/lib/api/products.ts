@@ -151,16 +151,23 @@ export function homeRailKeys(categories: CatalogCategory[], source: "api" | "moc
 }
 
 export async function fetchCategories(): Promise<ApiCategoryRow[]> {
-  return apiFetchJson<ApiCategoryRow[]>("/products/categories");
+  const res = await apiFetchJson<unknown>("/products/categories");
+  return Array.isArray(res) ? (res as ApiCategoryRow[]) : [];
 }
 
 export async function fetchProducts(limit = 100): Promise<ApiProductRow[]> {
-  const res = await apiFetchJson<ApiProductListResponse>(
+  const res = await apiFetchJson<ApiProductListResponse | null>(
     `/products/?limit=${limit}&sort_by=created_at&sort_order=desc`
   );
-  return res.items ?? [];
+  if (!res || typeof res !== "object") return [];
+  const items = (res as ApiProductListResponse).items;
+  return Array.isArray(items) ? items : [];
 }
 
 export async function fetchProductById(id: number): Promise<ApiProductRow> {
-  return apiFetchJson<ApiProductRow>(`/products/${id}`);
+  const row = await apiFetchJson<ApiProductRow | null>(`/products/${id}`);
+  if (!row || typeof row !== "object" || typeof (row as ApiProductRow).id !== "number") {
+    throw new Error("Invalid product response");
+  }
+  return row;
 }

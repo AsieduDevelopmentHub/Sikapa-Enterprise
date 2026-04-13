@@ -53,9 +53,11 @@ HTTPS_ENABLED=false
 # Option 1: Simple startup script
 python start_local.py
 
-# Option 2: Direct uvicorn
+# Option 2: Run uvicorn via Python (recommended on Windows)
 venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+**Windows:** If `uvicorn` fails with *“An Application Control policy has blocked this file”*, do not run `uvicorn.exe` from `Scripts\` directly. Use `python -m uvicorn` as above (or `py -m uvicorn` with the same args). IT policies sometimes block downloaded executables while allowing the Python interpreter.
 
 ### 4. Verify It's Working
 ```bash

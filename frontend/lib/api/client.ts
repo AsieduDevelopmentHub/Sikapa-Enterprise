@@ -15,6 +15,21 @@ export function getBackendOrigin(): string {
   return stripped || "http://localhost:8000";
 }
 
+/**
+ * Wake a cold backend (e.g. Render free tier) by hitting `/health`.
+ * Fire-and-forget; failures are ignored.
+ */
+export function pingBackendHealth(): void {
+  if (typeof window === "undefined") return;
+  const url = `${getBackendOrigin()}/health`;
+  void fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    mode: "cors",
+    keepalive: true,
+  }).catch(() => {});
+}
+
 let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshAccessTokenOnce(): Promise<string | null> {
@@ -54,11 +69,25 @@ async function parseJsonResponse<T>(res: Response): Promise<T> {
   if (res.status === 204 || res.status === 205) {
     return undefined as T;
   }
-  const ct = res.headers.get("content-type");
-  if (!ct || !ct.includes("application/json")) {
+  const text = await res.text().catch(() => "");
+  const trimmed = text.trim();
+  if (!trimmed) {
     return undefined as T;
   }
-  return res.json() as Promise<T>;
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  const looksJson =
+    ct.includes("application/json") ||
+    ct.includes("+json") ||
+    trimmed.startsWith("{") ||
+    trimmed.startsWith("[");
+  if (!looksJson) {
+    return undefined as T;
+  }
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    return undefined as T;
+  }
 }
 
 export async function apiFetchJson<T>(path: string, init?: RequestInit): Promise<T> {

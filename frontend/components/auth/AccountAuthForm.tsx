@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState } from "react";
 import { TwoFactorRequiredError } from "@/lib/api/auth";
 import { useAuth } from "@/context/AuthContext";
+import { privacyUrl, termsUrl } from "@/lib/site";
 import {
   sanitizeDigits,
   sanitizePlainText,
@@ -20,6 +22,92 @@ type Props = {
   onForgotPassword?: () => void;
 };
 
+function PasswordInputWithToggle({
+  id,
+  value,
+  onChange,
+  autoComplete,
+  minLength,
+  required,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete?: string;
+  minLength?: number;
+  required?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="relative mt-1">
+      <input
+        id={id}
+        type={visible ? "text" : "password"}
+        required={required}
+        minLength={minLength}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete={autoComplete}
+        className="w-full rounded-[10px] border-0 bg-white py-3 pl-3 pr-12 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+      />
+      <button
+        type="button"
+        className="sikapa-tap absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-sikapa-text-muted hover:bg-black/[0.04] hover:text-sikapa-text-primary dark:text-zinc-500 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+        aria-label={visible ? "Hide password" : "Show password"}
+        onClick={() => setVisible((v) => !v)}
+      >
+        {visible ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
+  );
+}
+
+function LegalInlineLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const cls = "font-semibold text-sikapa-gold underline-offset-2 hover:underline";
+  if (href.startsWith("http://") || href.startsWith("https://")) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={cls}>
+      {children}
+    </Link>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 10-4.24-4.24"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M1 1l22 22" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function AccountAuthForm({
   defaultMode = "signin",
   onSignInSuccess,
@@ -33,10 +121,12 @@ export function AccountAuthForm({
   const [signinStep, setSigninStep] = useState<"password" | "totp">("password");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [totpCode, setTotpCode] = useState("");
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -44,11 +134,11 @@ export function AccountAuthForm({
     e.preventDefault();
     clearAuthError();
     setLocalError(null);
-    const id = sanitizePlainText(identifier, 255);
+    const idVal = sanitizePlainText(identifier, 255);
     if (mode === "signin") {
-      if (!id) return setLocalError("Enter your email or username.");
-      if (id.includes("@")) {
-        const emailErr = validateEmail(id);
+      if (!idVal) return setLocalError("Enter your email or username.");
+      if (idVal.includes("@")) {
+        const emailErr = validateEmail(idVal);
         if (emailErr) return setLocalError(emailErr);
       }
     }
@@ -79,6 +169,14 @@ export function AccountAuthForm({
         setLocalError(pwErr);
         return;
       }
+      if (password !== passwordConfirm) {
+        setLocalError("Passwords do not match.");
+        return;
+      }
+      if (!acceptedLegal) {
+        setLocalError("Please accept the Terms of Service and Privacy Policy.");
+        return;
+      }
     }
     if (mode === "signin" && signinStep === "totp") {
       const code = sanitizeDigits(totpCode, 6);
@@ -92,13 +190,13 @@ export function AccountAuthForm({
     try {
       if (mode === "signin") {
         if (signinStep === "totp") {
-          await loginWithTotp(id, password, sanitizeDigits(totpCode, 6));
+          await loginWithTotp(idVal, password, sanitizeDigits(totpCode, 6));
           setSigninStep("password");
           setTotpCode("");
           onSignInSuccess?.();
         } else {
           try {
-            await login(id, password);
+            await login(idVal, password);
             onSignInSuccess?.();
           } catch (err) {
             if (err instanceof TwoFactorRequiredError) {
@@ -139,6 +237,8 @@ export function AccountAuthForm({
             setMode("signin");
             setSigninStep("password");
             setTotpCode("");
+            setPasswordConfirm("");
+            setAcceptedLegal(false);
             setLocalError(null);
             clearAuthError();
             onClearMessages?.();
@@ -157,6 +257,8 @@ export function AccountAuthForm({
             setMode("register");
             setSigninStep("password");
             setTotpCode("");
+            setPasswordConfirm("");
+            setAcceptedLegal(false);
             setLocalError(null);
             clearAuthError();
             onClearMessages?.();
@@ -232,38 +334,69 @@ export function AccountAuthForm({
           </div>
         )}
         {!(mode === "signin" && signinStep === "totp") && (
-          <div>
-            <label htmlFor={`${id}-password`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-              Password{" "}
-              {mode === "register" && (
-                <span className="font-normal text-sikapa-text-muted dark:text-zinc-500">(min. 8 characters)</span>
-              )}
-            </label>
-            <input
-              id={`${id}-password`}
-              type="password"
-              required
-              minLength={mode === "register" ? 8 : undefined}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-            />
-            {mode === "signin" && onForgotPassword ? (
-              <div className="mt-2 text-right">
-                <button
-                  type="button"
-                  className="text-small font-semibold text-sikapa-gold hover:underline"
-                  onClick={() => {
-                    onClearMessages?.();
-                    onForgotPassword();
-                  }}
-                >
-                  Forgot password?
-                </button>
+          <>
+            <div>
+              <label htmlFor={`${id}-password`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                Password{" "}
+                {mode === "register" && (
+                  <span className="font-normal text-sikapa-text-muted dark:text-zinc-500">(min. 8 characters)</span>
+                )}
+              </label>
+              <PasswordInputWithToggle
+                id={`${id}-password`}
+                value={password}
+                onChange={setPassword}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                minLength={mode === "register" ? 8 : undefined}
+                required
+              />
+              {mode === "signin" && onForgotPassword ? (
+                <div className="mt-2 text-right">
+                  <button
+                    type="button"
+                    className="text-small font-semibold text-sikapa-gold hover:underline"
+                    onClick={() => {
+                      onClearMessages?.();
+                      onForgotPassword();
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            {mode === "register" && (
+              <div>
+                <label htmlFor={`${id}-password-confirm`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                  Confirm password
+                </label>
+                <PasswordInputWithToggle
+                  id={`${id}-password-confirm`}
+                  value={passwordConfirm}
+                  onChange={setPasswordConfirm}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
               </div>
-            ) : null}
-          </div>
+            )}
+            {mode === "register" && (
+              <label className="flex cursor-pointer items-start gap-3 text-small text-sikapa-text-primary dark:text-zinc-200">
+                <input
+                  type="checkbox"
+                  checked={acceptedLegal}
+                  onChange={(e) => setAcceptedLegal(e.target.checked)}
+                  className="mt-1 h-4 w-4 shrink-0 accent-sikapa-gold"
+                />
+                <span className="leading-relaxed">
+                  I agree to the{" "}
+                  <LegalInlineLink href={termsUrl()}>Terms of Service</LegalInlineLink>
+                  {" "}and{" "}
+                  <LegalInlineLink href={privacyUrl()}>Privacy Policy</LegalInlineLink>.
+                </span>
+              </label>
+            )}
+          </>
         )}
         {mode === "signin" && signinStep === "totp" && (
           <div>

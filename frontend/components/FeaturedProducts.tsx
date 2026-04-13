@@ -6,8 +6,28 @@ import { useCatalog } from "@/context/CatalogContext";
 import { HomeProductCarouselCard } from "@/components/home/HomeProductCarouselCard";
 
 export function FeaturedProducts() {
-  const { products } = useCatalog();
+  const { products, loading } = useCatalog();
   const featured = useMemo(() => products.slice(0, Math.min(products.length, 8)), [products]);
+
+  if (loading && products.length === 0) {
+    return (
+      <section
+        id="featured"
+        className="scroll-mt-20 bg-sikapa-cream py-6 pb-6 dark:bg-zinc-950"
+        aria-labelledby="featured-title"
+      >
+        <div className="px-4">
+          <h2
+            id="featured-title"
+            className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100"
+          >
+            Featured
+          </h2>
+          <p className="mt-2 text-small text-sikapa-text-secondary dark:text-zinc-400">Loading products…</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

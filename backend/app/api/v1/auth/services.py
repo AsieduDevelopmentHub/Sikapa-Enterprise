@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
 import re
+from urllib.parse import quote
 
 from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -279,8 +280,8 @@ def request_password_reset(session: Session, email: str) -> None:
     session.add(password_reset)
     session.commit()
 
-    # Create reset link (frontend URL would be configured)
-    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+    # Match email template: path-based link (legacy ?token= still supported on the frontend)
+    reset_link = f"{(frontend_url or '').rstrip('/')}/reset-password/{quote(reset_token, safe='')}"
 
     # Send password reset email
     email_sent = email_service.send_password_reset(user.email, reset_token, user.name)

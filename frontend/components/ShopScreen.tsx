@@ -77,7 +77,7 @@ function ViewToggle({
 export function ShopScreen() {
   const searchParams = useSearchParams();
   const catParam = searchParams.get("cat");
-  const { products, categories, source } = useCatalog();
+  const { products, categories, source, loading: catalogLoading } = useCatalog();
   const { addProduct } = useCart();
   const { wishErr, clearWishErr } = useWishlist();
 
@@ -148,6 +148,14 @@ export function ShopScreen() {
   }
 
   const effectiveView = hydrated ? view : "grid";
+
+  if (catalogLoading && products.length === 0) {
+    return (
+      <div className="bg-sikapa-cream px-4 py-12 text-center text-small text-sikapa-text-secondary dark:bg-zinc-950 dark:text-zinc-400">
+        Loading catalog…
+      </div>
+    );
+  }
 
   return (
     <div className="bg-sikapa-cream px-4 pb-6 pt-3 dark:bg-zinc-950">
