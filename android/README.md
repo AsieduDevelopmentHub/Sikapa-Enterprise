@@ -2,6 +2,8 @@
 
 This directory is reserved for the Android Studio wrapper project that will host the Next.js storefront in a WebView.
 
+**Project documentation:** [../docs/README.md](../docs/README.md)
+
 ## Approach
 
 - Create a new Android project in Android Studio.

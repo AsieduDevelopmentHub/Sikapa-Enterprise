@@ -153,6 +153,7 @@ class TestAuthenticationE2E:
         assert response.status_code == 200
         new_tokens = response.json()
         assert "access_token" in new_tokens
+        assert "refresh_token" in new_tokens and new_tokens["refresh_token"]
         assert new_tokens["token_type"] == "bearer"
 
     async def test_password_change(self, client: AsyncClient, test_user):
