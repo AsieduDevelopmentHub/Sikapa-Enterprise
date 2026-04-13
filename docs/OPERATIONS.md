@@ -98,12 +98,13 @@ See [ENVIRONMENT.md](./ENVIRONMENT.md).
 
 ## GitHub Actions: auto PR `frontend` → `main`
 
-The auto-PR job sets `GH_TOKEN` to **`GH_ACTIONS_PR_TOKEN`** when that secret exists, otherwise **`github.token`** (so `gh` never runs with an empty token).
+The auto-PR job exports `GH_TOKEN` for the `gh` CLI in the shell: it uses **`GH_ACTIONS_PR_TOKEN`** when that secret is non-empty, otherwise **`github.token`** (avoids empty `GH_TOKEN` and avoids fragile `secrets || token` expressions in YAML).
 
-If `gh pr create` still fails with *“GitHub Actions is not permitted to create or approve pull requests”*, either:
+The **enable-automerge** step uses **`github.token`**. If your org blocks the default token from merging PRs, open **Settings → Actions → General → Workflow permissions** and allow read/write, or adjust org policy.
 
-- Enable **Workflow permissions** in the org/repo so `GITHUB_TOKEN` can open PRs, or
-- Add a repository secret **`GH_ACTIONS_PR_TOKEN`**: a fine-grained PAT with **Contents** and **Pull requests** write access to this repo (the job uses it for `gh pr create` and enable-automerge).
+If `gh pr create` still fails with *“GitHub Actions is not permitted to create or approve pull requests”*, add repository secret **`GH_ACTIONS_PR_TOKEN`**: a fine-grained PAT with **Contents** and **Pull requests** write (used only for the `gh pr create` step).
+
+CI jobs no longer target a GitHub **Environment** named `CI` (that was a common cause of runs failing before any step ran when the environment was missing or branch-restricted). Add `environment:` back only if you intentionally use deployment protection rules.
 
 ---
 

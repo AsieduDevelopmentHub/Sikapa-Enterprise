@@ -24,8 +24,6 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11"]
-    environment:
-      name: CI
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -80,8 +78,6 @@ jobs:
   frontend:
     name: Frontend CI
     runs-on: ubuntu-latest
-    environment:
-      name: CI
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -124,9 +120,15 @@ jobs:
       - name: Create or update PR from frontend to main
         id: cpr
         env:
-          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+          GH_TOKEN_DEFAULT: ${{ github.token }}
+          GH_PAT: ${{ secrets.GH_ACTIONS_PR_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -n "${GH_PAT:-}" ]; then
+            export GH_TOKEN="${GH_PAT}"
+          else
+            export GH_TOKEN="${GH_TOKEN_DEFAULT}"
+          fi
           PR_NUM=$(gh pr list --head frontend --base main --state open --json number --jq '.[0].number // empty')
           if [ -z "${PR_NUM}" ]; then
             {
@@ -146,6 +148,6 @@ jobs:
         if: ${{ steps.cpr.outputs.pr_number != '' }}
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
-          token: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+          token: ${{ github.token }}
           pull-request-number: ${{ steps.cpr.outputs.pr_number }}
           merge-method: squash
