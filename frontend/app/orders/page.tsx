@@ -12,7 +12,6 @@ export default function OrdersPage() {
         variant="inner"
         title="My Orders"
         left="menu"
-        menuHref="/#categories"
         right="profile"
       />
       <div className="mx-auto max-w-mobile px-4 pb-2 pt-3">

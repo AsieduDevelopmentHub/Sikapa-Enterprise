@@ -1,8 +1,15 @@
 import Link from "next/link";
+import { whatsappHelpUrl } from "@/lib/site";
 
 export function HomeHelpCta() {
+  const wa = whatsappHelpUrl();
+
   return (
-    <section className="bg-white px-4 py-6" aria-labelledby="help-heading">
+    <section
+      id="need-help"
+      className="scroll-mt-20 bg-white px-4 py-6"
+      aria-labelledby="help-heading"
+    >
       <div className="mx-auto max-w-mobile">
         <div className="rounded-[10px] bg-gradient-to-br from-sikapa-crimson to-[#5c1f24] px-5 py-5 text-center shadow-md ring-1 ring-black/10">
           <h2 id="help-heading" className="font-serif text-section-title font-semibold text-white">
@@ -11,7 +18,7 @@ export function HomeHelpCta() {
           <p className="mt-2 text-small leading-relaxed text-white/85">
             Orders, account settings, and more — your hub is one tap away.
           </p>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
             <Link
               href="/account"
               className="sikapa-tap inline-flex items-center justify-center rounded-[10px] bg-sikapa-gold px-5 py-2.5 text-small font-semibold text-white shadow-sm"
@@ -24,6 +31,16 @@ export function HomeHelpCta() {
             >
               Track orders
             </Link>
+            {wa ? (
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sikapa-tap inline-flex items-center justify-center rounded-[10px] border border-emerald-400/50 bg-emerald-500/20 px-5 py-2.5 text-small font-semibold text-white"
+              >
+                WhatsApp us
+              </a>
+            ) : null}
           </div>
         </div>
       </div>

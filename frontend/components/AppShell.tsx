@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { SplashScreen } from "@/components/SplashScreen";
+import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="sikapa-page-enter min-h-screen">{children}</div>
       </div>
       <BottomNav />
+      <WhatsAppFloat />
     </>
   );
 }

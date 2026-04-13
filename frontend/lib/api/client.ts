@@ -1,0 +1,107 @@
+import { V1 } from "@/lib/api/v1-paths";
+
+const STORAGE_ACCESS = "sikapa_access_token";
+const STORAGE_REFRESH = "sikapa_refresh_token";
+
+export function getApiV1Base(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000/api/v1";
+  return raw.replace(/\/$/, "");
+}
+
+export function getBackendOrigin(): string {
+  const base = getApiV1Base();
+  const stripped = base.replace(/\/api\/v1\/?$/i, "");
+  return stripped || "http://localhost:8000";
+}
+
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessTokenOnce(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const rt = localStorage.getItem(STORAGE_REFRESH);
+      if (!rt) return null;
+      const res = await fetch(`${getApiV1Base()}${V1.auth.refresh}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ refresh_token: rt }),
+      });
+      if (!res.ok) return null;
+      const tokens = (await res.json()) as {
+        access_token: string;
+        refresh_token?: string | null;
+      };
+      localStorage.setItem(STORAGE_ACCESS, tokens.access_token);
+      if (tokens.refresh_token) localStorage.setItem(STORAGE_REFRESH, tokens.refresh_token);
+      else localStorage.removeItem(STORAGE_REFRESH);
+      window.dispatchEvent(new CustomEvent("sikapa-auth-refreshed", { detail: tokens.access_token }));
+      return tokens.access_token;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  if (res.status === 204 || res.status === 205) {
+    return undefined as T;
+  }
+  const ct = res.headers.get("content-type");
+  if (!ct || !ct.includes("application/json")) {
+    return undefined as T;
+  }
+  return res.json() as Promise<T>;
+}
+
+export async function apiFetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = `${getApiV1Base()}${path.startsWith("/") ? path : `/${path}`}`;
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      ...init?.headers,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+  }
+  return parseJsonResponse<T>(res);
+}
+
+export async function apiFetchJsonAuth<T>(
+  accessToken: string | null | undefined,
+  path: string,
+  init?: RequestInit,
+  allowRetry = true
+): Promise<T> {
+  if (!accessToken?.trim()) {
+    throw new Error("Not authenticated");
+  }
+  const url = `${getApiV1Base()}${path.startsWith("/") ? path : `/${path}`}`;
+  const doFetch = (tok: string) =>
+    fetch(url, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${tok.trim()}`,
+        ...init?.headers,
+      },
+    });
+
+  let res = await doFetch(accessToken);
+  if (res.status === 401 && allowRetry && typeof window !== "undefined") {
+    const next = await refreshAccessTokenOnce();
+    if (next) res = await doFetch(next);
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+  }
+  return parseJsonResponse<T>(res);
+}

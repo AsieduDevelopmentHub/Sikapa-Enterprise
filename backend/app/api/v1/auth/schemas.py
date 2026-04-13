@@ -73,6 +73,7 @@ class UserProfileResponse(BaseModel):
     two_fa_enabled: bool
     two_fa_method: Optional[str] = None
     is_active: bool
+    is_admin: bool = False
     created_at: datetime
     updated_at: datetime
 
