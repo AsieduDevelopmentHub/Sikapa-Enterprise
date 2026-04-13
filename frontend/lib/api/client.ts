@@ -35,8 +35,10 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
         refresh_token?: string | null;
       };
       localStorage.setItem(STORAGE_ACCESS, tokens.access_token);
-      if (tokens.refresh_token) localStorage.setItem(STORAGE_REFRESH, tokens.refresh_token);
-      else localStorage.removeItem(STORAGE_REFRESH);
+      if (tokens.refresh_token) {
+        localStorage.setItem(STORAGE_REFRESH, tokens.refresh_token);
+      }
+      /* If the API omits refresh_token, keep the previous refresh (older servers). */
       window.dispatchEvent(new CustomEvent("sikapa-auth-refreshed", { detail: tokens.access_token }));
       return tokens.access_token;
     } catch {
