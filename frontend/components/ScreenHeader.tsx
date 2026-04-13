@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SikapaLogo } from "@/components/SikapaLogo";
+import { useNavDrawer } from "@/context/NavDrawerContext";
 import {
   FaAccount,
   FaBag,
@@ -13,7 +14,6 @@ import {
 
 type HomeProps = {
   variant: "home";
-  menuHref?: string;
 };
 
 type InnerProps = {
@@ -21,7 +21,6 @@ type InnerProps = {
   title: string;
   left: "back" | "menu";
   backHref?: string;
-  menuHref?: string;
   right: "search" | "wishlist" | "bag" | "profile" | "none";
 };
 
@@ -31,14 +30,15 @@ const hit =
   "sikapa-tap flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sikapa-text-primary";
 
 export function ScreenHeader(props: ScreenHeaderProps) {
+  const { openDrawer } = useNavDrawer();
+
   if (props.variant === "home") {
-    const { menuHref = "/#categories" } = props;
     return (
       <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2">
         <div className="mx-auto flex max-w-mobile items-center justify-between gap-2">
-          <Link href={menuHref} className={hit} aria-label="Menu">
+          <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
             <FaBars />
-          </Link>
+          </button>
           <Link href="/" className="flex min-w-0 flex-1 justify-center px-1">
             <SikapaLogo asset="navigation" priority />
           </Link>
@@ -50,21 +50,15 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     );
   }
 
-  const {
-    title,
-    left,
-    backHref = "/",
-    menuHref = "/#categories",
-    right,
-  } = props;
+  const { title, left, backHref = "/", right } = props;
 
   return (
     <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2">
       <div className="mx-auto flex max-w-mobile items-center justify-between gap-2">
         {left === "menu" ? (
-          <Link href={menuHref} className={hit} aria-label="Menu">
+          <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
             <FaBars />
-          </Link>
+          </button>
         ) : (
           <Link href={backHref} className={hit} aria-label="Back">
             <FaChevronLeft />
