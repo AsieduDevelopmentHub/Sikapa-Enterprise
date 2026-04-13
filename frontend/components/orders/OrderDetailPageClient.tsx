@@ -11,7 +11,7 @@ import {
   ordersInvoicePdfBlob,
   type OrderDetail,
 } from "@/lib/api/orders";
-import { paystackVerify } from "@/lib/api/payments";
+import { paystackInitialize, paystackVerify } from "@/lib/api/payments";
 import { GHANA_REGIONS } from "@/lib/ghana-shipping";
 import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
 import { formatGhs } from "@/lib/mock-data";
@@ -53,6 +53,7 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [payBusy, setPayBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken || !idValid) return;
@@ -117,6 +118,24 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
       setErr(e instanceof Error ? e.message : "Could not download invoice");
     } finally {
       setPdfBusy(false);
+    }
+  }
+
+  async function onPayNow() {
+    if (!accessToken || !detail) return;
+    setPayBusy(true);
+    setErr(null);
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const callbackUrl = `${origin}/orders/${detail.id}`;
+      const pay = await paystackInitialize(accessToken, detail.id, callbackUrl);
+      if (typeof window !== "undefined" && pay.authorization_url) {
+        window.location.href = pay.authorization_url;
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not start payment");
+    } finally {
+      setPayBusy(false);
     }
   }
 
@@ -203,6 +222,16 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
                   Ref: {detail.paystack_reference}
                 </p>
               ) : null}
+              {(detail.payment_status ?? "pending").toLowerCase() === "pending" && (
+                <button
+                  type="button"
+                  disabled={payBusy}
+                  onClick={() => void onPayNow()}
+                  className="sikapa-btn-gold sikapa-tap mt-4 w-full rounded-[10px] py-2.5 text-small font-semibold text-white disabled:opacity-60"
+                >
+                  {payBusy ? "Redirecting to Paystack…" : "Pay now"}
+                </button>
+              )}
             </section>
 
             <section className="rounded-[12px] bg-white p-4 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
@@ -285,6 +314,12 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
                     </dd>
                   </div>
                 ) : null}
+                {detail.shipping_city ? (
+                  <div>
+                    <dt className="text-sikapa-text-muted dark:text-zinc-500">City / town</dt>
+                    <dd className="font-medium text-sikapa-text-primary dark:text-zinc-200">{detail.shipping_city}</dd>
+                  </div>
+                ) : null}
                 {detail.shipping_provider ? (
                   <div>
                     <dt className="text-sikapa-text-muted dark:text-zinc-500">Courier / service</dt>
@@ -298,6 +333,15 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
                     <dt className="text-sikapa-text-muted dark:text-zinc-500">Address</dt>
                     <dd className="whitespace-pre-wrap font-medium text-sikapa-text-primary dark:text-zinc-200">
                       {detail.shipping_address}
+                    </dd>
+                  </div>
+                ) : null}
+                {detail.shipping_contact_name ? (
+                  <div>
+                    <dt className="text-sikapa-text-muted dark:text-zinc-500">Delivery contact</dt>
+                    <dd className="font-medium text-sikapa-text-primary dark:text-zinc-200">
+                      {detail.shipping_contact_name}
+                      {detail.shipping_contact_phone ? ` · ${detail.shipping_contact_phone}` : ""}
                     </dd>
                   </div>
                 ) : null}

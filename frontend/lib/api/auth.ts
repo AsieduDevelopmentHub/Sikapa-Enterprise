@@ -15,6 +15,13 @@ export type UserProfile = {
   name: string;
   email?: string | null;
   phone?: string | null;
+  shipping_region?: string | null;
+  shipping_city?: string | null;
+  shipping_address_line1?: string | null;
+  shipping_address_line2?: string | null;
+  shipping_landmark?: string | null;
+  shipping_contact_name?: string | null;
+  shipping_contact_phone?: string | null;
   email_verified: boolean;
   two_fa_enabled: boolean;
   two_fa_method?: string | null;
@@ -170,7 +177,18 @@ export async function authVerifyEmail(email: string, code: string): Promise<{
 
 export async function authUpdateProfile(
   accessToken: string,
-  body: { username?: string | null; name?: string | null; phone?: string | null }
+  body: {
+    username?: string | null;
+    name?: string | null;
+    phone?: string | null;
+    shipping_region?: string | null;
+    shipping_city?: string | null;
+    shipping_address_line1?: string | null;
+    shipping_address_line2?: string | null;
+    shipping_landmark?: string | null;
+    shipping_contact_name?: string | null;
+    shipping_contact_phone?: string | null;
+  }
 ): Promise<UserProfile> {
   return apiFetchJsonAuth<UserProfile>(accessToken, V1.auth.profilePut, {
     method: "PUT",

@@ -84,6 +84,17 @@ See [ENVIRONMENT.md](./ENVIRONMENT.md).
 
 ---
 
+## Payments (Paystack) integrity
+
+- Orders can be created in `pending` state before checkout redirection.
+- A payment is treated as confirmed only after Paystack verify/webhook reports success and amount/currency checks pass.
+- Order confirmation email is sent only after successful payment confirmation.
+- Optional webhook source hardening:
+  - Set `PAYSTACK_WEBHOOK_IP_ALLOWLIST` (comma-separated IPs) to reject unexpected webhook sources.
+  - Leave it empty for local development.
+
+---
+
 ## Deployment pointers
 
 - **Render (API):** [../backend/docs/hosting/render.md](../backend/docs/hosting/render.md) — set `HTTPS_ENABLED=false`, provide `DATABASE_URL`, `SECRET_KEY`, `CORS_ORIGINS`.

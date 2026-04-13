@@ -136,6 +136,54 @@ def test_webhook_skips_payment_on_amount_mismatch(test_session: Session, monkeyp
     assert order.payment_status != "paid"
 
 
+def test_verify_marks_paid_and_sends_confirmation_once(test_session: Session, monkeypatch):
+    monkeypatch.setenv("PAYSTACK_CURRENCY", "GHS")
+    u = _user(test_session)
+    order = Order(
+        user_id=u.id,
+        total_price=25.0,
+        status="pending",
+        paystack_reference="SKP-VERIFY-OK-1",
+        payment_status="pending",
+    )
+    test_session.add(order)
+    test_session.commit()
+    test_session.refresh(order)
+
+    ok_payload = {
+        "status": True,
+        "data": {
+            "status": "success",
+            "amount": paystack_client.money_to_subunit(25.0),
+            "currency": "GHS",
+            "id": "ps_tx_123",
+            "channel": "card",
+            "customer": {"email": u.email},
+            "metadata": {"order_id": order.id},
+            "paid_at": "2026-04-13T20:00:00Z",
+        },
+    }
+
+    with patch.object(payment_services.paystack_client, "is_configured", return_value=True), patch.object(
+        payment_services.paystack_client,
+        "verify_transaction",
+        return_value=ok_payload,
+    ), patch.object(
+        payment_services.email_service,
+        "send_order_confirmation",
+        return_value=True,
+    ) as send_mock:
+        out1 = payment_services.verify_paystack_reference(test_session, u.id, "SKP-VERIFY-OK-1")
+        out2 = payment_services.verify_paystack_reference(test_session, u.id, "SKP-VERIFY-OK-1")
+
+    assert out1["status"] == "paid"
+    assert out2["already_confirmed"] is True
+    assert send_mock.call_count == 1
+    test_session.refresh(order)
+    assert order.payment_status == "paid"
+    assert order.confirmation_email_sent_at is not None
+
+
 @patch.object(payment_services.paystack_client, "is_configured", return_value=True)
 @patch.object(
     payment_services.paystack_client,

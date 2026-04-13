@@ -65,6 +65,13 @@ class UserProfileUpdate(BaseModel):
     username: Optional[str] = None
     name: Optional[str] = None
     phone: Optional[str] = None
+    shipping_region: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_address_line1: Optional[str] = None
+    shipping_address_line2: Optional[str] = None
+    shipping_landmark: Optional[str] = None
+    shipping_contact_name: Optional[str] = None
+    shipping_contact_phone: Optional[str] = None
 
     @field_validator("username", mode="before")
     @classmethod
@@ -82,6 +89,24 @@ class UserProfileUpdate(BaseModel):
     def _strip_phone(cls, v):
         return sanitize_phone(v)
 
+    @field_validator(
+        "shipping_region",
+        "shipping_city",
+        "shipping_address_line1",
+        "shipping_address_line2",
+        "shipping_landmark",
+        "shipping_contact_name",
+        mode="before",
+    )
+    @classmethod
+    def _strip_shipping_fields(cls, v):
+        return sanitize_plain_text(v, max_length=255, single_line=True)
+
+    @field_validator("shipping_contact_phone", mode="before")
+    @classmethod
+    def _strip_shipping_phone(cls, v):
+        return sanitize_phone(v)
+
 
 class UserProfileResponse(BaseModel):
     id: int
@@ -89,6 +114,13 @@ class UserProfileResponse(BaseModel):
     name: str
     email: Optional[str] = None
     phone: Optional[str] = None
+    shipping_region: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_address_line1: Optional[str] = None
+    shipping_address_line2: Optional[str] = None
+    shipping_landmark: Optional[str] = None
+    shipping_contact_name: Optional[str] = None
+    shipping_contact_phone: Optional[str] = None
     email_verified: bool
     two_fa_enabled: bool
     two_fa_method: Optional[str] = None
