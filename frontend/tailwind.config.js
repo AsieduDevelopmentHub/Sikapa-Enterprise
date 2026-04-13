@@ -1,7 +1,101 @@
+/** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}"],
+  darkMode: "class",
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./context/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        sikapa: {
+          crimson: "#941A20",
+          "crimson-dark": "#7A1419",
+          "bg-deep": "#3B2A25",
+          gold: "#C8A96A",
+          "gold-hover": "#A8894F",
+          cream: "#F7F4F1",
+          "gray-soft": "#EDEDED",
+          "text-primary": "#1A1A1A",
+          "text-secondary": "#6B6B6B",
+          "text-muted": "#A0A0A0",
+          "hero-subtext": "#F1EDE9",
+        },
+      },
+      fontFamily: {
+        serif: ["var(--font-cormorant)", "Georgia", "serif"],
+        sans: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
+      },
+      fontSize: {
+        hero: ["2rem", { lineHeight: "1.15" }], // 32px mobile
+        "hero-lg": ["2.25rem", { lineHeight: "1.12" }], // 36px
+        "page-title": ["1.25rem", { lineHeight: "1.3" }], // 20px
+        "section-title": ["1.125rem", { lineHeight: "1.35" }], // 18px
+        body: ["0.875rem", { lineHeight: "1.5" }], // 14px
+        small: ["0.75rem", { lineHeight: "1.45" }], // 12px
+      },
+      maxWidth: {
+        mobile: "430px",
+      },
+      keyframes: {
+        "splash-in": {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "gold-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 8px rgba(200, 169, 106, 0.35))" },
+          "50%": { filter: "drop-shadow(0 0 20px rgba(200, 169, 106, 0.65))" },
+        },
+        "hero-model": {
+          "0%": { opacity: "0", transform: "translateX(28px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "hero-text": {
+          "0%": { opacity: "0", transform: "translateY(16px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "hero-product": {
+          "0%": { opacity: "0", transform: "scale(0.92)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        /** Splash: elastic logo entrance */
+        "splash-logo-bounce": {
+          "0%": { opacity: "0", transform: "scale(0.52) translateY(28px)" },
+          "48%": { opacity: "1", transform: "scale(1.08) translateY(-10px)" },
+          "68%": { transform: "scale(0.94) translateY(6px)" },
+          "82%": { transform: "scale(1.03) translateY(-3px)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+        /** Splash: blur + scale “dissolve” exit */
+        "splash-dissolve-out": {
+          "0%": { opacity: "1", filter: "blur(0px)", transform: "scale(1)" },
+          "40%": { opacity: "0.75", filter: "blur(4px)", transform: "scale(1.03)" },
+          "100%": { opacity: "0", filter: "blur(22px)", transform: "scale(1.12)" },
+        },
+        /** Subtle gold shimmer on logo during splash */
+        "splash-logo-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 6px rgba(200, 169, 106, 0.4))" },
+          "50%": { filter: "drop-shadow(0 0 22px rgba(200, 169, 106, 0.85))" },
+        },
+      },
+      animation: {
+        "splash-in": "splash-in 0.9s ease-out forwards",
+        "splash-logo-bounce": "splash-logo-bounce 1.2s cubic-bezier(0.34, 1.45, 0.64, 1) forwards",
+        "splash-dissolve-out": "splash-dissolve-out 0.78s ease-in forwards",
+        "splash-logo-glow": "splash-logo-glow 2.2s ease-in-out infinite",
+        "gold-glow": "gold-glow 2s ease-in-out infinite",
+        "hero-model": "hero-model 1s ease-out 0.2s forwards",
+        "hero-text": "hero-text 0.85s ease-out 0.35s forwards",
+        "hero-product": "hero-product 0.7s ease-out 0.55s forwards",
+        "hero-fade": "splash-in 1s ease-out forwards",
+        shimmer: "shimmer 1.5s ease-in-out infinite",
+      },
+    },
   },
   plugins: [],
 };

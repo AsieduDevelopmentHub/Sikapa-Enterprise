@@ -25,6 +25,10 @@ class ReviewCreateSchema(BaseModel):
         return sanitize_multiline_text(v, max_length=5000)
 
 
+class ReviewWriteEligibility(BaseModel):
+    can_review: bool
+
+
 class ReviewSchema(BaseModel):
     """Schema for review response"""
     id: int
@@ -32,8 +36,18 @@ class ReviewSchema(BaseModel):
     user_id: int
     rating: int
     title: str
-    content: str
+    content: str | None = None
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class ReviewPublic(BaseModel):
+    id: int
+    product_id: int
+    rating: int
+    title: str
+    content: str | None = None
+    created_at: datetime
+    reviewer_name: str

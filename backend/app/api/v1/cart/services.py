@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlmodel import Session, select
 from datetime import datetime
 
-from app.models import CartItem
+from app.models import CartItem, Product
 from app.api.v1.cart.schemas import CartItemCreateSchema, CartItemUpdateSchema
 from app.api.v1.wishlist.services import list_wishlist
 
@@ -27,7 +27,13 @@ async def get_cart_with_wishlist(session: Session, user_id: int):
 
 async def add_to_cart(session: Session, user_id: int, item: CartItemCreateSchema) -> CartItem:
     """Add or update item in cart."""
-    # Check if item already in cart
+    product = session.exec(select(Product).where(Product.id == item.product_id)).first()
+    if not product or not product.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This product is not available.",
+        )
+
     existing = session.exec(
         select(CartItem).where(
             CartItem.user_id == user_id,

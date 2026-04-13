@@ -1,11 +1,20 @@
-from fastapi import FastAPI
+import logging
+import time
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.routes import router as api_v1_router
+from app.core.http_errors import (
+    integrity_error_handler,
+    request_validation_exception_handler,
+)
 from app.core.rate_limit import limiter
 from app.db import create_db_and_tables
 import os
@@ -14,13 +23,21 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+
 app = FastAPI(
     title="Sikapa Enterprise API",
     description="Secure API for product browsing, authentication, and orders with HTTPS/TLS encryption.",
     version="0.1.0",
-    docs_url="/docs",  # Only available in development
-    redoc_url="/redoc"  # Only available in development
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
+
+app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+app.add_exception_handler(IntegrityError, integrity_error_handler)
 
 # Rate Limiting (shared instance for SlowAPIMiddleware + route decorators)
 app.state.limiter = limiter
@@ -33,16 +50,38 @@ if https_enabled and not os.getenv("DEBUG", "false").lower() == "true":
     app.add_middleware(HTTPSRedirectMiddleware)
 
 # CORS Middleware for frontend integration
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://localhost:3000").split(",")
+_cors_raw = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,https://localhost:3000,http://192.168.1.202:3000",
+)
+cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
 cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
+# Optional: e.g. https://.*\\.vercel\\.app for preview deploys (still validates Origin per request).
+_cors_regex = os.getenv("CORS_ORIGIN_REGEX", "").strip()
 
-app.add_middleware(
-    CORSMiddleware,
+_cors_kwargs = dict(
     allow_origins=cors_origins,
     allow_credentials=cors_allow_credentials,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
+if _cors_regex:
+    _cors_kwargs["allow_origin_regex"] = _cors_regex
+
+app.add_middleware(CORSMiddleware, **_cors_kwargs)
+
+_request_log = logging.getLogger("sikapa.request")
+
+
+@app.middleware("http")
+async def log_incoming_requests(request: Request, call_next):
+    """Log each request so local dev can confirm the frontend hit the API."""
+    path = request.url.path
+    start = time.perf_counter()
+    response = await call_next(request)
+    ms = (time.perf_counter() - start) * 1000
+    _request_log.info("%s %s -> %s (%.2fms)", request.method, path, response.status_code, ms)
+    return response
 
 # Security Headers Middleware
 # @app.middleware("http")
@@ -118,10 +157,12 @@ def root() -> dict:
 
 
 @app.get("/health")
+@app.get("/health/")
 def health_check() -> dict:
+    """Both paths avoid 307 redirects from probes that add or omit a trailing slash."""
     return {
         "status": "healthy",
         "service": "Sikapa Enterprise API",
         "version": "0.1.0",
-        "security": "HTTPS/TLS" if https_enabled else "HTTP"
+        "security": "HTTPS/TLS" if https_enabled else "HTTP",
     }
