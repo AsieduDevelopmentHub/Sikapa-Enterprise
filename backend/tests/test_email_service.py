@@ -36,6 +36,7 @@ class TestEmailService:
                 str(c.args[0]) for c in mock_print.call_args_list if c.args
             )
             assert "[DEBUG] Would send email to test@example.com" in combined
+            assert "Welcome" in combined
 
     def test_send_email_verification_debug_mode(self, email_service):
         """Test sending email verification in debug mode."""
@@ -54,7 +55,7 @@ class TestEmailService:
                 str(c.args[0]) for c in mock_print.call_args_list if c.args
             )
             assert "[DEBUG] Would send email to test@example.com" in combined
-            assert "Verify Your Email" in combined
+            assert "Verify your email" in combined
 
     def test_send_password_reset_debug_mode(self, email_service):
         """Test sending password reset email in debug mode."""

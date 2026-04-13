@@ -12,6 +12,7 @@ from app.models import Order, OrderItem, CartItem, Product, Invoice, User
 from app.api.v1.orders.schemas import OrderCreateSchema
 from app.core.email_service import EmailService
 from app.core.invoice_service import InvoiceService
+from app.core.order_mail import line_items_for_order_email
 
 email_service = EmailService()
 invoice_service = InvoiceService()
@@ -175,11 +176,15 @@ async def send_order_confirmation_email(
     if not user or not user.email:
         return
 
+    currency = os.getenv("PAYSTACK_CURRENCY", "GHS").strip().upper()
+    lines = line_items_for_order_email(session, order.id)
     email_service.send_order_confirmation(
         user.email,
         order.id,
         order.total_price,
         user.name or user.username or user.email,
+        currency=currency,
+        line_items=lines,
     )
 
 
@@ -250,26 +255,22 @@ async def send_shipment_notification_email(
     if not user or not user.email:
         return
     
-    # Send shipment notification with tracking details
-    tracking_info = ""
-    if order.shipping_provider:
-        tracking_info += f"Carrier: {order.shipping_provider}\n"
-    if order.tracking_number:
-        tracking_info += f"Tracking Number: {order.tracking_number}\n"
-    if order.estimated_delivery:
-        tracking_info += f"Estimated Delivery: {order.estimated_delivery.strftime('%Y-%m-%d')}"
-    
-    email_service.send_email(
-        to=user.email,
-        subject=f"Your Order #{order.id} Has Been Shipped",
-        template="shipment_notification",
-        context={
-            "customer_name": user.name or user.username or user.email,
-            "order_id": order.id,
-            "tracking_info": tracking_info,
-            "shipping_provider": order.shipping_provider or "Not specified",
-            "tracking_number": order.tracking_number or "N/A"
-        }
+    currency = os.getenv("PAYSTACK_CURRENCY", "GHS").strip().upper()
+    lines = line_items_for_order_email(session, order_id)
+    est = (
+        order.estimated_delivery.strftime("%Y-%m-%d")
+        if order.estimated_delivery
+        else None
+    )
+    email_service.send_order_shipped(
+        user.email,
+        order.id,
+        order.tracking_number,
+        user.name or user.username or user.email,
+        shipping_provider=order.shipping_provider,
+        estimated_delivery=est,
+        line_items=lines,
+        currency=currency,
     )
 
 
@@ -324,15 +325,11 @@ async def update_order_status_and_notify(
     elif new_status == "cancelled":
         user = session.exec(select(User).where(User.id == order.user_id)).first()
         if user and user.email:
-            email_service.send_email(
-                to=user.email,
-                subject=f"Order #{order.id} Has Been Cancelled",
-                template="order_cancelled",
-                context={
-                    "customer_name": user.name or user.username or user.email,
-                    "order_id": order.id,
-                    "reason": order.cancel_reason or "No reason provided"
-                }
+            email_service.send_order_cancelled(
+                user.email,
+                order.id,
+                user.name or user.username or user.email,
+                reason=order.cancel_reason or "No reason provided",
             )
     
     return order

@@ -20,6 +20,7 @@ from app.db import DATABASE_URL, apply_postgres_session_user
 from app.models import Order, Invoice, PaystackInitIdempotency, PaystackTransaction, User
 from app.core import paystack_client
 from app.core.email_service import EmailService
+from app.core.order_mail import line_items_for_order_email
 
 logger = logging.getLogger(__name__)
 email_service = EmailService()
@@ -235,10 +236,16 @@ def initialize_paystack_for_order(
         currency=_currency(),
     )
     if not resp.get("status") or not resp.get("data"):
-        msg = resp.get("message", "Paystack initialization failed")
+        msg = str(resp.get("message", "Paystack initialization failed"))
+        hint = ""
+        if "ip" in msg.lower():
+            hint = (
+                " Paystack may be blocking your server's IP (dashboard IP whitelist) or the "
+                "request may be from a disallowed network; check Paystack developer settings."
+            )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(msg),
+            detail=msg + hint,
         )
 
     data = resp["data"]
@@ -333,11 +340,15 @@ def _send_order_confirmation_once(session: Session, order: Order) -> None:
     user = session.get(User, order.user_id)
     if not user or not user.email:
         return
+    currency = os.getenv("PAYSTACK_CURRENCY", "GHS").strip().upper()
+    lines = line_items_for_order_email(session, order.id)
     sent = email_service.send_order_confirmation(
         user.email,
         order.id,
         order.total_price,
         user.name or user.username or user.email,
+        currency=currency,
+        line_items=lines,
     )
     if not sent:
         logger.warning("Order confirmation email failed for order %s", order.id)

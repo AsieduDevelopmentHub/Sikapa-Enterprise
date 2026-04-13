@@ -95,6 +95,12 @@ See [ENVIRONMENT.md](./ENVIRONMENT.md).
   - Set `PAYSTACK_WEBHOOK_IP_ALLOWLIST` (comma-separated IPs) to reject unexpected webhook sources.
   - Behind **Render / nginx**, the client IP is taken from `X-Forwarded-For` / `X-Real-IP` first, then the socket IP.
   - Leave allowlist **empty** for local development (or you will block webhooks).
+- **“Your IP address is not allowed to make this call”** from Paystack usually means **Paystack’s dashboard IP allowlist** is enabled for API calls from your server’s egress IP. Open Paystack → Settings → Developer (or security) and disable or widen IP restrictions, or ensure your hosting egress IPs are allowlisted. Our API surfaces Paystack’s message on failed `transaction/initialize` and appends a short hint when the text mentions “IP”.
+
+## Email branding and order images
+
+- **`EMAIL_LOGO_URL`:** public `https://` URL to your logo. Used in transactional HTML emails and in the PDF invoice header (same variable as invoice generator).
+- **`EMAIL_IMAGE_BASE_URL`:** if product `image_url` values are paths like `/uploads/...`, set this to your **public API base** (e.g. `https://api.example.com`) so confirmation and shipped emails can embed **HTTPS** thumbnails. Many clients block `http://` images.
 
 ## GitHub Actions: auto PR `frontend` → `main`
 
