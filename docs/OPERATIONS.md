@@ -98,10 +98,12 @@ See [ENVIRONMENT.md](./ENVIRONMENT.md).
 
 ## GitHub Actions: auto PR `frontend` → `main`
 
-If the workflow fails with *“GitHub Actions is not permitted to create or approve pull requests”*, either:
+The auto-PR job sets `GH_TOKEN` to **`GH_ACTIONS_PR_TOKEN`** when that secret exists, otherwise **`github.token`** (so `gh` never runs with an empty token).
+
+If `gh pr create` still fails with *“GitHub Actions is not permitted to create or approve pull requests”*, either:
 
 - Enable **Workflow permissions** in the org/repo so `GITHUB_TOKEN` can open PRs, or
-- Add a repository secret **`GH_ACTIONS_PR_TOKEN`**: a fine-grained PAT with **Contents** and **Pull requests** write access to this repo (the auto-merge job uses this token for `gh pr create` and enable-automerge).
+- Add a repository secret **`GH_ACTIONS_PR_TOKEN`**: a fine-grained PAT with **Contents** and **Pull requests** write access to this repo (the job uses it for `gh pr create` and enable-automerge).
 
 ---
 
