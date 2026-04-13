@@ -1,45 +1,51 @@
 # Authentication System Documentation
 
 ## Overview
-Complete enterprise-grade authentication system for Sikapa platform with JWT, 2FA TOTP, email verification, password reset, and token management.
 
-## Implemented Endpoints (16 total)
+Sikapa authentication now supports **username or email login** with one identifier field.
 
-### Registration & Login
-- **POST /register** - Register new user with email verification OTP
-- **POST /login** - Login with email/password, returns JWT tokens
-- **POST /login-2fa** - Login with 2FA verification code when 2FA enabled
-- **POST /logout** - Logout and blacklist current token
+- Login accepts `identifier` (`username` or `email`) + `password`
+- Registration requires `username`, `name`, `password`; `email` is optional
+- JWT access + refresh tokens (refresh rotates tokens)
+- TOTP 2FA, password reset, email verification (only for users with email)
 
-### Email Verification  
-- **POST /verify-email** - Verify email address with OTP code
+All routes are under `/api/v1/auth`.
 
-### Password Management
-- **POST /password-reset/request** - Request password reset (sends link to email)
-- **POST /password-reset/confirm** - Reset password with reset token
-- **POST /password/change** - Change password (authenticated users only)
+## Endpoints
 
-### Token Management
-- **POST /refresh** - Refresh access token using refresh token
+### Registration & login
+- `POST /register`
+- `POST /login`
+- `POST /login-2fa`
+- `POST /logout`
 
-### Profile Management
-- **GET /profile** - Get current user profile
-- **PUT /profile** - Update user profile (name, phone, etc.)
+### Email verification and reset
+- `POST /verify-email`
+- `POST /password-reset/request`
+- `POST /password-reset/confirm`
+- `POST /password/change`
 
-### 2FA TOTP Management  
-- **POST /2fa/setup** - Generate TOTP secret and QR code
-- **POST /2fa/enable** - Enable 2FA after verification
-- **POST /2fa/disable** - Disable 2FA (requires password)
-- **GET /2fa/backup-codes** - Get backup codes for 2FA
+### Token and profile
+- `POST /refresh`
+- `GET /profile`
+- `PUT /profile`
 
-### Account Management
-- **POST /account/delete** - Delete user account (soft delete)
+### 2FA
+- `POST /2fa/setup`
+- `POST /2fa/enable`
+- `POST /2fa/disable`
+- `GET /2fa/backup-codes`
+
+### Account
+- `POST /account/delete`
 
 ## Database Models
 
 ### User
-- id, email (unique), hashed_password
-- first_name, last_name, phone
+- id, username (unique), name
+- email (optional, unique when present), hashed_password
+- first_name/last_name retained temporarily for backward compatibility
+- phone
 - email_verified, is_active
 - two_fa_enabled, two_fa_method
 - role (admin/user), is_admin
@@ -66,8 +72,8 @@ Complete enterprise-grade authentication system for Sikapa platform with JWT, 2F
 ## Security Features
 
 ✓ **JWT with Refresh Tokens**
-  - Access tokens: 15 minutes
-  - Refresh tokens: 7 days
+  - Access token TTL: `ACCESS_TOKEN_EXPIRE_MINUTES`
+  - Refresh token TTL: `REFRESH_TOKEN_EXPIRE_DAYS`
   - HS256 algorithm
   - Token blacklist for revocation
 
@@ -103,20 +109,20 @@ Complete enterprise-grade authentication system for Sikapa platform with JWT, 2F
 ```json
 POST /register
 {
+  "username": "john.doe",
+  "name": "John Doe",
   "email": "user@example.com",
   "password": "SecurePass123!",
-  "first_name": "John",
-  "last_name": "Doe"
 }
 
-Response: { "id": 1, "email": "...", "email_verified": false, ... }
+Response: { "id": 1, "username": "john.doe", "name": "John Doe", "email": "...", ... }
 ```
 
 ### Login
 ```json
 POST /login
 {
-  "email": "user@example.com",
+  "identifier": "john.doe",
   "password": "SecurePass123!"
 }
 
@@ -149,6 +155,7 @@ POST /refresh
 
 Response: {
   "access_token": "eyJ0eXAi...",
+  "refresh_token": "eyJ0eXAi...",
   "token_type": "bearer",
   "expires_in": 900
 }
@@ -212,27 +219,10 @@ All migrations applied automatically:
 ✓ Database connections working
 ✓ Migrations applied successfully
 
-## Next Steps
+## Notes
 
-### Remaining Tasks:
-1. Rate limiting on auth endpoints
-2. Comprehensive endpoint testing
-3. Frontend integration
-4. Email service integration (Resend API)
-5. Backup code regeneration endpoint
-6. Session management
-7. Device tracking for 2FA
-
-### Production Considerations:
-- Enable HTTPS/TLS on production
-- Store secrets in secure vaults
-- Implement rate limiting
-- Add request logging/monitoring
-- Database automatic backups
-- Token expiration cleanup job
-- Email template system
-- SMS 2FA option
-- Biometric authentication
+- Users without email can still register and login, but email-only flows (verification/reset notifications) require an email address.
+- If `SECRET_KEY` changes, all existing JWTs become invalid and users must sign in again.
 
 ## File Structure
 

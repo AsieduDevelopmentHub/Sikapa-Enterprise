@@ -170,14 +170,14 @@ async def send_order_confirmation_email(
 ) -> None:
     """Send order confirmation email to the user."""
     user = session.exec(select(User).where(User.id == user_id)).first()
-    if not user:
+    if not user or not user.email:
         return
 
     email_service.send_order_confirmation(
         user.email,
         order.id,
         order.total_price,
-        user.first_name or user.email,
+        user.name or user.username or user.email,
     )
 
 
@@ -245,7 +245,7 @@ async def send_shipment_notification_email(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     
     user = session.exec(select(User).where(User.id == order.user_id)).first()
-    if not user:
+    if not user or not user.email:
         return
     
     # Send shipment notification with tracking details
@@ -262,7 +262,7 @@ async def send_shipment_notification_email(
         subject=f"Your Order #{order.id} Has Been Shipped",
         template="shipment_notification",
         context={
-            "customer_name": user.first_name or user.email,
+            "customer_name": user.name or user.username or user.email,
             "order_id": order.id,
             "tracking_info": tracking_info,
             "shipping_provider": order.shipping_provider or "Not specified",
@@ -321,13 +321,13 @@ async def update_order_status_and_notify(
         await send_shipment_notification_email(session, order_id)
     elif new_status == "cancelled":
         user = session.exec(select(User).where(User.id == order.user_id)).first()
-        if user:
+        if user and user.email:
             email_service.send_email(
                 to=user.email,
                 subject=f"Order #{order.id} Has Been Cancelled",
                 template="order_cancelled",
                 context={
-                    "customer_name": user.first_name or user.email,
+                    "customer_name": user.name or user.username or user.email,
                     "order_id": order.id,
                     "reason": order.cancel_reason or "No reason provided"
                 }

@@ -15,7 +15,10 @@ from app.models import Order, PaystackInitIdempotency, User
 
 
 def _user(session: Session, *, admin: bool = False) -> User:
+    seed = str(id(session))
     u = User(
+        username=f"u{admin}-{seed}",
+        name=f"User {seed}",
         email=f"u{admin}-{id(session)}@example.com",
         hashed_password=get_password_hash("Pw123456!"),
         is_active=True,

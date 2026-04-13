@@ -33,7 +33,12 @@ class ProductRead(ProductBase):
 
 
 class UserBase(SQLModel):
-    email: str
+    username: str = Field(index=True, unique=True, max_length=50)
+    name: str = Field(max_length=120)
+    email: Optional[str] = Field(
+        default=None,
+        sa_column=Column("email", String, unique=True, nullable=True),
+    )
     is_active: bool = True
     is_admin: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -59,12 +64,15 @@ class UserRead(UserBase):
     id: int
     email_verified: bool
     phone: Optional[str] = None
+    # Backward-compat fields; deprecated in favor of `name`.
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     two_fa_enabled: bool
 
 
 class UserUpdate(SQLModel):
+    username: Optional[str] = None
+    name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None

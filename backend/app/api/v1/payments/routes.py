@@ -35,6 +35,12 @@ def paystack_initialize(
     Start a Paystack transaction for an order. Client should redirect the
     shopper to `authorization_url`, then call verify (or rely on webhook).
     """
+    if not current_user.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Add an email to your account before starting payment.",
+        )
+
     data = payment_services.initialize_paystack_for_order(
         session,
         current_user.id,

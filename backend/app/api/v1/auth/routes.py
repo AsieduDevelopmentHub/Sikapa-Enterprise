@@ -19,6 +19,7 @@ from app.api.v1.auth.schemas import (
     TwoFAEnableRequest,
     LoginWithTwoFARequest,
     DeleteAccountRequest,
+    RefreshTokenRequest,
 )
 from app.api.v1.auth.services import (
     register_user,
@@ -69,10 +70,10 @@ def register_endpoint(
     """Register a new user account."""
     user = register_user(
         session=session,
+        username=payload.username,
+        name=payload.name,
         email=payload.email,
         password=payload.password,
-        first_name=payload.first_name,
-        last_name=payload.last_name,
     )
     return user
 
@@ -85,7 +86,7 @@ def login_endpoint(
     session: Session = Depends(get_session)
 ):
     """Login user and return access/refresh tokens."""
-    user = authenticate_user(session, payload.email, payload.password)
+    user = authenticate_user(session, payload.identifier, payload.password)
     if user.two_fa_enabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -103,7 +104,7 @@ def login_with_2fa_endpoint(
     session: Session = Depends(get_session)
 ):
     """Login with 2FA verification code."""
-    user = authenticate_user(session, payload.email, payload.password)
+    user = authenticate_user(session, payload.identifier, payload.password)
 
     if not user.two_fa_enabled:
         raise HTTPException(
@@ -195,18 +196,11 @@ def reset_password_endpoint(
 @token_refresh_limiter  # 5 token refresh requests per minute per IP
 def refresh_token_endpoint(
     request: Request,
-    payload: dict,
+    payload: RefreshTokenRequest,
     session: Session = Depends(get_session)
 ):
     """Refresh access token using refresh token."""
-    refresh_token = payload.get("refresh_token")
-    if not refresh_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="refresh_token is required"
-        )
-
-    new_tokens = refresh_access_token(session, refresh_token)
+    new_tokens = refresh_access_token(session, payload.refresh_token)
     return new_tokens
 
 
@@ -230,8 +224,8 @@ def update_profile_endpoint(
     updated_user = update_user_profile(
         session,
         current_user.id,
-        first_name=request.first_name,
-        last_name=request.last_name,
+        username=request.username,
+        name=request.name,
         phone=request.phone,
     )
     return UserProfileResponse.model_validate(updated_user)

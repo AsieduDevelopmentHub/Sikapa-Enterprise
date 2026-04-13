@@ -49,6 +49,7 @@ Public env vars are embedded at build time on Vercel; change them and **redeploy
 - [ ] `CORS_ORIGINS` includes your **exact** frontend origin (`https://...`).
 - [ ] `NEXT_PUBLIC_API_URL` points to the **same** API users reach in the browser (correct host, `https`, `/api` base as documented above).
 - [ ] Backend health: `GET /health` or `GET /health/` returns `200` (see [OPERATIONS.md](./OPERATIONS.md)).
+- [ ] Auth clients send `identifier` (username or email) for login and keep `username` + `name` required on registration.
 
 ---
 
