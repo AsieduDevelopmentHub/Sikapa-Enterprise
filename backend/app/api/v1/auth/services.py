@@ -117,10 +117,15 @@ def register_user(
         session.add(otp)
         session.commit()
 
-    # Send verification email
-    email_sent = email_service.send_email_verification(user.email, otp_code, user.first_name)
-    if not email_sent:
-        print(f"⚠️  Warning: Failed to send verification email to {user.email}")
+        # Send welcome email
+        welcome_sent = email_service.send_welcome_email(user.email, user.name)
+        if not welcome_sent:
+            print(f"⚠️  Warning: Failed to send welcome email to {user.email}")
+
+        # Send verification email
+        email_sent = email_service.send_email_verification(user.email, otp_code, user.name)
+        if not email_sent:
+            print(f"⚠️  Warning: Failed to send verification email to {user.email}")
 
     return user
 
