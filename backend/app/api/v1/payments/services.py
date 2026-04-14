@@ -240,9 +240,15 @@ def initialize_paystack_for_order(
         hint = ""
         if "ip" in msg.lower():
             hint = (
-                " Paystack may be blocking your server's IP (dashboard IP whitelist) or the "
-                "request may be from a disallowed network; check Paystack developer settings."
+                " Your server's outgoing IP is not in Paystack's whitelist. "
+                "Fix: go to https://dashboard.paystack.com/#/settings/developer "
+                "→ 'IP Whitelist' → either add your server's IP or disable the whitelist. "
+                f"(Key mode: {paystack_client.key_mode()})"
             )
+        logger.error(
+            "Paystack initialization rejected (mode=%s): %s",
+            paystack_client.key_mode(), msg,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=msg + hint,

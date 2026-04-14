@@ -1,0 +1,16 @@
+# Force LF line endings for all text files checked out on any OS.
+# This prevents CRLF from leaking into GitHub Actions bash scripts.
+* text=auto eol=lf
+
+# Explicitly mark binary formats so Git never touches them.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
