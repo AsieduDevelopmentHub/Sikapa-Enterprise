@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -31,22 +32,22 @@ export type AdminNavItem = {
 };
 
 const NAV_MAIN: AdminNavItem[] = [
-  { href: "/admin", label: "Overview", icon: faHouse },
-  { href: "/admin/products", label: "Products", icon: faBox },
-  { href: "/admin/categories", label: "Categories", icon: faFolderTree },
-  { href: "/admin/orders", label: "Orders", icon: faClipboardList },
-  { href: "/admin/customers", label: "Customers", icon: faUsers },
-  { href: "/admin/inventory", label: "Inventory", icon: faWarehouse },
-  { href: "/admin/coupons", label: "Coupons", icon: faTicket },
-  { href: "/admin/reviews", label: "Reviews", icon: faStar },
-  { href: "/admin/analytics", label: "Analytics", icon: faChartLine },
-  { href: "/admin/payments", label: "Payments", icon: faWallet },
-  { href: "/admin/staff", label: "Staff", icon: faShieldHalved },
-  { href: "/admin/settings", label: "Settings", icon: faGear },
+  { href: "/system", label: "Overview", icon: faHouse },
+  { href: "/system/products", label: "Products", icon: faBox },
+  { href: "/system/categories", label: "Categories", icon: faFolderTree },
+  { href: "/system/orders", label: "Orders", icon: faClipboardList },
+  { href: "/system/customers", label: "Customers", icon: faUsers },
+  { href: "/system/inventory", label: "Inventory", icon: faWarehouse },
+  { href: "/system/coupons", label: "Coupons", icon: faTicket },
+  { href: "/system/reviews", label: "Reviews", icon: faStar },
+  { href: "/system/analytics", label: "Analytics", icon: faChartLine },
+  { href: "/system/payments", label: "Payments", icon: faWallet },
+  { href: "/system/staff", label: "Staff", icon: faShieldHalved },
+  { href: "/system/settings", label: "Settings", icon: faGear },
 ];
 
 function navActive(pathname: string, href: string): boolean {
-  if (href === "/admin") return pathname === "/admin";
+  if (href === "/system") return pathname === "/system";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -123,11 +124,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="border-b border-white/10 px-4 py-5">
-        <Link href="/admin" className="block" onClick={closeMobile}>
-          <p className="font-serif text-lg font-semibold tracking-wide text-white">Sikapa</p>
-          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-sikapa-gold/90">
-            Admin
-          </p>
+        <Link href="/system" className="block" onClick={closeMobile}>
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="/assets/logos/brandmark.png"
+              alt="Sikapa"
+              width={34}
+              height={34}
+              className="h-8 w-8 rounded-sm object-contain"
+            />
+            <div>
+              <p className="font-serif text-lg font-semibold tracking-wide text-white">Sikapa</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-sikapa-gold/90">
+                System
+              </p>
+            </div>
+          </div>
         </Link>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">

@@ -74,7 +74,7 @@ export default function AdminOrdersPage() {
               {rows.map((o) => (
                 <tr key={o.id} className="hover:bg-sikapa-cream/80">
                   <td className="px-4 py-3">
-                    <Link href={`/admin/orders/${o.id}`} className="font-semibold text-sikapa-crimson hover:underline">
+                    <Link href={`/system/orders/${o.id}`} className="font-semibold text-sikapa-crimson hover:underline">
                       #{o.id}
                     </Link>
                   </td>

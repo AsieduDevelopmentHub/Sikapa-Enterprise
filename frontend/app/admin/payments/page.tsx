@@ -46,7 +46,7 @@ export default function AdminPaymentsPage() {
               <tr key={t.id}>
                 <td className="px-4 py-3 font-mono text-[11px]">{t.reference}</td>
                 <td className="px-4 py-3">
-                  <Link href={`/admin/orders/${t.order_id}`} className="font-semibold text-sikapa-crimson hover:underline">
+                  <Link href={`/system/orders/${t.order_id}`} className="font-semibold text-sikapa-crimson hover:underline">
                     #{t.order_id}
                   </Link>
                 </td>

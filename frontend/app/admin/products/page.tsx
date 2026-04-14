@@ -41,7 +41,7 @@ export default function AdminProductsPage() {
           <p className="text-small text-sikapa-text-secondary">Manage catalog, pricing, and visibility.</p>
         </div>
         <Link
-          href="/admin/products/new"
+          href="/system/products/new"
           className="inline-flex justify-center rounded-full bg-sikapa-crimson px-5 py-2.5 text-small font-semibold text-white"
         >
           Add product
@@ -80,7 +80,7 @@ export default function AdminProductsPage() {
                           ) : null}
                         </div>
                         <div>
-                          <Link href={`/admin/products/${p.id}`} className="font-semibold text-sikapa-crimson hover:underline">
+                          <Link href={`/system/products/${p.id}`} className="font-semibold text-sikapa-crimson hover:underline">
                             {p.name}
                           </Link>
                           <p className="text-[11px] text-sikapa-text-muted">{p.slug}</p>

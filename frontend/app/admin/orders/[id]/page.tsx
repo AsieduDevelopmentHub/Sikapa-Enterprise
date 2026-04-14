@@ -119,7 +119,7 @@ export default function AdminOrderDetailPage() {
   if (err || !order) {
     return (
       <div>
-        <Link href="/admin/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
+        <Link href="/system/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
           ← Orders
         </Link>
         <p className="mt-4 text-small text-red-800">{err}</p>
@@ -129,7 +129,7 @@ export default function AdminOrderDetailPage() {
 
   return (
     <div>
-      <Link href="/admin/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
+      <Link href="/system/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
         ← Orders
       </Link>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">

@@ -24,8 +24,8 @@ export default function AdminInventoryPage() {
     if (!accessToken) return;
     try {
       const [products, changes] = await Promise.all([
-        adminFetchProducts(accessToken, { limit: 200 }),
-        adminFetchInventoryLogs(accessToken, { limit: 150 }),
+        adminFetchProducts(accessToken, { limit: 100 }),
+        adminFetchInventoryLogs(accessToken, { limit: 100 }),
       ]);
       setRows(products);
       setLogs(changes);
@@ -120,7 +120,7 @@ export default function AdminInventoryPage() {
                   <span className={p.in_stock <= 5 ? "font-bold text-amber-900" : ""}>{p.in_stock}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link href={`/admin/products/${p.id}`} className="text-[11px] font-semibold text-sikapa-gold hover:underline">
+                  <Link href={`/system/products/${p.id}`} className="text-[11px] font-semibold text-sikapa-gold hover:underline">
                     Update
                   </Link>
                 </td>

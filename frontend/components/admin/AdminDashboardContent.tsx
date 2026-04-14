@@ -65,7 +65,7 @@ export function AdminDashboardContent() {
         adminFetchDashboard(accessToken, days),
         adminFetchRevenue(accessToken, days),
         adminFetchOrders(accessToken, { limit: 10 }),
-        adminFetchProducts(accessToken, { limit: 200 }),
+        adminFetchProducts(accessToken, { limit: 100 }),
       ]);
       setData(d);
       setRevenue(rev);
@@ -166,7 +166,7 @@ export function AdminDashboardContent() {
                 <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
                   Recent orders
                 </h2>
-                <Link href="/admin/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
+                <Link href="/system/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
                   View all
                 </Link>
               </div>
@@ -176,7 +176,7 @@ export function AdminDashboardContent() {
                 ) : (
                   recent.map((o) => (
                     <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-small">
-                      <Link href={`/admin/orders/${o.id}`} className="font-semibold text-sikapa-crimson hover:underline">
+                      <Link href={`/system/orders/${o.id}`} className="font-semibold text-sikapa-crimson hover:underline">
                         #{o.id}
                       </Link>
                       <span className="text-sikapa-text-muted">{o.status}</span>
@@ -193,7 +193,7 @@ export function AdminDashboardContent() {
                 <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
                   Low stock
                 </h2>
-                <Link href="/admin/inventory" className="text-small font-semibold text-sikapa-gold hover:underline">
+                <Link href="/system/inventory" className="text-small font-semibold text-sikapa-gold hover:underline">
                   Inventory
                 </Link>
               </div>
@@ -203,7 +203,7 @@ export function AdminDashboardContent() {
                 ) : (
                   lowStock.map((p) => (
                     <li key={p.id} className="flex justify-between py-3 text-small">
-                      <Link href={`/admin/products/${p.id}`} className="font-medium text-sikapa-text-primary hover:underline">
+                      <Link href={`/system/products/${p.id}`} className="font-medium text-sikapa-text-primary hover:underline">
                         {p.name}
                       </Link>
                       <span className="text-sikapa-crimson font-semibold">{p.in_stock} left</span>
@@ -224,7 +224,7 @@ export function AdminDashboardContent() {
                   <li key={row.product_id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <Link
-                        href={`/admin/products/${row.product_id}`}
+                        href={`/system/products/${row.product_id}`}
                         className="font-semibold text-sikapa-gold hover:underline"
                       >
                         {row.name}
