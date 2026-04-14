@@ -4,10 +4,29 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminFetchUsers,
+  adminSetStaffRole,
   adminPromoteUser,
   adminRevokeAdmin,
   type AdminUser,
 } from "@/lib/api/admin";
+
+const ROLE_PRESETS: Record<"super_admin" | "admin" | "staff", string[]> = {
+  super_admin: [],
+  admin: [
+    "view_users",
+    "manage_users",
+    "manage_staff",
+    "manage_products",
+    "manage_orders",
+    "manage_inventory",
+    "manage_coupons",
+    "manage_reviews",
+    "view_analytics",
+    "view_payments",
+    "manage_settings",
+  ],
+  staff: ["manage_products", "manage_orders", "manage_inventory", "manage_reviews", "view_analytics"],
+};
 
 export default function AdminStaffPage() {
   const { accessToken, user: me } = useAuth();
@@ -49,7 +68,7 @@ export default function AdminStaffPage() {
     <div>
       <h1 className="font-serif text-page-title font-semibold">Staff & admins</h1>
       <p className="text-small text-sikapa-text-secondary">
-        Super-admins use the same role today; granular RBAC can extend the backend later.
+        Configure role and permission scope per team member.
       </p>
       <div className="mt-4">
         <button
@@ -67,30 +86,55 @@ export default function AdminStaffPage() {
             <div>
               <p className="font-semibold">{u.name}</p>
               <p className="text-[11px] text-sikapa-text-muted">
-                @{u.username} · {u.email ?? "no email"}
+                @{u.username} · {u.email ?? "no email"} · role: {u.admin_role ?? "admin"}
               </p>
+              {u.admin_permissions ? (
+                <p className="mt-1 text-[11px] text-sikapa-text-muted">Permissions: {u.admin_permissions}</p>
+              ) : null}
             </div>
-            {u.id !== me?.id ? (
-              <button
-                type="button"
-                className="text-[11px] font-semibold text-red-700 hover:underline"
-                onClick={() => {
-                  if (!accessToken || !confirm(`Revoke admin from @${u.username}?`)) return;
-                  void (async () => {
-                    try {
-                      await adminRevokeAdmin(accessToken, u.id);
-                      await load();
-                    } catch (e) {
-                      alert(e instanceof Error ? e.message : "Failed");
-                    }
-                  })();
-                }}
-              >
-                Revoke admin
-              </button>
-            ) : (
-              <span className="text-[11px] text-sikapa-text-muted">You</span>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {u.id !== me?.id ? (
+                <>
+                  <select
+                    className="rounded-lg border border-black/[0.1] bg-white px-2 py-1 text-[11px]"
+                    value={u.admin_role ?? "admin"}
+                    onChange={(e) => {
+                      if (!accessToken) return;
+                      const role = e.target.value as "super_admin" | "admin" | "staff";
+                      void adminSetStaffRole(accessToken, u.id, {
+                        role,
+                        permissions: ROLE_PRESETS[role],
+                      })
+                        .then(load)
+                        .catch((er) => alert(er instanceof Error ? er.message : "Failed"));
+                    }}
+                  >
+                    <option value="super_admin">super_admin</option>
+                    <option value="admin">admin</option>
+                    <option value="staff">staff</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="text-[11px] font-semibold text-red-700 hover:underline"
+                    onClick={() => {
+                      if (!accessToken || !confirm(`Revoke admin from @${u.username}?`)) return;
+                      void (async () => {
+                        try {
+                          await adminRevokeAdmin(accessToken, u.id);
+                          await load();
+                        } catch (e) {
+                          alert(e instanceof Error ? e.message : "Failed");
+                        }
+                      })();
+                    }}
+                  >
+                    Revoke admin
+                  </button>
+                </>
+              ) : (
+                <span className="text-[11px] text-sikapa-text-muted">You</span>
+              )}
+            </div>
           </li>
         ))}
         {rows.length === 0 && !err && (

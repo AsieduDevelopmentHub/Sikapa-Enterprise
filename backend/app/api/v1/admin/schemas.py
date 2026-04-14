@@ -45,6 +45,8 @@ class UserManagementResponse(BaseModel):
     last_name: Optional[str] = None
     is_active: bool
     is_admin: bool
+    admin_role: str = "customer"
+    admin_permissions: Optional[str] = ""
     created_at: datetime
 
     class Config:
@@ -102,6 +104,75 @@ class PaystackTransactionRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class InventoryAdjustmentRead(BaseModel):
+    id: int
+    product_id: int
+    admin_id: Optional[int] = None
+    delta: int
+    previous_stock: int
+    new_stock: int
+    reason: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CouponRead(BaseModel):
+    id: int
+    code: str
+    discount_type: str
+    discount_value: float
+    usage_limit: Optional[int] = None
+    used_count: int
+    min_order_amount: float
+    starts_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    is_active: bool
+    created_by: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CouponCreateUpdate(BaseModel):
+    code: str = Field(..., min_length=2, max_length=64)
+    discount_type: str = Field(..., pattern="^(percent|fixed)$")
+    discount_value: float = Field(..., gt=0)
+    usage_limit: Optional[int] = Field(default=None, ge=1)
+    min_order_amount: float = Field(default=0, ge=0)
+    starts_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    is_active: bool = True
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def _code(cls, v):
+        return sanitize_plain_text(v, max_length=64, single_line=True).upper()
+
+
+class BusinessSettingRead(BaseModel):
+    key: str
+    value: str
+    updated_by: Optional[int] = None
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BusinessSettingUpsert(BaseModel):
+    key: str = Field(..., min_length=2, max_length=120)
+    value: str = Field(default="", max_length=8000)
+
+    @field_validator("key", mode="before")
+    @classmethod
+    def _key(cls, v):
+        return sanitize_slug(v or "").replace("-", "_")
 
 
 class CategoryAdminRead(BaseModel):

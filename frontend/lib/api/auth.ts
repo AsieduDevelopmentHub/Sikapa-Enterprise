@@ -28,6 +28,8 @@ export type UserProfile = {
   two_fa_method?: string | null;
   is_active: boolean;
   is_admin: boolean;
+  admin_role?: string;
+  admin_permissions?: string | null;
   created_at: string;
   updated_at: string;
 };

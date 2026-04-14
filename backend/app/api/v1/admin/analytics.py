@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, status
 from sqlmodel import Session, select, func
 
 from app.db import get_session
-from app.api.v1.auth.dependencies import get_current_admin_user
+from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Order, OrderItem, Review, Product, CartItem
 from app.api.v1.admin.schemas import (
     DashboardMetrics,
@@ -22,7 +22,7 @@ router = APIRouter()
 async def get_dashboard_metrics(
     days: int = 30,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("view_analytics")),
 ):
     """Get dashboard metrics and analytics."""
     
@@ -121,7 +121,7 @@ async def get_dashboard_metrics(
 async def get_revenue_stats(
     days: int = 30,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("view_analytics")),
 ):
     """Get daily revenue statistics."""
     

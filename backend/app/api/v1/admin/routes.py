@@ -10,6 +10,9 @@ from app.api.v1.admin.orders import router as orders_router
 from app.api.v1.admin.categories import router as categories_router
 from app.api.v1.admin.payments import router as payments_router
 from app.api.v1.admin.reviews import router as reviews_router
+from app.api.v1.admin.inventory import router as inventory_router
+from app.api.v1.admin.coupons import router as coupons_router
+from app.api.v1.admin.settings import router as settings_router
 
 router = APIRouter(prefix="/admin")
 
@@ -21,3 +24,6 @@ router.include_router(categories_router, prefix="/categories")
 router.include_router(orders_router, prefix="/orders")
 router.include_router(payments_router, prefix="/payments")
 router.include_router(reviews_router, prefix="/reviews")
+router.include_router(inventory_router, prefix="/inventory")
+router.include_router(coupons_router, prefix="/coupons")
+router.include_router(settings_router, prefix="/settings")

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session
 
 from app.db import get_session
-from app.api.v1.auth.dependencies import get_current_admin_user
+from app.api.v1.auth.dependencies import require_admin_permission
 from app.api.v1.admin.services import (
     create_category_admin,
     update_category_admin,
@@ -29,7 +29,7 @@ async def list_categories_admin(
     limit: int = Query(50, ge=1, le=100),
     is_active: bool = None,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     """List categories for admin management."""
     return await get_all_categories_admin(session, skip, limit, is_active)
@@ -39,7 +39,7 @@ async def list_categories_admin(
 async def create_category(
     payload: CategoryAdminCreate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     return await create_category_admin(session, payload.dict())
 
@@ -49,7 +49,7 @@ async def update_category(
     category_id: int,
     payload: CategoryAdminUpdate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     return await update_category_admin(session, category_id, payload.dict(exclude_none=True))
 
@@ -58,6 +58,6 @@ async def update_category(
 async def delete_category(
     category_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     await delete_category_admin(session, category_id)
