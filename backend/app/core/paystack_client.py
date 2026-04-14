@@ -12,23 +12,37 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
-PAYSTACK_BASE_URL = os.getenv(
-    "PAYSTACK_BASE_URL", "https://api.paystack.co"
-).rstrip("/")
+
+def _secret_key() -> str:
+    return os.getenv("PAYSTACK_SECRET_KEY", "").strip()
+
+
+def _base_url() -> str:
+    return os.getenv("PAYSTACK_BASE_URL", "https://api.paystack.co").rstrip("/")
 
 
 def _headers() -> dict[str, str]:
-    if not PAYSTACK_SECRET_KEY:
+    sk = _secret_key()
+    if not sk:
         raise RuntimeError("PAYSTACK_SECRET_KEY is not configured")
     return {
-        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+        "Authorization": f"Bearer {sk}",
         "Content-Type": "application/json",
     }
 
 
 def is_configured() -> bool:
-    return bool(PAYSTACK_SECRET_KEY.strip())
+    return bool(_secret_key())
+
+
+def key_mode() -> str:
+    """Return 'test', 'live', or 'none' based on the current secret key prefix."""
+    sk = _secret_key()
+    if sk.startswith("sk_test_"):
+        return "test"
+    if sk.startswith("sk_live_"):
+        return "live"
+    return "none" if not sk else "unknown"
 
 
 def money_to_subunit(amount_major: float) -> int:
@@ -58,33 +72,31 @@ def initialize_transaction(
     if metadata:
         payload["metadata"] = metadata
 
+    url = f"{_base_url()}/transaction/initialize"
     with httpx.Client(timeout=60.0) as client:
-        r = client.post(
-            f"{PAYSTACK_BASE_URL}/transaction/initialize",
-            headers=_headers(),
-            json=payload,
-        )
+        r = client.post(url, headers=_headers(), json=payload)
     try:
         data = r.json()
     except Exception:
-        logger.error("Paystack initialize non-JSON response: %s", r.text[:500])
+        logger.error("Paystack initialize non-JSON response (HTTP %s): %s", r.status_code, r.text[:500])
         raise RuntimeError("Invalid response from Paystack") from None
     if not data.get("status"):
-        logger.warning("Paystack initialize failed: %s", data)
+        logger.warning(
+            "Paystack initialize failed (HTTP %s, mode=%s): %s",
+            r.status_code, key_mode(), data,
+        )
     return data
 
 
 def verify_transaction(reference: str) -> dict[str, Any]:
     """GET /transaction/verify/{reference}"""
+    url = f"{_base_url()}/transaction/verify/{reference}"
     with httpx.Client(timeout=60.0) as client:
-        r = client.get(
-            f"{PAYSTACK_BASE_URL}/transaction/verify/{reference}",
-            headers=_headers(),
-        )
+        r = client.get(url, headers=_headers())
     try:
         return r.json()
     except Exception:
-        logger.error("Paystack verify non-JSON response: %s", r.text[:500])
+        logger.error("Paystack verify non-JSON response (HTTP %s): %s", r.status_code, r.text[:500])
         raise RuntimeError("Invalid response from Paystack") from None
 
 
@@ -110,14 +122,11 @@ def create_refund(
     if merchant_note:
         payload["merchant_note"] = merchant_note
 
+    url = f"{_base_url()}/refund"
     with httpx.Client(timeout=60.0) as client:
-        r = client.post(
-            f"{PAYSTACK_BASE_URL}/refund",
-            headers=_headers(),
-            json=payload,
-        )
+        r = client.post(url, headers=_headers(), json=payload)
     try:
         return r.json()
     except Exception:
-        logger.error("Paystack refund non-JSON response: %s", r.text[:500])
+        logger.error("Paystack refund non-JSON response (HTTP %s): %s", r.status_code, r.text[:500])
         raise RuntimeError("Invalid response from Paystack") from None
