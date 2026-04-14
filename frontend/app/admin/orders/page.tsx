@@ -21,7 +21,7 @@ export default function AdminOrdersPage() {
     setErr(null);
     try {
       const data = await adminFetchOrders(accessToken, {
-        limit: 100,
+        limit: 30,
         status: filter === "all" ? undefined : filter,
       });
       setRows(data);
