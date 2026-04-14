@@ -1,0 +1,77 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { adminDeleteReview, adminFetchReviews, type AdminReview } from "@/lib/api/admin";
+
+export default function AdminReviewsPage() {
+  const { accessToken } = useAuth();
+  const [rows, setRows] = useState<AdminReview[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      setRows(await adminFetchReviews(accessToken));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load");
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <div>
+      <h1 className="font-serif text-page-title font-semibold">Reviews</h1>
+      <p className="text-small text-sikapa-text-secondary">Moderate customer feedback. Removing a review is permanent.</p>
+      {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
+      <ul className="mt-6 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+        {rows.map((r) => (
+          <li key={r.id} className="px-4 py-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold">
+                  {r.title}{" "}
+                  <span className="text-sikapa-gold">★ {r.rating}</span>
+                </p>
+                <p className="mt-1 text-[11px] text-sikapa-text-muted">
+                  Product #{r.product_id} · User #{r.user_id} · {new Date(r.created_at).toLocaleString()}
+                </p>
+                {r.content && <p className="mt-2 text-small text-sikapa-text-secondary">{r.content}</p>}
+                <Link
+                  href={`/product/${r.product_id}`}
+                  className="mt-2 inline-block text-[11px] font-semibold text-sikapa-gold hover:underline"
+                >
+                  View product
+                </Link>
+              </div>
+              <button
+                type="button"
+                className="shrink-0 rounded-full bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-800"
+                onClick={() => {
+                  if (!accessToken || !confirm("Delete this review?")) return;
+                  void (async () => {
+                    try {
+                      await adminDeleteReview(accessToken, r.id);
+                      await load();
+                    } catch (e) {
+                      alert(e instanceof Error ? e.message : "Failed");
+                    }
+                  })();
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </li>
+        ))}
+        {rows.length === 0 && !err && (
+          <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">No reviews.</li>
+        )}
+      </ul>
+    </div>
+  );
+}

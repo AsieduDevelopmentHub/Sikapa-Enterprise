@@ -4,19 +4,27 @@ Admin order management routes
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
-from sqlmodel import Session
+from sqlmodel import Session, select
 from pydantic import BaseModel
 
 from app.db import get_session
 from app.api.v1.auth.dependencies import get_current_admin_user
-from app.models import User, Order
+from app.models import User, Order, Product
 from app.api.v1.admin.schemas import OrderManagementRead
 from app.api.v1.admin.services import (
     get_all_orders_admin,
     update_order_status,
 )
+from app.api.v1.orders.schemas import (
+    OrderDetailSchema,
+    OrderItemLineSchema,
+    OrderSchema,
+    InvoiceSchema,
+)
 from app.api.v1.orders.services import (
     generate_invoice_pdf,
+    get_order_items,
+    get_invoice_for_order,
     update_order_status_and_notify,
 )
 from app.api.v1.payments import services as payment_services
@@ -56,6 +64,38 @@ async def list_orders_admin(
         limit=limit,
         status=status,
     )
+
+
+@router.get("/{order_id}", response_model=OrderDetailSchema)
+async def admin_get_order_detail(
+    order_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Full order with line items and invoice (admin)."""
+    order = session.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    raw_items = await get_order_items(session, order_id)
+    invoice = await get_invoice_for_order(session, order_id)
+    lines: list[OrderItemLineSchema] = []
+    for it in raw_items:
+        prod = session.exec(select(Product).where(Product.id == it.product_id)).first()
+        lines.append(
+            OrderItemLineSchema(
+                id=it.id,
+                order_id=it.order_id,
+                product_id=it.product_id,
+                quantity=it.quantity,
+                price_at_purchase=it.price_at_purchase,
+                created_at=it.created_at,
+                product_name=prod.name if prod else None,
+                product_image_url=prod.image_url if prod else None,
+            )
+        )
+    inv_schema = InvoiceSchema.model_validate(invoice) if invoice else None
+    base = OrderSchema.model_validate(order)
+    return OrderDetailSchema(**base.model_dump(), items=lines, invoice=inv_schema)
 
 
 @router.post(
