@@ -38,9 +38,11 @@ class DashboardMetrics(BaseModel):
 
 class UserManagementResponse(BaseModel):
     id: int
-    email: str
-    first_name: Optional[str]
-    last_name: Optional[str]
+    username: str
+    name: str
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     is_active: bool
     is_admin: bool
     created_at: datetime
@@ -53,11 +55,15 @@ class ProductManagementRead(BaseModel):
     id: int
     name: str
     slug: str
+    description: Optional[str] = None
     price: float
     in_stock: int
+    category: Optional[str] = None
+    sku: Optional[str] = None
+    image_url: Optional[str] = None
     is_active: bool
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -67,7 +73,32 @@ class OrderManagementRead(BaseModel):
     user_id: int
     total_price: float
     status: str
+    payment_status: str = "pending"
+    paystack_reference: Optional[str] = None
+    payment_method: Optional[str] = None
     created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PaystackTransactionRead(BaseModel):
+    id: int
+    order_id: int
+    user_id: int
+    reference: str
+    status: str
+    amount_subunit: int
+    currency: str
+    paystack_transaction_id: Optional[str] = None
+    channel: Optional[str] = None
+    customer_email: Optional[str] = None
+    gateway_message: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
