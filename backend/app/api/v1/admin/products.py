@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile
 from sqlmodel import Session
 
 from app.db import get_session
-from app.api.v1.auth.dependencies import get_current_admin_user
+from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Product
 from app.api.v1.admin.schemas import ProductManagementRead
 from app.api.v1.admin.services import (
@@ -28,7 +28,7 @@ async def list_products_admin(
     limit: int = Query(50, ge=1, le=100),
     category: str = None,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     """List all products for admin management."""
     return await get_all_products_admin(
@@ -49,7 +49,7 @@ async def create_product(
     in_stock: int = Form(0, ge=0),
     image: UploadFile = File(None),
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     """Create a new product with optional image upload."""
     image_url = None
@@ -80,7 +80,7 @@ async def create_product(
 async def get_product_admin(
     product_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     """Single product for admin edit forms."""
     p = await get_entity_or_404(session, Product, product_id)
@@ -99,7 +99,7 @@ async def update_product(
     is_active: bool = Form(None),
     image: UploadFile = File(None),
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     """Update a product."""
     image_url = None
@@ -131,7 +131,7 @@ async def update_product(
 async def delete_product(
     product_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     """Delete a product."""
     await delete_product_admin(session, product_id)

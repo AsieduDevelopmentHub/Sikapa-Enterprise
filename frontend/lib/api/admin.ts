@@ -41,6 +41,8 @@ export type AdminUser = {
   last_name?: string | null;
   is_active: boolean;
   is_admin: boolean;
+  admin_role?: string;
+  admin_permissions?: string | null;
   created_at: string;
 };
 
@@ -164,6 +166,40 @@ export type AdminReview = {
   created_at: string;
 };
 
+export type InventoryAdjustmentRow = {
+  id: number;
+  product_id: number;
+  admin_id?: number | null;
+  delta: number;
+  previous_stock: number;
+  new_stock: number;
+  reason?: string | null;
+  created_at: string;
+};
+
+export type CouponRow = {
+  id: number;
+  code: string;
+  discount_type: "percent" | "fixed";
+  discount_value: number;
+  usage_limit?: number | null;
+  used_count: number;
+  min_order_amount: number;
+  starts_at?: string | null;
+  expires_at?: string | null;
+  is_active: boolean;
+  created_by?: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BusinessSettingRow = {
+  key: string;
+  value: string;
+  updated_by?: number | null;
+  updated_at: string;
+};
+
 export async function adminFetchDashboard(
   accessToken: string,
   days = 30
@@ -219,6 +255,18 @@ export async function adminRevokeAdmin(accessToken: string, userId: number): Pro
     V1.admin.userRevokeAdmin(userId),
     "PATCH"
   );
+}
+
+export async function adminSetStaffRole(
+  accessToken: string,
+  userId: number,
+  body: { role: "super_admin" | "admin" | "staff"; permissions: string[] }
+): Promise<AdminUser> {
+  return apiFetchJsonAuth<AdminUser>(accessToken, V1.admin.userStaffRole(userId), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 export async function adminFetchProducts(
@@ -377,4 +425,73 @@ export async function adminFetchReviews(accessToken: string): Promise<AdminRevie
 
 export async function adminDeleteReview(accessToken: string, reviewId: number): Promise<void> {
   await apiFetchJsonAuthMethod<undefined>(accessToken, V1.admin.review(reviewId), "DELETE");
+}
+
+export async function adminFetchInventoryLogs(
+  accessToken: string,
+  params?: { product_id?: number; skip?: number; limit?: number }
+): Promise<InventoryAdjustmentRow[]> {
+  const q = new URLSearchParams();
+  if (params?.product_id != null) q.set("product_id", String(params.product_id));
+  if (params?.skip != null) q.set("skip", String(params.skip));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<InventoryAdjustmentRow[]>(accessToken, `${V1.admin.inventoryLogs}${suffix}`);
+}
+
+export async function adminCreateInventoryAdjustment(
+  accessToken: string,
+  body: { product_id: number; delta: number; reason?: string }
+): Promise<InventoryAdjustmentRow> {
+  return apiFetchJsonAuth<InventoryAdjustmentRow>(accessToken, V1.admin.inventoryAdjustments, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function adminFetchCoupons(accessToken: string): Promise<CouponRow[]> {
+  return apiFetchJsonAuth<CouponRow[]>(accessToken, `${V1.admin.coupons}/`);
+}
+
+export async function adminCreateCoupon(
+  accessToken: string,
+  body: Omit<CouponRow, "id" | "used_count" | "created_by" | "created_at" | "updated_at">
+): Promise<CouponRow> {
+  return apiFetchJsonAuth<CouponRow>(accessToken, `${V1.admin.coupons}/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function adminUpdateCoupon(
+  accessToken: string,
+  couponId: number,
+  body: Omit<CouponRow, "id" | "used_count" | "created_by" | "created_at" | "updated_at">
+): Promise<CouponRow> {
+  return apiFetchJsonAuth<CouponRow>(accessToken, V1.admin.coupon(couponId), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function adminDeleteCoupon(accessToken: string, couponId: number): Promise<void> {
+  await apiFetchJsonAuthMethod<undefined>(accessToken, V1.admin.coupon(couponId), "DELETE");
+}
+
+export async function adminFetchSettings(accessToken: string): Promise<BusinessSettingRow[]> {
+  return apiFetchJsonAuth<BusinessSettingRow[]>(accessToken, `${V1.admin.settings}/`);
+}
+
+export async function adminUpsertSetting(
+  accessToken: string,
+  body: { key: string; value: string }
+): Promise<BusinessSettingRow> {
+  return apiFetchJsonAuth<BusinessSettingRow>(accessToken, `${V1.admin.settings}/`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }

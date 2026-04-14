@@ -106,3 +106,31 @@ async def get_current_admin_user(
             detail="Admin access required"
         )
     return current_user
+
+
+def _permission_set(user: User) -> set[str]:
+    raw = (user.admin_permissions or "").strip()
+    if not raw:
+        return set()
+    return {p.strip().lower() for p in raw.split(",") if p.strip()}
+
+
+def require_admin_permission(permission: str):
+    """
+    Dependency factory for granular admin access.
+    super_admin role bypasses explicit permission checks.
+    """
+    required = permission.strip().lower()
+
+    async def _checker(current_user: User = Depends(get_current_admin_user)) -> User:
+        role = (current_user.admin_role or "").strip().lower()
+        if role == "super_admin":
+            return current_user
+        if required in _permission_set(current_user):
+            return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Missing admin permission: {required}",
+        )
+
+    return _checker

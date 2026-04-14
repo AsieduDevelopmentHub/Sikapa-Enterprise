@@ -1,13 +1,13 @@
 """Admin: list and moderate reviews."""
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, select
 
-from app.db import get_session
-from app.api.v1.auth.dependencies import get_current_admin_user
-from app.models import User, Review
+from app.api.v1.auth.dependencies import require_admin_permission
 from app.api.v1.reviews.schemas import ReviewSchema
+from app.db import get_session
+from app.models import Review, User
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ async def list_reviews_admin(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_reviews")),
 ):
     reviews = session.exec(
         select(Review).order_by(Review.created_at.desc()).offset(skip).limit(limit)
@@ -29,7 +29,7 @@ async def list_reviews_admin(
 async def delete_review_admin(
     review_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_reviews")),
 ):
     review = session.get(Review, review_id)
     if not review:
