@@ -15,6 +15,7 @@ from app.api.v1.admin.services import (
     delete_product_admin,
     upload_product_image,
     get_all_products_admin,
+    get_entity_or_404,
 )
 from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text, sanitize_slug
 
@@ -73,6 +74,17 @@ async def create_product(
     }
     
     return await create_product_admin(session, product_data)
+
+
+@router.get("/{product_id}", response_model=ProductManagementRead)
+async def get_product_admin(
+    product_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Single product for admin edit forms."""
+    p = await get_entity_or_404(session, Product, product_id)
+    return ProductManagementRead.model_validate(p)
 
 
 @router.put("/{product_id}", response_model=ProductManagementRead)

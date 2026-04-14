@@ -169,3 +169,71 @@ export async function apiFetchJsonAuth<T>(
   }
   return parseJsonResponse<T>(res);
 }
+
+/** Authorized multipart (e.g. admin product create). Retries once on 401 after refresh. */
+export async function apiFetchFormAuth<T>(
+  accessToken: string | null | undefined,
+  path: string,
+  formData: FormData,
+  method: "POST" | "PUT" = "POST",
+  allowRetry = true
+): Promise<T> {
+  if (!accessToken?.trim()) {
+    throw new Error("Not authenticated");
+  }
+  const url = `${getApiV1Base()}${path.startsWith("/") ? path : `/${path}`}`;
+  const doFetch = (tok: string) =>
+    fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${tok.trim()}`,
+      },
+      body: formData,
+    });
+
+  let res = await doFetch(accessToken);
+  if (res.status === 401 && allowRetry && typeof window !== "undefined") {
+    const next = await refreshAccessTokenOnce();
+    if (next) res = await doFetch(next);
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(parseApiErrorBody(res.status, text));
+  }
+  return parseJsonResponse<T>(res);
+}
+
+/** PATCH/DELETE with optional JSON body. */
+export async function apiFetchJsonAuthMethod<T>(
+  accessToken: string | null | undefined,
+  path: string,
+  method: "PATCH" | "DELETE",
+  body?: unknown,
+  allowRetry = true
+): Promise<T> {
+  if (!accessToken?.trim()) {
+    throw new Error("Not authenticated");
+  }
+  const url = `${getApiV1Base()}${path.startsWith("/") ? path : `/${path}`}`;
+  const doFetch = (tok: string) =>
+    fetch(url, {
+      method,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tok.trim()}`,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+
+  let res = await doFetch(accessToken);
+  if (res.status === 401 && allowRetry && typeof window !== "undefined") {
+    const next = await refreshAccessTokenOnce();
+    if (next) res = await doFetch(next);
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(parseApiErrorBody(res.status, text));
+  }
+  return parseJsonResponse<T>(res);
+}
