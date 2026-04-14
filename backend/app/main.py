@@ -4,8 +4,10 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -15,7 +17,12 @@ from app.core.http_errors import (
     integrity_error_handler,
     request_validation_exception_handler,
 )
-from app.core.rate_limit import limiter
+from app.core.rate_limit import (
+    API_RATE_LIMIT_ENABLED,
+    api_rate_guard,
+    limiter,
+    parse_rate_limited_prefixes,
+)
 from app.db import create_db_and_tables
 import os
 from dotenv import load_dotenv
@@ -69,17 +76,38 @@ if _cors_regex:
     _cors_kwargs["allow_origin_regex"] = _cors_regex
 
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
+app.add_middleware(GZipMiddleware, minimum_size=1200)
 
 _request_log = logging.getLogger("sikapa.request")
+_rate_prefixes = parse_rate_limited_prefixes()
 
 
 @app.middleware("http")
 async def log_incoming_requests(request: Request, call_next):
     """Log each request so local dev can confirm the frontend hit the API."""
     path = request.url.path
+    matched_prefix = next((prefix for prefix in _rate_prefixes if path.startswith(prefix)), None)
+    if API_RATE_LIMIT_ENABLED and matched_prefix:
+        xff = request.headers.get("x-forwarded-for", "")
+        ip = (xff.split(",")[0].strip() if xff else "") or (request.client.host if request.client else "unknown")
+        key = f"{ip}:{matched_prefix}"
+        ok, limit, remaining, retry_after = api_rate_guard.check(str(key))
+        if not ok:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please retry shortly."},
+                headers={
+                    "Retry-After": str(max(1, int(retry_after + 0.999))),
+                    "X-RateLimit-Limit": str(limit),
+                    "X-RateLimit-Remaining": "0",
+                },
+            )
     start = time.perf_counter()
     response = await call_next(request)
     ms = (time.perf_counter() - start) * 1000
+    if API_RATE_LIMIT_ENABLED and matched_prefix:
+        response.headers["X-RateLimit-Limit"] = str(limit)
+        response.headers["X-RateLimit-Remaining"] = str(remaining)
     _request_log.info("%s %s -> %s (%.2fms)", request.method, path, response.status_code, ms)
     return response
 
