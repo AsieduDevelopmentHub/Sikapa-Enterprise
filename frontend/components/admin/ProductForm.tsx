@@ -66,7 +66,7 @@ export function ProductForm({ accessToken, mode, productId, initial, categoryHin
       } else if (productId != null) {
         await adminUpdateProduct(accessToken, productId, fd);
       }
-      router.push("/admin/products");
+      router.push("/system/products");
       router.refresh();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Save failed");

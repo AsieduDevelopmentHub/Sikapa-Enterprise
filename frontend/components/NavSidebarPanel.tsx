@@ -31,7 +31,7 @@ const HELP_LEGAL_LINKS: { href: string; label: string; description: string }[] =
 ];
 
 const ADMIN_LINK = {
-  href: "/admin",
+  href: "/system",
   label: "Admin",
   description: "Store metrics and analytics for team accounts.",
 } as const;
