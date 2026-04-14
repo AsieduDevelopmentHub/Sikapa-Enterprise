@@ -65,7 +65,7 @@ export function AdminDashboardContent() {
         adminFetchDashboard(accessToken, days),
         adminFetchRevenue(accessToken, days),
         adminFetchOrders(accessToken, { limit: 10 }),
-        adminFetchProducts(accessToken, { limit: 100 }),
+        adminFetchProducts(accessToken, { limit: 40 }),
       ]);
       setData(d);
       setRevenue(rev);
