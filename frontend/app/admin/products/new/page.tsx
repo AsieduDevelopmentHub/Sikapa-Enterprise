@@ -27,7 +27,7 @@ export default function AdminProductNewPage() {
 
   return (
     <div>
-      <Link href="/admin/products" className="text-small font-semibold text-sikapa-gold hover:underline">
+      <Link href="/system/products" className="text-small font-semibold text-sikapa-gold hover:underline">
         ← Products
       </Link>
       <h1 className="mt-3 font-serif text-page-title font-semibold">New product</h1>
