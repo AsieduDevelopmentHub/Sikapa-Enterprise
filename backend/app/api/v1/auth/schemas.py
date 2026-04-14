@@ -136,6 +136,8 @@ class UserProfileResponse(BaseModel):
     two_fa_method: Optional[str] = None
     is_active: bool
     is_admin: bool = False
+    admin_role: str = "customer"
+    admin_permissions: Optional[str] = ""
     created_at: datetime
     updated_at: datetime
 

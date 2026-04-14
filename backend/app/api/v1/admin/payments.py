@@ -4,10 +4,10 @@ from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select
 
-from app.db import get_session
-from app.api.v1.auth.dependencies import get_current_admin_user
-from app.models import User, PaystackTransaction
 from app.api.v1.admin.schemas import PaystackTransactionRead
+from app.api.v1.auth.dependencies import require_admin_permission
+from app.db import get_session
+from app.models import PaystackTransaction, User
 
 router = APIRouter()
 
@@ -18,7 +18,7 @@ async def list_paystack_transactions(
     limit: int = Query(50, ge=1, le=100),
     status: str | None = None,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("view_payments")),
 ):
     stmt = select(PaystackTransaction).order_by(PaystackTransaction.created_at.desc())
     if status:

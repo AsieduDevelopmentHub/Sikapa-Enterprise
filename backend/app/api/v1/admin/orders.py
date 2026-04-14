@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from pydantic import BaseModel
 
 from app.db import get_session
-from app.api.v1.auth.dependencies import get_current_admin_user
+from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Order, Product
 from app.api.v1.admin.schemas import OrderManagementRead
 from app.api.v1.admin.services import (
@@ -55,7 +55,7 @@ async def list_orders_admin(
     limit: int = Query(50, ge=1, le=100),
     status: str = None,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
     """List all orders for admin management."""
     return await get_all_orders_admin(
@@ -70,7 +70,7 @@ async def list_orders_admin(
 async def admin_get_order_detail(
     order_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
     """Full order with line items and invoice (admin)."""
     order = session.get(Order, order_id)
@@ -107,7 +107,7 @@ async def admin_paystack_refund(
     order_id: int,
     body: PaystackRefundRequestBody,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
     """
     Initiate a Paystack refund for a paid order (full refund if `amount` is omitted).
@@ -127,7 +127,7 @@ async def update_order_status_endpoint(
     order_id: int,
     status_update: OrderStatusUpdate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
     """Update order status."""
     order = await update_order_status(session, order_id, status_update.status)
@@ -139,7 +139,7 @@ async def update_order_tracking(
     order_id: int,
     tracking_update: OrderTrackingUpdate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
     """
     Update order status with full tracking information.
@@ -169,7 +169,7 @@ async def update_order_tracking(
 async def download_invoice_pdf(
     order_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
     """
     Download invoice as PDF for an order.

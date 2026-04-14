@@ -61,6 +61,9 @@ class User(UserBase, table=True):
     shipping_landmark: Optional[str] = Field(default=None, max_length=255)
     shipping_contact_name: Optional[str] = Field(default=None, max_length=120)
     shipping_contact_phone: Optional[str] = Field(default=None, max_length=32)
+    admin_role: str = Field(default="customer", max_length=32)
+    # Comma-separated permission keys for staff/admin (super_admin bypasses checks).
+    admin_permissions: Optional[str] = Field(default="", max_length=4000)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -349,3 +352,51 @@ class AdminAuditLog(SQLModel, table=True):
     changes: Optional[str] = None  # JSON diff of changes
     ip_address: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class InventoryAdjustment(SQLModel, table=True):
+    """Inventory movement audit trail (restock/reduction/manual correction)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    product_id: int = Field(foreign_key="product.id", index=True)
+    admin_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    delta: int  # + for restock, - for reduction
+    previous_stock: int = Field(ge=0)
+    new_stock: int = Field(ge=0)
+    reason: Optional[str] = Field(default=None, max_length=255)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Coupon(SQLModel, table=True):
+    """Discount configuration."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    code: str = Field(index=True, unique=True, max_length=64)
+    discount_type: str = Field(default="percent", max_length=16)  # percent | fixed
+    discount_value: float = Field(ge=0)
+    usage_limit: Optional[int] = Field(default=None, ge=1)
+    used_count: int = Field(default=0, ge=0)
+    min_order_amount: float = Field(default=0, ge=0)
+    starts_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    is_active: bool = True
+    created_by: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class CouponUsage(SQLModel, table=True):
+    """Coupon redemption tracking."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    coupon_id: int = Field(foreign_key="coupon.id", index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    order_id: Optional[int] = Field(default=None, foreign_key="order.id", index=True)
+    discount_amount: float = Field(default=0, ge=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class BusinessSetting(SQLModel, table=True):
+    """Mutable business preferences for admin settings screen."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str = Field(index=True, unique=True, max_length=120)
+    value: str = Field(default="", max_length=8000)
+    updated_by: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
