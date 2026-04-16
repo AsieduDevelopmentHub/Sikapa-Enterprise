@@ -31,13 +31,17 @@ const ROLE_PRESETS: Record<"super_admin" | "admin" | "staff", string[]> = {
 export default function AdminStaffPage() {
   const { accessToken, user: me } = useAuth();
   const [rows, setRows] = useState<AdminUser[]>([]);
+  const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
+  const [candidateId, setCandidateId] = useState<number | "">("");
+  const [candidateRole, setCandidateRole] = useState<"admin" | "staff">("staff");
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
     try {
-      const data = await adminFetchUsers(accessToken, { limit: 100, is_admin: true });
-      setRows(data);
+      const data = await adminFetchUsers(accessToken, { limit: 200 });
+      setAllUsers(data);
+      setRows(data.filter((u) => u.is_admin));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     }
@@ -47,22 +51,7 @@ export default function AdminStaffPage() {
     void load();
   }, [load]);
 
-  const nonAdmins = useCallback(async () => {
-    if (!accessToken) return;
-    const all = await adminFetchUsers(accessToken, { limit: 100 });
-    const pick = all.find((u) => !u.is_admin);
-    if (!pick) {
-      alert("No non-admin user to promote. Register a test account first.");
-      return;
-    }
-    if (!confirm(`Grant admin to @${pick.username}?`)) return;
-    try {
-      await adminPromoteUser(accessToken, pick.id);
-      await load();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed");
-    }
-  }, [accessToken, load]);
+  const candidates = allUsers.filter((u) => !u.is_admin);
 
   return (
     <div>
@@ -71,13 +60,55 @@ export default function AdminStaffPage() {
         Configure role and permission scope per team member.
       </p>
       <div className="mt-4">
-        <button
-          type="button"
-          onClick={() => void nonAdmins()}
-          className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white"
-        >
-          Promote next customer to admin
-        </button>
+        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
+          <p className="text-small font-semibold text-sikapa-text-primary">Add specific user as staff/admin</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <select
+              value={candidateId}
+              onChange={(e) => setCandidateId(e.target.value ? Number(e.target.value) : "")}
+              className="min-w-[220px] rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-small"
+            >
+              <option value="">Select user…</option>
+              {candidates.map((u) => (
+                <option key={u.id} value={u.id}>
+                  @{u.username} ({u.name || "No name"})
+                </option>
+              ))}
+            </select>
+            <select
+              value={candidateRole}
+              onChange={(e) => setCandidateRole(e.target.value as "admin" | "staff")}
+              className="rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-small"
+            >
+              <option value="staff">staff</option>
+              <option value="admin">admin</option>
+            </select>
+            <button
+              type="button"
+              className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white"
+              onClick={() => {
+                if (!accessToken || !candidateId) return;
+                const pick = candidates.find((u) => u.id === candidateId);
+                if (!pick) return;
+                void (async () => {
+                  try {
+                    await adminPromoteUser(accessToken, pick.id);
+                    await adminSetStaffRole(accessToken, pick.id, {
+                      role: candidateRole,
+                      permissions: ROLE_PRESETS[candidateRole],
+                    });
+                    setCandidateId("");
+                    await load();
+                  } catch (e) {
+                    alert(e instanceof Error ? e.message : "Failed");
+                  }
+                })();
+              }}
+            >
+              Add to staff
+            </button>
+          </div>
+        </div>
       </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       <ul className="mt-6 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminDeleteProduct, adminFetchProducts, type AdminProduct } from "@/lib/api/admin";
@@ -9,6 +10,7 @@ import { formatGhs } from "@/lib/mock-data";
 
 export default function AdminProductsPage() {
   const { accessToken } = useAuth();
+  const router = useRouter();
   const [rows, setRows] = useState<AdminProduct[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,11 @@ export default function AdminProductsPage() {
                     : `${origin}${p.image_url}`
                   : null;
                 return (
-                  <tr key={p.id} className="hover:bg-sikapa-cream/80">
+                  <tr
+                    key={p.id}
+                    className="cursor-pointer hover:bg-sikapa-cream/80"
+                    onClick={() => router.push(`/system/products/${p.id}`)}
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-sikapa-gray-soft">
@@ -80,9 +86,7 @@ export default function AdminProductsPage() {
                           ) : null}
                         </div>
                         <div>
-                          <Link href={`/system/products/${p.id}`} className="font-semibold text-sikapa-crimson hover:underline">
-                            {p.name}
-                          </Link>
+                          <span className="font-semibold text-sikapa-crimson">{p.name}</span>
                           <p className="text-[11px] text-sikapa-text-muted">{p.slug}</p>
                         </div>
                       </div>
@@ -102,7 +106,8 @@ export default function AdminProductsPage() {
                       <button
                         type="button"
                         className="text-[11px] font-semibold text-red-700 hover:underline"
-                        onClick={() => {
+                        onClick={(event) => {
+                          event.stopPropagation();
                           if (!accessToken || !confirm(`Delete "${p.name}"?`)) return;
                           void (async () => {
                             try {
