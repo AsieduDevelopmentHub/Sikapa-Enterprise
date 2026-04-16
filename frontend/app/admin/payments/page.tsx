@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchTransactions, type PaystackTransactionRow } from "@/lib/api/admin";
@@ -8,6 +9,7 @@ import { formatGhs } from "@/lib/mock-data";
 
 export default function AdminPaymentsPage() {
   const { accessToken } = useAuth();
+  const router = useRouter();
   const [rows, setRows] = useState<PaystackTransactionRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
@@ -43,12 +45,14 @@ export default function AdminPaymentsPage() {
           </thead>
           <tbody className="divide-y divide-sikapa-gray-soft">
             {rows.map((t) => (
-              <tr key={t.id}>
+              <tr
+                key={t.id}
+                className="cursor-pointer hover:bg-sikapa-cream/80"
+                onClick={() => router.push(`/system/orders/${t.order_id}`)}
+              >
                 <td className="px-4 py-3 font-mono text-[11px]">{t.reference}</td>
                 <td className="px-4 py-3">
-                  <Link href={`/system/orders/${t.order_id}`} className="font-semibold text-sikapa-crimson hover:underline">
-                    #{t.order_id}
-                  </Link>
+                  <span className="font-semibold text-sikapa-crimson">#{t.order_id}</span>
                 </td>
                 <td className="px-4 py-3">
                   {formatGhs(t.amount_subunit / 100)} {t.currency}

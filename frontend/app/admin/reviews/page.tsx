@@ -3,17 +3,36 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { adminDeleteReview, adminFetchReviews, type AdminReview } from "@/lib/api/admin";
+import {
+  adminDeleteReview,
+  adminFetchProducts,
+  adminFetchReviews,
+  adminFetchUsers,
+  type AdminReview,
+} from "@/lib/api/admin";
 
 export default function AdminReviewsPage() {
   const { accessToken } = useAuth();
   const [rows, setRows] = useState<AdminReview[]>([]);
+  const [users, setUsers] = useState<Record<number, string>>({});
+  const [products, setProducts] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
     try {
-      setRows(await adminFetchReviews(accessToken));
+      const [reviews, userRows, productRows] = await Promise.all([
+        adminFetchReviews(accessToken),
+        adminFetchUsers(accessToken, { limit: 200 }),
+        adminFetchProducts(accessToken, { limit: 200 }),
+      ]);
+      setRows(reviews);
+      setUsers(
+        Object.fromEntries(userRows.map((u) => [u.id, u.name?.trim() || u.username || `User ${u.id}`]))
+      );
+      setProducts(
+        Object.fromEntries(productRows.map((p) => [p.id, p.name || `Product #${p.id}`]))
+      );
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     }
@@ -38,7 +57,8 @@ export default function AdminReviewsPage() {
                   <span className="text-sikapa-gold">★ {r.rating}</span>
                 </p>
                 <p className="mt-1 text-[11px] text-sikapa-text-muted">
-                  Product #{r.product_id} · User #{r.user_id} · {new Date(r.created_at).toLocaleString()}
+                  {products[r.product_id] ?? `Product #${r.product_id}`} ·{" "}
+                  {users[r.user_id] ?? `User #${r.user_id}`} · {new Date(r.created_at).toLocaleString()}
                 </p>
                 {r.content && <p className="mt-2 text-small text-sikapa-text-secondary">{r.content}</p>}
                 <Link

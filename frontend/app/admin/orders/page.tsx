@@ -1,17 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { adminFetchOrders, type AdminOrderListItem } from "@/lib/api/admin";
+import { adminFetchOrders, adminFetchUsers, type AdminOrderListItem } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 
 const FILTERS = ["all", "pending", "processing", "shipped", "delivered", "cancelled"] as const;
 
 export default function AdminOrdersPage() {
   const { accessToken } = useAuth();
+  const router = useRouter();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
   const [rows, setRows] = useState<AdminOrderListItem[]>([]);
+  const [userNames, setUserNames] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,10 +23,18 @@ export default function AdminOrdersPage() {
     setLoading(true);
     setErr(null);
     try {
-      const data = await adminFetchOrders(accessToken, {
-        limit: 30,
-        status: filter === "all" ? undefined : filter,
-      });
+      const [data, users] = await Promise.all([
+        adminFetchOrders(accessToken, {
+          limit: 30,
+          status: filter === "all" ? undefined : filter,
+        }),
+        adminFetchUsers(accessToken, { limit: 200 }),
+      ]);
+      const nameMap: Record<number, string> = {};
+      for (const u of users) {
+        nameMap[u.id] = u.name?.trim() || u.username || `User ${u.id}`;
+      }
+      setUserNames(nameMap);
       setRows(data);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
@@ -72,13 +83,15 @@ export default function AdminOrdersPage() {
             </thead>
             <tbody className="divide-y divide-sikapa-gray-soft">
               {rows.map((o) => (
-                <tr key={o.id} className="hover:bg-sikapa-cream/80">
+                <tr
+                  key={o.id}
+                  className="cursor-pointer hover:bg-sikapa-cream/80"
+                  onClick={() => router.push(`/system/orders/${o.id}`)}
+                >
                   <td className="px-4 py-3">
-                    <Link href={`/system/orders/${o.id}`} className="font-semibold text-sikapa-crimson hover:underline">
-                      #{o.id}
-                    </Link>
+                    <span className="font-semibold text-sikapa-crimson">#{o.id}</span>
                   </td>
-                  <td className="px-4 py-3 text-sikapa-text-muted">User {o.user_id}</td>
+                  <td className="px-4 py-3 text-sikapa-text-muted">{userNames[o.user_id] ?? `User ${o.user_id}`}</td>
                   <td className="px-4 py-3 font-medium">{formatGhs(o.total_price)}</td>
                   <td className="px-4 py-3 capitalize">{o.status}</td>
                   <td className="px-4 py-3 text-[11px]">{o.payment_status}</td>

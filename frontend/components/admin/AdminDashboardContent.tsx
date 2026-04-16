@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -48,6 +49,7 @@ function RevenueBars({ stats }: { stats: RevenueStat[] }) {
 
 export function AdminDashboardContent() {
   const { accessToken } = useAuth();
+  const router = useRouter();
   const [days, setDays] = useState(30);
   const [data, setData] = useState<AdminDashboardMetrics | null>(null);
   const [revenue, setRevenue] = useState<RevenueStat[]>([]);
@@ -170,22 +172,36 @@ export function AdminDashboardContent() {
                   View all
                 </Link>
               </div>
-              <ul className="mt-3 divide-y divide-sikapa-gray-soft">
-                {recent.length === 0 ? (
-                  <li className="py-3 text-small text-sikapa-text-muted">No orders yet.</li>
-                ) : (
-                  recent.map((o) => (
-                    <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-small">
-                      <Link href={`/system/orders/${o.id}`} className="font-semibold text-sikapa-crimson hover:underline">
-                        #{o.id}
-                      </Link>
-                      <span className="text-sikapa-text-muted">{o.status}</span>
-                      <span className="font-medium">{formatGhs(o.total_price)}</span>
-                      <span className="text-[11px] text-sikapa-text-muted">{o.payment_status}</span>
-                    </li>
-                  ))
-                )}
-              </ul>
+              {recent.length === 0 ? (
+                <p className="mt-3 text-small text-sikapa-text-muted">No orders yet.</p>
+              ) : (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full min-w-[460px] text-left text-small">
+                    <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
+                      <tr>
+                        <th className="py-2 pr-2">Order</th>
+                        <th className="py-2 pr-2">Status</th>
+                        <th className="py-2 pr-2">Total</th>
+                        <th className="py-2">Payment</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-sikapa-gray-soft">
+                      {recent.map((o) => (
+                        <tr
+                          key={o.id}
+                          className="cursor-pointer hover:bg-sikapa-cream/80"
+                          onClick={() => router.push(`/system/orders/${o.id}`)}
+                        >
+                          <td className="py-3 pr-2 font-semibold text-sikapa-crimson">#{o.id}</td>
+                          <td className="py-3 pr-2 text-sikapa-text-muted capitalize">{o.status}</td>
+                          <td className="py-3 pr-2 font-medium">{formatGhs(o.total_price)}</td>
+                          <td className="py-3 text-[11px] text-sikapa-text-muted">{o.payment_status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
 
             <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">

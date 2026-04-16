@@ -329,6 +329,27 @@ def _apply_successful_payment(session: Session, order: Order, reference: str) ->
         inv.status = "paid"
         inv.paid_at = datetime.utcnow()
         session.add(inv)
+    elif inv is None:
+        # Invoice is generated only after payment succeeds.
+        subtotal = float(order.subtotal_amount) if order.subtotal_amount is not None else float(order.total_price)
+        shipping = float(order.delivery_fee or 0)
+        tax = 0.0
+        total = round(subtotal + tax + shipping, 2)
+        invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{order.id}-{uuid.uuid4().hex[:8]}"
+        inv = Invoice(
+            order_id=order.id,
+            invoice_number=invoice_number,
+            subtotal=subtotal,
+            tax=tax,
+            shipping=shipping,
+            total=total,
+            payment_method=order.payment_method or "card",
+            status="paid",
+            # Keep invoice date aligned to order creation date.
+            issued_at=order.created_at,
+            paid_at=datetime.utcnow(),
+        )
+        session.add(inv)
 
     session.commit()
     session.refresh(order)

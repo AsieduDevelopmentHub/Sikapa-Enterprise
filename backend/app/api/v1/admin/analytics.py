@@ -4,6 +4,7 @@ Admin analytics routes - dashboard data and business metrics
 from typing import Optional
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import and_
 from sqlmodel import Session, select, func
 
 from app.db import get_session
@@ -36,9 +37,11 @@ async def get_dashboard_metrics(
         select(func.count(Order.id)).where(Order.created_at >= start_date)
     ).one()
     
-    # Revenue calculation
+    # Revenue calculation (paid orders only)
     revenue_result = session.exec(
-        select(func.sum(Order.total_price)).where(Order.created_at >= start_date)
+        select(func.sum(Order.total_price)).where(
+            and_(Order.created_at >= start_date, Order.payment_status == "paid")
+        )
     ).one()
     total_revenue = revenue_result or 0.0
     
@@ -47,31 +50,44 @@ async def get_dashboard_metrics(
         select(func.count(CartItem.id))
     ).one()
     
-    # Top products
-    top_products_query = (
-        select(
-            Product.id,
-            Product.name,
-            Product.price,
-            func.sum(OrderItem.quantity).label("quantity_sold"),
-            func.count(Review.id).label("review_count"),
-        )
-        .outerjoin(OrderItem)
-        .outerjoin(Review)
-        .group_by(Product.id)
-        .order_by(func.sum(OrderItem.quantity).desc())
-        .limit(10)
-    )
-    
+    # Top products: avoid row multiplication by using independent aggregations.
+    sold_rows = session.exec(
+        select(OrderItem.product_id, func.sum(OrderItem.quantity))
+        .join(Order, Order.id == OrderItem.order_id)
+        .where(and_(Order.created_at >= start_date, Order.payment_status == "paid"))
+        .group_by(OrderItem.product_id)
+    ).all()
+    sold_by_product: dict[int, int] = {
+        int(pid): int(qty or 0)
+        for pid, qty in sold_rows
+        if pid is not None
+    }
+
+    review_rows = session.exec(
+        select(Review.product_id, func.count(Review.id)).group_by(Review.product_id)
+    ).all()
+    reviews_by_product: dict[int, int] = {
+        int(pid): int(cnt or 0)
+        for pid, cnt in review_rows
+        if pid is not None
+    }
+
+    product_ids = sorted(sold_by_product.keys(), key=lambda pid: sold_by_product.get(pid, 0), reverse=True)[:10]
+    products = []
+    if product_ids:
+        products = session.exec(select(Product).where(Product.id.in_(product_ids))).all()
+    products_by_id = {int(p.id): p for p in products if p.id is not None}
+
     top_products = []
-    for row in session.exec(top_products_query).all():
-        if row[0]:  # if product_id exists
+    for pid in product_ids:
+        prod = products_by_id.get(pid)
+        if prod:
             top_products.append(TopProduct(
-                product_id=row[0],
-                name=row[1],
-                price=row[2],
-                quantity_sold=row[3] or 0,
-                review_count=row[4] or 0,
+                product_id=pid,
+                name=prod.name,
+                price=float(prod.price),
+                quantity_sold=sold_by_product.get(pid, 0),
+                review_count=reviews_by_product.get(pid, 0),
             ))
     
     # Order status breakdown
@@ -80,7 +96,11 @@ async def get_dashboard_metrics(
     for status_val in statuses:
         count = session.exec(
             select(func.count(Order.id)).where(
-                (Order.status == status_val) & (Order.created_at >= start_date)
+                and_(
+                    Order.status == status_val,
+                    Order.created_at >= start_date,
+                    Order.payment_status == "paid",
+                )
             )
         ).one()
         if count > 0:
@@ -98,7 +118,9 @@ async def get_dashboard_metrics(
     avg_order_value = 0.0
     if total_orders > 0:
         avg_result = session.exec(
-            select(func.avg(Order.total_price)).where(Order.created_at >= start_date)
+            select(func.avg(Order.total_price)).where(
+                and_(Order.created_at >= start_date, Order.payment_status == "paid")
+            )
         ).one()
         avg_order_value = avg_result or 0.0
     
@@ -133,7 +155,7 @@ async def get_revenue_stats(
             func.count(Order.id).label("order_count"),
             func.sum(Order.total_price).label("revenue"),
         )
-        .where(Order.created_at >= start_date)
+        .where(and_(Order.created_at >= start_date, Order.payment_status == "paid"))
         .group_by(func.date(Order.created_at))
         .order_by(func.date(Order.created_at))
     )
