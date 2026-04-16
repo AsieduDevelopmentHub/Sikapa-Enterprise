@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   adminDownloadInvoicePdf,
   adminFetchOrderDetail,
+  adminFetchUsers,
   adminUpdateOrderStatus,
   adminUpdateOrderTracking,
   type AdminOrderDetail,
@@ -28,13 +29,19 @@ export default function AdminOrderDetailPage() {
   const [carrier, setCarrier] = useState("");
   const [eta, setEta] = useState("");
   const [cancelReason, setCancelReason] = useState("");
+  const [customerLabel, setCustomerLabel] = useState<string>("");
 
   const load = useCallback(async () => {
     if (!accessToken || !Number.isFinite(id)) return;
     setErr(null);
     try {
-      const o = await adminFetchOrderDetail(accessToken, id);
+      const [o, users] = await Promise.all([
+        adminFetchOrderDetail(accessToken, id),
+        adminFetchUsers(accessToken, { limit: 200 }),
+      ]);
       setOrder(o);
+      const u = users.find((x) => x.id === o.user_id);
+      setCustomerLabel(u ? `${u.name || u.username} (@${u.username})` : `User ${o.user_id}`);
       setTracking(o.tracking_number ?? "");
       setCarrier(o.shipping_provider ?? "");
       setEta(o.estimated_delivery ? o.estimated_delivery.slice(0, 10) : "");
@@ -136,7 +143,7 @@ export default function AdminOrderDetailPage() {
         <div>
           <h1 className="font-serif text-page-title font-semibold">Order #{order.id}</h1>
           <p className="text-small text-sikapa-text-muted">
-            User {order.user_id} · {new Date(order.created_at).toLocaleString()}
+            {customerLabel || `User ${order.user_id}`} · Ordered {new Date(order.created_at).toLocaleString()}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -159,6 +166,9 @@ export default function AdminOrderDetailPage() {
           <p className="text-small text-sikapa-text-secondary">
             Payment: <strong>{order.payment_status}</strong>
             {order.paystack_reference ? ` · ${order.paystack_reference}` : ""}
+          </p>
+          <p className="text-small text-sikapa-text-secondary">
+            Order date: <strong>{new Date(order.created_at).toLocaleString()}</strong>
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {QUICK_STATUSES.map((s) => (
@@ -282,7 +292,8 @@ export default function AdminOrderDetailPage() {
           <p className="text-section-title font-semibold">{formatGhs(order.total_price)}</p>
           {order.invoice && (
             <p className="text-[11px] text-sikapa-text-muted">
-              Invoice {order.invoice.invoice_number} · {order.invoice.status}
+              Invoice {order.invoice.invoice_number} · {order.invoice.status} · issued{" "}
+              {new Date(order.invoice.issued_at).toLocaleString()}
             </p>
           )}
         </div>

@@ -81,8 +81,6 @@ async def create_order_from_cart(
     session.commit()
     session.refresh(order)
 
-    invoice = await create_invoice_for_order(session, order)
-
     for cart_item in cart_items:
         session.delete(cart_item)
 
@@ -135,7 +133,9 @@ async def create_invoice_for_order(
     order: Order,
     tax_rate: float = 0.0,
     shipping: float = 0.0,
-    payment_method: str = "card"
+    payment_method: str = "card",
+    issued_at: datetime | None = None,
+    initial_status: str = "pending",
 ) -> Invoice:
     """Create an invoice record for an order."""
     if order.subtotal_amount is not None:
@@ -157,8 +157,8 @@ async def create_invoice_for_order(
         shipping=shipping_fee,
         total=total,
         payment_method=payment_method,
-        status="pending",
-        issued_at=datetime.utcnow(),
+        status=initial_status,
+        issued_at=issued_at or datetime.utcnow(),
     )
     session.add(invoice)
     session.commit()
@@ -207,10 +207,27 @@ async def generate_invoice_pdf(
     order = session.exec(select(Order).where(Order.id == order_id)).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    if (order.payment_status or "").lower() != "paid":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invoice PDF is available only for paid orders",
+        )
     
     invoice = session.exec(select(Invoice).where(Invoice.order_id == order_id)).first()
     if not invoice:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+        # Backfill missing invoice for already-paid historical orders.
+        invoice = await create_invoice_for_order(
+            session,
+            order,
+            shipping=float(order.delivery_fee or 0),
+            payment_method=order.payment_method or "card",
+            issued_at=order.created_at,
+            initial_status="paid",
+        )
+        invoice.paid_at = order.updated_at or datetime.utcnow()
+        session.add(invoice)
+        session.commit()
+        session.refresh(invoice)
     
     user = session.exec(select(User).where(User.id == order.user_id)).first()
     if not user:
