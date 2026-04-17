@@ -39,7 +39,7 @@ export default function AdminStaffPage() {
   const load = useCallback(async () => {
     if (!accessToken) return;
     try {
-      const data = await adminFetchUsers(accessToken, { limit: 200 });
+      const data = await adminFetchUsers(accessToken, { limit: 100 });
       setAllUsers(data);
       setRows(data.filter((u) => u.is_admin));
     } catch (e) {
@@ -54,19 +54,19 @@ export default function AdminStaffPage() {
   const candidates = allUsers.filter((u) => !u.is_admin);
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <h1 className="font-serif text-page-title font-semibold">Staff & admins</h1>
       <p className="text-small text-sikapa-text-secondary">
         Configure role and permission scope per team member.
       </p>
       <div className="mt-4">
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
+        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5">
           <p className="text-small font-semibold text-sikapa-text-primary">Add specific user as staff/admin</p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <select
               value={candidateId}
               onChange={(e) => setCandidateId(e.target.value ? Number(e.target.value) : "")}
-              className="min-w-[220px] rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-small"
+              className="w-full min-w-0 rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-small sm:min-w-[200px] sm:flex-1 sm:max-w-md"
             >
               <option value="">Select user…</option>
               {candidates.map((u) => (
@@ -78,14 +78,14 @@ export default function AdminStaffPage() {
             <select
               value={candidateRole}
               onChange={(e) => setCandidateRole(e.target.value as "admin" | "staff")}
-              className="rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-small"
+              className="w-full rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-small sm:w-auto sm:shrink-0"
             >
               <option value="staff">staff</option>
               <option value="admin">admin</option>
             </select>
             <button
               type="button"
-              className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white"
+              className="w-full rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white sm:w-auto sm:shrink-0"
               onClick={() => {
                 if (!accessToken || !candidateId) return;
                 const pick = candidates.find((u) => u.id === candidateId);
@@ -113,21 +113,26 @@ export default function AdminStaffPage() {
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       <ul className="mt-6 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
         {rows.map((u) => (
-          <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-            <div>
-              <p className="font-semibold">{u.name}</p>
-              <p className="text-[11px] text-sikapa-text-muted">
+          <li
+            key={u.id}
+            className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0">
+              <p className="break-words font-semibold">{u.name}</p>
+              <p className="break-words text-[11px] text-sikapa-text-muted">
                 @{u.username} · {u.email ?? "no email"} · role: {u.admin_role ?? "admin"}
               </p>
               {u.admin_permissions ? (
-                <p className="mt-1 text-[11px] text-sikapa-text-muted">Permissions: {u.admin_permissions}</p>
+                <p className="mt-1 break-words text-[11px] text-sikapa-text-muted">
+                  Permissions: {u.admin_permissions}
+                </p>
               ) : null}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto sm:justify-end">
               {u.id !== me?.id ? (
                 <>
                   <select
-                    className="rounded-lg border border-black/[0.1] bg-white px-2 py-1 text-[11px]"
+                    className="min-w-0 flex-1 rounded-lg border border-black/[0.1] bg-white px-2 py-1 text-[11px] sm:flex-none sm:min-w-[8rem]"
                     value={u.admin_role ?? "admin"}
                     onChange={(e) => {
                       if (!accessToken) return;

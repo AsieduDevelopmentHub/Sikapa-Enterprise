@@ -1,0 +1,263 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import {
+  adminFetchReturns,
+  adminUpdateReturnStatus,
+  type AdminReturn,
+} from "@/lib/api/admin";
+import { sanitizeMultiline } from "@/lib/validation/input";
+
+const STATUS_FILTERS = [
+  "all",
+  "pending",
+  "approved",
+  "rejected",
+  "received",
+  "refunded",
+  "cancelled",
+] as const;
+
+type Filter = (typeof STATUS_FILTERS)[number];
+
+const NEXT_STATUSES: Record<AdminReturn["status"], AdminReturn["status"][]> = {
+  pending: ["approved", "rejected", "cancelled"],
+  approved: ["received", "rejected", "cancelled"],
+  rejected: ["pending"],
+  received: ["refunded", "rejected"],
+  refunded: [],
+  cancelled: ["pending"],
+};
+
+function statusBadgeClass(status: AdminReturn["status"]): string {
+  switch (status) {
+    case "pending":
+      return "bg-amber-100 text-amber-800";
+    case "approved":
+      return "bg-blue-100 text-blue-800";
+    case "received":
+      return "bg-indigo-100 text-indigo-800";
+    case "refunded":
+      return "bg-emerald-100 text-emerald-800";
+    case "rejected":
+      return "bg-rose-100 text-rose-800";
+    case "cancelled":
+      return "bg-zinc-200 text-zinc-700";
+    default:
+      return "bg-zinc-200 text-zinc-700";
+  }
+}
+
+export default function AdminReturnsPage() {
+  const { accessToken } = useAuth();
+  const [filter, setFilter] = useState<Filter>("all");
+  const [rows, setRows] = useState<AdminReturn[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<number | null>(null);
+  const [notesById, setNotesById] = useState<Record<number, string>>({});
+
+  const load = useCallback(async () => {
+    if (!accessToken) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const data = await adminFetchReturns(accessToken, {
+        status: filter === "all" ? undefined : filter,
+        limit: 100,
+      });
+      setRows(data);
+      const initial: Record<number, string> = {};
+      data.forEach((r) => {
+        initial[r.id] = r.admin_notes ?? "";
+      });
+      setNotesById(initial);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load returns");
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, filter]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const handleStatusChange = async (ret: AdminReturn, next: AdminReturn["status"]) => {
+    if (!accessToken) return;
+    setSavingId(ret.id);
+    setErr(null);
+    try {
+      const notes = sanitizeMultiline(notesById[ret.id] ?? "", 4000).trim();
+      const updated = await adminUpdateReturnStatus(accessToken, ret.id, {
+        status: next,
+        admin_notes: notes || null,
+      });
+      setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to update return");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const totalPending = useMemo(() => rows.filter((r) => r.status === "pending").length, [rows]);
+
+  return (
+    <div className="w-full min-w-0 max-w-full">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-serif text-page-title font-semibold">Returns</h1>
+          <p className="text-small text-sikapa-text-secondary">
+            Customer return and refund requests. {totalPending > 0 && (
+              <span className="ml-1 font-semibold text-amber-700">{totalPending} awaiting review.</span>
+            )}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="rounded-full border border-sikapa-gray-soft bg-white px-4 py-1.5 text-small font-semibold text-sikapa-text-primary hover:bg-sikapa-cream"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {STATUS_FILTERS.map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFilter(f)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold capitalize ${
+              filter === f
+                ? "bg-sikapa-crimson text-white"
+                : "bg-white text-sikapa-text-secondary ring-1 ring-black/[0.08]"
+            }`}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
+
+      {loading ? (
+        <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
+      ) : rows.length === 0 ? (
+        <div className="mt-6 rounded-xl bg-white p-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
+          No return requests match this filter yet.
+        </div>
+      ) : (
+        <div className="mt-6 space-y-4">
+          {rows.map((r) => {
+            const allowed = NEXT_STATUSES[r.status] ?? [];
+            const notes = notesById[r.id] ?? "";
+            return (
+              <article
+                key={r.id}
+                className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06]"
+              >
+                <header className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="font-serif text-section-title font-semibold text-sikapa-crimson">
+                      Return #{r.id}
+                    </span>
+                    <Link
+                      href={`/system/orders/${r.order_id}`}
+                      className="text-small font-semibold text-sikapa-gold hover:underline"
+                    >
+                      Order #{r.order_id}
+                    </Link>
+                    <span className="text-[11px] text-sikapa-text-muted">
+                      User #{r.user_id} · {new Date(r.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ${statusBadgeClass(r.status)}`}
+                  >
+                    {r.status}
+                  </span>
+                </header>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
+                      Reason
+                    </p>
+                    <p className="text-small text-sikapa-text-primary">{r.reason}</p>
+                    {r.details && (
+                      <p className="mt-1 whitespace-pre-wrap text-small text-sikapa-text-secondary">
+                        {r.details}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
+                      Preferred outcome
+                    </p>
+                    <p className="text-small capitalize text-sikapa-text-primary">
+                      {r.preferred_outcome}
+                    </p>
+                    <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
+                      Items
+                    </p>
+                    <ul className="mt-1 space-y-0.5 text-small text-sikapa-text-secondary">
+                      {r.items.map((it) => (
+                        <li key={it.id}>
+                          Item #{it.order_item_id} × {it.quantity}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label
+                    htmlFor={`notes-${r.id}`}
+                    className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted"
+                  >
+                    Internal notes
+                  </label>
+                  <textarea
+                    id={`notes-${r.id}`}
+                    value={notes}
+                    onChange={(e) =>
+                      setNotesById((prev) => ({ ...prev, [r.id]: e.target.value }))
+                    }
+                    rows={2}
+                    maxLength={4000}
+                    placeholder="Visible only to admins — track decisions, refund refs, etc."
+                    className="mt-1 w-full rounded-lg border border-sikapa-gray-soft bg-white px-3 py-2 text-small text-sikapa-text-primary focus:border-sikapa-gold focus:outline-none"
+                  />
+                </div>
+
+                {allowed.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {allowed.map((next) => (
+                      <button
+                        key={next}
+                        type="button"
+                        disabled={savingId === r.id}
+                        onClick={() => void handleStatusChange(r, next)}
+                        className="rounded-full bg-sikapa-crimson px-3 py-1.5 text-[11px] font-semibold capitalize text-white disabled:opacity-60"
+                      >
+                        Mark {next}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-[11px] text-sikapa-text-muted">
+                    This return is in a terminal state.
+                  </p>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

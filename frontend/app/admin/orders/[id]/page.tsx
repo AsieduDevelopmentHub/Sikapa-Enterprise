@@ -37,7 +37,7 @@ export default function AdminOrderDetailPage() {
     try {
       const [o, users] = await Promise.all([
         adminFetchOrderDetail(accessToken, id),
-        adminFetchUsers(accessToken, { limit: 200 }),
+        adminFetchUsers(accessToken, { limit: 100 }),
       ]);
       setOrder(o);
       const u = users.find((x) => x.id === o.user_id);
@@ -135,7 +135,7 @@ export default function AdminOrderDetailPage() {
   }
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <Link href="/system/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
         ← Orders
       </Link>
@@ -260,9 +260,9 @@ export default function AdminOrderDetailPage() {
         </button>
       </section>
 
-      <section className="mt-6 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+      <section className="mt-6 w-full min-w-0 overflow-x-auto rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5">
         <h2 className="font-serif text-section-title font-semibold">Line items</h2>
-        <ul className="mt-3 divide-y divide-sikapa-gray-soft">
+        <ul className="mt-3 min-w-0 divide-y divide-sikapa-gray-soft">
           {order.items.map((line) => {
             const img = line.product_image_url
               ? line.product_image_url.startsWith("http")
@@ -270,7 +270,7 @@ export default function AdminOrderDetailPage() {
                 : `${origin}${line.product_image_url}`
               : null;
             return (
-              <li key={line.id} className="flex gap-3 py-3">
+              <li key={line.id} className="flex min-w-0 gap-3 py-3">
                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-sikapa-gray-soft">
                   {img ? (
                     // eslint-disable-next-line @next/next/no-img-element

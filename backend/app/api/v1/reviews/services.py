@@ -4,8 +4,22 @@ Reviews business logic
 from fastapi import HTTPException, status
 from sqlmodel import Session, select, func
 
-from app.models import Review, Product, Order, OrderItem, User
-from app.api.v1.reviews.schemas import ReviewCreateSchema, ReviewPublic
+from app.models import Review, Product, Order, OrderItem, ReviewMedia, User
+from app.api.v1.reviews.schemas import ReviewCreateSchema, ReviewMediaRead, ReviewPublic
+
+
+def _media_for_reviews(session: Session, review_ids: list[int]) -> dict[int, list[ReviewMediaRead]]:
+    if not review_ids:
+        return {}
+    rows = session.exec(
+        select(ReviewMedia)
+        .where(ReviewMedia.review_id.in_(review_ids))
+        .order_by(ReviewMedia.sort_order.asc(), ReviewMedia.id.asc())
+    ).all()
+    grouped: dict[int, list[ReviewMediaRead]] = {}
+    for m in rows:
+        grouped.setdefault(m.review_id, []).append(ReviewMediaRead.model_validate(m))
+    return grouped
 
 
 def _reviewer_first_name(user: User | None) -> str:
@@ -126,6 +140,7 @@ async def list_product_reviews_public(
     user_ids = list({r.user_id for r in reviews})
     users = session.exec(select(User).where(User.id.in_(user_ids))).all()
     by_id = {u.id: u for u in users if u.id is not None}
+    media_by_review = _media_for_reviews(session, [r.id for r in reviews])
     out: list[ReviewPublic] = []
     for r in reviews:
         u = by_id.get(r.user_id)
@@ -138,6 +153,7 @@ async def list_product_reviews_public(
                 content=r.content,
                 created_at=r.created_at,
                 reviewer_name=_reviewer_first_name(u),
+                media=media_by_review.get(r.id, []),
             )
         )
     return out

@@ -495,3 +495,248 @@ export async function adminUpsertSetting(
     body: JSON.stringify(body),
   });
 }
+
+// ---- Returns (admin) ----
+
+export type AdminReturnItem = {
+  id: number;
+  return_id: number;
+  order_item_id: number;
+  quantity: number;
+  created_at: string;
+};
+
+export type AdminReturn = {
+  id: number;
+  order_id: number;
+  user_id: number;
+  reason: string;
+  details?: string | null;
+  preferred_outcome: "refund" | "replacement";
+  status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "received"
+    | "refunded"
+    | "cancelled";
+  admin_notes?: string | null;
+  resolved_by?: number | null;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  items: AdminReturnItem[];
+};
+
+export async function adminFetchReturns(
+  accessToken: string,
+  params?: { status?: string; skip?: number; limit?: number }
+): Promise<AdminReturn[]> {
+  const q = new URLSearchParams();
+  if (params?.status) q.set("status", params.status);
+  if (params?.skip != null) q.set("skip", String(params.skip));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<AdminReturn[]>(accessToken, `${V1.admin.returns}/${suffix}`);
+}
+
+export async function adminFetchReturn(accessToken: string, id: number): Promise<AdminReturn> {
+  return apiFetchJsonAuth<AdminReturn>(accessToken, V1.admin.return(id));
+}
+
+export async function adminUpdateReturnStatus(
+  accessToken: string,
+  id: number,
+  body: { status: AdminReturn["status"]; admin_notes?: string | null }
+): Promise<AdminReturn> {
+  return apiFetchJsonAuth<AdminReturn>(accessToken, V1.admin.returnStatus(id), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+// ---- Search analytics (admin) ----
+
+export type SearchSummary = {
+  total_searches: number;
+  unique_queries: number;
+  zero_result_searches: number;
+  period_days: number;
+};
+
+export type TopSearchRow = {
+  query: string;
+  count: number;
+  avg_results: number;
+  last_seen_at: string;
+};
+
+export type ZeroResultRow = {
+  query: string;
+  count: number;
+  last_seen_at: string;
+};
+
+export async function adminFetchSearchSummary(
+  accessToken: string,
+  days = 30
+): Promise<SearchSummary> {
+  return apiFetchJsonAuth<SearchSummary>(
+    accessToken,
+    `${V1.admin.searchSummary}?days=${days}`
+  );
+}
+
+export async function adminFetchTopSearches(
+  accessToken: string,
+  params?: { days?: number; limit?: number }
+): Promise<TopSearchRow[]> {
+  const q = new URLSearchParams();
+  if (params?.days != null) q.set("days", String(params.days));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<TopSearchRow[]>(accessToken, `${V1.admin.searchTop}${suffix}`);
+}
+
+export async function adminFetchZeroResultSearches(
+  accessToken: string,
+  params?: { days?: number; limit?: number }
+): Promise<ZeroResultRow[]> {
+  const q = new URLSearchParams();
+  if (params?.days != null) q.set("days", String(params.days));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<ZeroResultRow[]>(
+    accessToken,
+    `${V1.admin.searchZero}${suffix}`
+  );
+}
+
+// ---- Variants (admin) ----
+
+export type AdminVariant = {
+  id: number;
+  product_id: number;
+  name: string;
+  sku?: string | null;
+  attributes?: Record<string, unknown> | null;
+  price_delta: number;
+  in_stock: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function adminFetchVariants(
+  accessToken: string,
+  params?: { product_id?: number; skip?: number; limit?: number }
+): Promise<AdminVariant[]> {
+  const q = new URLSearchParams();
+  if (params?.product_id != null) q.set("product_id", String(params.product_id));
+  if (params?.skip != null) q.set("skip", String(params.skip));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<AdminVariant[]>(accessToken, `${V1.admin.variants}/${suffix}`);
+}
+
+export async function adminCreateVariant(
+  accessToken: string,
+  body: {
+    product_id: number;
+    name: string;
+    sku?: string | null;
+    attributes?: Record<string, unknown> | null;
+    price_delta?: number;
+    in_stock?: number;
+    is_active?: boolean;
+    sort_order?: number;
+  }
+): Promise<AdminVariant> {
+  return apiFetchJsonAuth<AdminVariant>(accessToken, `${V1.admin.variants}/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function adminUpdateVariant(
+  accessToken: string,
+  variantId: number,
+  body: Partial<{
+    name: string;
+    sku: string | null;
+    attributes: Record<string, unknown> | null;
+    price_delta: number;
+    in_stock: number;
+    is_active: boolean;
+    sort_order: number;
+  }>
+): Promise<AdminVariant> {
+  return apiFetchJsonAuth<AdminVariant>(accessToken, V1.admin.variant(variantId), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function adminDeleteVariant(
+  accessToken: string,
+  variantId: number
+): Promise<void> {
+  await apiFetchJsonAuthMethod<undefined>(accessToken, V1.admin.variant(variantId), "DELETE");
+}
+
+// ---- Low-stock list ----
+
+export async function adminFetchLowStock(
+  accessToken: string,
+  params?: { threshold?: number; limit?: number }
+): Promise<AdminProduct[]> {
+  const q = new URLSearchParams();
+  if (params?.threshold != null) q.set("threshold", String(params.threshold));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<AdminProduct[]>(
+    accessToken,
+    `${V1.admin.productsLowStock}${suffix}`
+  );
+}
+
+// ---- Bulk CSV import ----
+
+export type BulkImportRow = {
+  row_index: number;
+  slug?: string | null;
+  action: "create" | "update" | "skip" | "error";
+  message?: string | null;
+  product_id?: number | null;
+};
+
+export type BulkImportResult = {
+  mode: "dry_run" | "commit";
+  total_rows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+  results: BulkImportRow[];
+};
+
+export async function adminBulkImportProducts(
+  accessToken: string,
+  file: File,
+  options?: { commit?: boolean; updateExisting?: boolean }
+): Promise<BulkImportResult> {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("commit", String(options?.commit ?? false));
+  fd.append("update_existing", String(options?.updateExisting ?? true));
+  return apiFetchFormAuth<BulkImportResult>(
+    accessToken,
+    V1.admin.productsBulkImport,
+    fd,
+    "POST"
+  );
+}
