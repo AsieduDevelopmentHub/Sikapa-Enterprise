@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -28,7 +27,7 @@ export default function AdminOrdersPage() {
           limit: 30,
           status: filter === "all" ? undefined : filter,
         }),
-        adminFetchUsers(accessToken, { limit: 200 }),
+        adminFetchUsers(accessToken, { limit: 100 }),
       ]);
       const nameMap: Record<number, string> = {};
       for (const u of users) {
@@ -48,7 +47,7 @@ export default function AdminOrdersPage() {
   }, [load]);
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <h1 className="font-serif text-page-title font-semibold">Orders</h1>
       <p className="text-small text-sikapa-text-secondary">Fulfillment, payment state, and invoices.</p>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -57,7 +56,7 @@ export default function AdminOrdersPage() {
             key={f}
             type="button"
             onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold capitalize ${
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold capitalize ${
               filter === f ? "bg-sikapa-crimson text-white" : "bg-white text-sikapa-text-secondary ring-1 ring-black/[0.08]"
             }`}
           >
@@ -69,7 +68,7 @@ export default function AdminOrdersPage() {
       {loading ? (
         <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+        <div className="mt-6 w-full max-w-full touch-pan-x overflow-x-auto overscroll-x-contain rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
           <table className="w-full min-w-[720px] text-left text-small">
             <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
               <tr>
