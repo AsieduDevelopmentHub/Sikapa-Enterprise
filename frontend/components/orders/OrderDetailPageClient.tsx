@@ -14,6 +14,7 @@ import {
 import { paystackInitialize, paystackVerify } from "@/lib/api/payments";
 import { GHANA_REGIONS } from "@/lib/ghana-shipping";
 import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
+import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline";
 import { formatGhs } from "@/lib/mock-data";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
 
@@ -234,6 +235,12 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
               )}
             </section>
 
+            <OrderStatusTimeline
+              status={detail.status}
+              createdAt={detail.created_at}
+              updatedAt={detail.updated_at}
+            />
+
             <section className="rounded-[12px] bg-white p-4 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
               <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
                 Items
@@ -385,12 +392,20 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
               </section>
             )}
 
-            <Link
-              href="/shop"
-              className="block rounded-[10px] bg-sikapa-text-primary py-3 text-center text-small font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              Continue shopping
-            </Link>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Link
+                href={`/orders/${orderId}/return`}
+                className="block rounded-[10px] border border-sikapa-gray-soft bg-white py-3 text-center text-small font-semibold text-sikapa-text-primary dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                Request a return
+              </Link>
+              <Link
+                href="/shop"
+                className="block rounded-[10px] bg-sikapa-text-primary py-3 text-center text-small font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
+              >
+                Continue shopping
+              </Link>
+            </div>
           </>
         ) : null}
       </div>

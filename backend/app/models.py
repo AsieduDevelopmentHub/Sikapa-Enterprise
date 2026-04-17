@@ -400,3 +400,92 @@ class BusinessSetting(SQLModel, table=True):
     value: str = Field(default="", max_length=8000)
     updated_by: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ============ RETURNS ============
+
+class OrderReturn(SQLModel, table=True):
+    """Customer-initiated return/refund request against an order."""
+
+    __tablename__ = "orderreturn"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    order_id: int = Field(foreign_key="order.id", index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    reason: str = Field(max_length=120)
+    details: Optional[str] = Field(default=None, max_length=4000)
+    preferred_outcome: str = Field(default="refund", max_length=24)  # refund | replacement
+    status: str = Field(default="pending", max_length=24, index=True)
+    # pending | approved | rejected | received | refunded | cancelled
+    admin_notes: Optional[str] = Field(default=None, max_length=4000)
+    resolved_by: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    resolved_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class OrderReturnItem(SQLModel, table=True):
+    """One line per order-item selected for return."""
+
+    __tablename__ = "orderreturnitem"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    return_id: int = Field(foreign_key="orderreturn.id", index=True)
+    order_item_id: int = Field(foreign_key="orderitem.id", index=True)
+    quantity: int = Field(gt=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ============ SEARCH ANALYTICS ============
+
+class SearchQueryLog(SQLModel, table=True):
+    """One row per /products/search call (for admin search analytics)."""
+
+    __tablename__ = "searchquerylog"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    query: str = Field(max_length=200, index=True)
+    normalized_query: str = Field(max_length=200, index=True)
+    result_count: int = Field(default=0, ge=0)
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    ip_hash: Optional[str] = Field(default=None, max_length=64)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+# ============ PRODUCT VARIANTS ============
+
+class ProductVariant(SQLModel, table=True):
+    """
+    Variant SKU of a product (e.g. size/colour combination).
+    Storefront may display for browsing; cart/checkout variant-routing comes in Phase 2.
+    """
+
+    __tablename__ = "productvariant"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    product_id: int = Field(foreign_key="product.id", index=True)
+    name: str = Field(max_length=160)  # e.g. "Red / Small"
+    sku: Optional[str] = Field(default=None, max_length=120, index=True)
+    attributes: Optional[str] = Field(default=None, max_length=2000)
+    # JSON-encoded dict of attributes e.g. {"color":"red","size":"S"}
+    price_delta: float = Field(default=0.0)  # signed offset from base product price
+    in_stock: int = Field(default=0, ge=0)
+    is_active: bool = True
+    sort_order: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ============ REVIEW MEDIA ============
+
+class ReviewMedia(SQLModel, table=True):
+    """Images or short videos attached to a product review."""
+
+    __tablename__ = "reviewmedia"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    review_id: int = Field(foreign_key="review.id", index=True)
+    url: str = Field(max_length=1024)
+    kind: str = Field(default="image", max_length=16)  # image | video
+    sort_order: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

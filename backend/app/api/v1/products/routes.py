@@ -2,10 +2,11 @@
 Products API routes - public endpoints for browsing products
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlmodel import Session
 
 from app.db import get_session
+from app.api.v1.auth.dependencies import get_current_active_user_optional
 from app.api.v1.products.schemas import (
     ProductRead,
     ProductSearchResponse,
@@ -19,19 +20,34 @@ from app.api.v1.products.services import (
     get_all_categories,
     get_category_by_id,
 )
+from app.core.search_analytics import log_search
+from app.models import User
 
 router = APIRouter()
 
 
 @router.get("/search", response_model=ProductSearchResponse)
 async def search_products_endpoint(
+    request: Request,
     q: str = Query(..., min_length=1, max_length=100),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_active_user_optional),
 ):
-    """Search products by name, description, or SKU."""
-    return await search_products(session, q, skip, limit)
+    """Search products by name, description, or SKU. Logs the query (fire-and-forget)."""
+    result = await search_products(session, q, skip, limit)
+    # Only log the first page to avoid inflating analytics with paginated scans.
+    if skip == 0:
+        client_ip = request.client.host if request.client else None
+        log_search(
+            session,
+            query=q,
+            result_count=result.total,
+            user_id=current_user.id if current_user else None,
+            ip=client_ip,
+        )
+    return result
 
 
 @router.get("/categories", response_model=List[CategoryRead])
@@ -105,3 +121,44 @@ async def get_product_by_slug_endpoint(
 ):
     """Get product by slug."""
     return await get_product_by_slug(session, slug)
+
+
+@router.get("/{product_id}/variants")
+async def list_product_variants_public(
+    product_id: int,
+    session: Session = Depends(get_session),
+):
+    """Public: list active variants for a product (for display on PDP)."""
+    from sqlmodel import select as _select
+    from app.models import ProductVariant as _PV
+    import json as _json
+
+    rows = list(
+        session.exec(
+            _select(_PV)
+            .where(_PV.product_id == product_id, _PV.is_active == True)
+            .order_by(_PV.sort_order.asc(), _PV.id.asc())
+        ).all()
+    )
+    out = []
+    for v in rows:
+        attrs = None
+        if v.attributes:
+            try:
+                parsed = _json.loads(v.attributes)
+                if isinstance(parsed, dict):
+                    attrs = parsed
+            except Exception:
+                attrs = None
+        out.append(
+            {
+                "id": v.id,
+                "product_id": v.product_id,
+                "name": v.name,
+                "sku": v.sku,
+                "attributes": attrs,
+                "price_delta": v.price_delta,
+                "in_stock": v.in_stock,
+            }
+        )
+    return out

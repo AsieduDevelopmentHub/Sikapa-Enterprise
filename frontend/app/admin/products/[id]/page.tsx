@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ProductForm } from "@/components/admin/ProductForm";
+import { ProductVariantsManager } from "@/components/admin/ProductVariantsManager";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchCategories, adminFetchProduct, type AdminCategory, type AdminProduct } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
@@ -95,6 +96,11 @@ export default function AdminProductEditPage() {
               categoryHints={cats}
             />
           </section>
+        </div>
+      )}
+      {product && (
+        <div className="mt-6">
+          <ProductVariantsManager accessToken={accessToken} productId={id} />
         </div>
       )}
     </div>

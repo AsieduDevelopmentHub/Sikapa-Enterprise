@@ -42,12 +42,26 @@ export default function AdminProductsPage() {
           <h1 className="font-serif text-page-title font-semibold">Products</h1>
           <p className="text-small text-sikapa-text-secondary">Manage catalog, pricing, and visibility.</p>
         </div>
-        <Link
-          href="/system/products/new"
-          className="inline-flex justify-center rounded-full bg-sikapa-crimson px-5 py-2.5 text-small font-semibold text-white"
-        >
-          Add product
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/system/products/low-stock"
+            className="inline-flex justify-center rounded-full border border-sikapa-gray-soft bg-white px-4 py-2.5 text-small font-semibold text-sikapa-text-primary hover:bg-sikapa-cream"
+          >
+            Low stock
+          </Link>
+          <Link
+            href="/system/products/import"
+            className="inline-flex justify-center rounded-full border border-sikapa-gray-soft bg-white px-4 py-2.5 text-small font-semibold text-sikapa-text-primary hover:bg-sikapa-cream"
+          >
+            Bulk import
+          </Link>
+          <Link
+            href="/system/products/new"
+            className="inline-flex justify-center rounded-full bg-sikapa-crimson px-5 py-2.5 text-small font-semibold text-white"
+          >
+            Add product
+          </Link>
+        </div>
       </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       {loading ? (

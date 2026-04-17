@@ -1,9 +1,13 @@
 """
 Admin product management routes
 """
-from typing import List
+import csv
+import io
+from typing import List, Literal, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
-from sqlmodel import Session
+from pydantic import BaseModel, Field
+from sqlmodel import Session, select
 
 from app.db import get_session
 from app.api.v1.auth.dependencies import require_admin_permission
@@ -20,6 +24,107 @@ from app.api.v1.admin.services import (
 from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text, sanitize_slug
 
 router = APIRouter()
+
+
+CSV_EXPECTED_FIELDS = [
+    "name",
+    "slug",
+    "description",
+    "price",
+    "category",
+    "sku",
+    "in_stock",
+    "is_active",
+    "image_url",
+]
+
+
+class BulkImportRowResult(BaseModel):
+    row_index: int
+    slug: Optional[str] = None
+    action: Literal["create", "update", "skip", "error"]
+    message: Optional[str] = None
+    product_id: Optional[int] = None
+
+
+class BulkImportResult(BaseModel):
+    mode: Literal["dry_run", "commit"]
+    total_rows: int
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    errors: int = 0
+    results: List[BulkImportRowResult] = Field(default_factory=list)
+
+
+def _coerce_bool(raw: object, default: bool = True) -> bool:
+    if raw is None:
+        return default
+    if isinstance(raw, bool):
+        return raw
+    s = str(raw).strip().lower()
+    if s in {"1", "true", "yes", "y", "t", "on"}:
+        return True
+    if s in {"0", "false", "no", "n", "f", "off", ""}:
+        return False
+    return default
+
+
+def _parse_price(raw: object) -> float:
+    if raw is None or str(raw).strip() == "":
+        raise ValueError("Price is required")
+    try:
+        value = float(str(raw).replace(",", "").strip())
+    except ValueError:
+        raise ValueError(f"Invalid price: {raw!r}")
+    if value <= 0:
+        raise ValueError("Price must be greater than zero")
+    return value
+
+
+def _parse_int(raw: object, *, minimum: int = 0) -> int:
+    if raw is None or str(raw).strip() == "":
+        return minimum
+    try:
+        value = int(float(str(raw).strip()))
+    except ValueError:
+        raise ValueError(f"Invalid integer: {raw!r}")
+    if value < minimum:
+        raise ValueError(f"Value {value} below minimum {minimum}")
+    return value
+
+
+def _normalize_row(row: dict) -> dict:
+    """Validate + sanitize a CSV row into a product-payload dict."""
+    name = sanitize_plain_text(row.get("name"), max_length=300, single_line=True)
+    if not name:
+        raise ValueError("Missing 'name'")
+
+    slug_raw = row.get("slug") or name
+    slug = sanitize_slug(str(slug_raw))
+    if not slug:
+        raise ValueError("Missing/invalid 'slug'")
+
+    price = _parse_price(row.get("price"))
+    in_stock = _parse_int(row.get("in_stock"), minimum=0)
+    is_active = _coerce_bool(row.get("is_active"), default=True)
+
+    description = sanitize_multiline_text(row.get("description"), max_length=20000)
+    category = sanitize_plain_text(row.get("category"), max_length=64, single_line=True)
+    sku = sanitize_plain_text(row.get("sku"), max_length=120, single_line=True)
+    image_url = sanitize_plain_text(row.get("image_url"), max_length=1024, single_line=True)
+
+    return {
+        "name": name,
+        "slug": slug,
+        "description": description,
+        "price": price,
+        "in_stock": in_stock,
+        "is_active": is_active,
+        "category": category,
+        "sku": sku,
+        "image_url": image_url,
+    }
 
 
 @router.get("/", response_model=List[ProductManagementRead])
@@ -135,3 +240,199 @@ async def delete_product(
 ):
     """Delete a product."""
     await delete_product_admin(session, product_id)
+
+
+@router.get("/low-stock/list", response_model=List[ProductManagementRead])
+async def list_low_stock_products(
+    threshold: int = Query(5, ge=0, le=10_000),
+    limit: int = Query(100, ge=1, le=500),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin_permission("manage_inventory")),
+):
+    """
+    Products at or below `threshold` stock. Default threshold is 5.
+    Useful for admin "stock alerts" dashboards and back-in-stock emails.
+    """
+    stmt = (
+        select(Product)
+        .where(Product.is_active == True, Product.in_stock <= threshold)
+        .order_by(Product.in_stock.asc(), Product.name.asc())
+        .limit(limit)
+    )
+    rows = list(session.exec(stmt).all())
+    return [ProductManagementRead.model_validate(p) for p in rows]
+
+
+@router.post(
+    "/bulk-import",
+    response_model=BulkImportResult,
+    status_code=status.HTTP_200_OK,
+)
+async def bulk_import_products(
+    file: UploadFile = File(..., description="CSV file with product rows"),
+    commit: bool = Form(False, description="If false, run a dry-run and report changes without persisting"),
+    update_existing: bool = Form(True, description="If true, update products that match by slug; otherwise skip them"),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin_permission("manage_products")),
+):
+    """
+    Bulk-create/update products from CSV. Expected columns (header row):
+    `name,slug,description,price,category,sku,in_stock,is_active,image_url`
+    Rows are matched to existing products by `slug`.
+    """
+    if file.content_type and "csv" not in file.content_type.lower() and not file.filename.lower().endswith(".csv"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be a CSV",
+        )
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Empty CSV"
+        )
+
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CSV missing header row",
+        )
+
+    unknown = [h for h in reader.fieldnames if h and h.strip().lower() not in CSV_EXPECTED_FIELDS]
+    if unknown:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unexpected CSV columns: {', '.join(unknown)}. Expected: {', '.join(CSV_EXPECTED_FIELDS)}",
+        )
+
+    mode: Literal["dry_run", "commit"] = "commit" if commit else "dry_run"
+    created = updated = skipped = errors = 0
+    results: List[BulkImportRowResult] = []
+
+    for idx, raw_row in enumerate(reader, start=2):  # account for header row
+        row = {k.strip().lower(): v for k, v in (raw_row or {}).items() if k}
+        try:
+            payload = _normalize_row(row)
+        except ValueError as exc:
+            errors += 1
+            results.append(
+                BulkImportRowResult(
+                    row_index=idx,
+                    slug=None,
+                    action="error",
+                    message=str(exc),
+                )
+            )
+            continue
+
+        existing = session.exec(
+            select(Product).where(Product.slug == payload["slug"])
+        ).first()
+
+        if existing is not None:
+            if not update_existing:
+                skipped += 1
+                results.append(
+                    BulkImportRowResult(
+                        row_index=idx,
+                        slug=payload["slug"],
+                        action="skip",
+                        product_id=existing.id,
+                        message="Exists; update_existing=false",
+                    )
+                )
+                continue
+
+            if commit:
+                try:
+                    await update_product_admin(session, existing.id, payload)
+                    updated += 1
+                    results.append(
+                        BulkImportRowResult(
+                            row_index=idx,
+                            slug=payload["slug"],
+                            action="update",
+                            product_id=existing.id,
+                        )
+                    )
+                except Exception as exc:  # pragma: no cover
+                    errors += 1
+                    results.append(
+                        BulkImportRowResult(
+                            row_index=idx,
+                            slug=payload["slug"],
+                            action="error",
+                            product_id=existing.id,
+                            message=str(exc),
+                        )
+                    )
+            else:
+                updated += 1
+                results.append(
+                    BulkImportRowResult(
+                        row_index=idx,
+                        slug=payload["slug"],
+                        action="update",
+                        product_id=existing.id,
+                        message="Would update",
+                    )
+                )
+        else:
+            if commit:
+                try:
+                    created_product = await create_product_admin(session, payload)
+                    created += 1
+                    results.append(
+                        BulkImportRowResult(
+                            row_index=idx,
+                            slug=payload["slug"],
+                            action="create",
+                            product_id=created_product.id,
+                        )
+                    )
+                except HTTPException as exc:
+                    errors += 1
+                    results.append(
+                        BulkImportRowResult(
+                            row_index=idx,
+                            slug=payload["slug"],
+                            action="error",
+                            message=str(exc.detail),
+                        )
+                    )
+                except Exception as exc:  # pragma: no cover
+                    errors += 1
+                    results.append(
+                        BulkImportRowResult(
+                            row_index=idx,
+                            slug=payload["slug"],
+                            action="error",
+                            message=str(exc),
+                        )
+                    )
+            else:
+                created += 1
+                results.append(
+                    BulkImportRowResult(
+                        row_index=idx,
+                        slug=payload["slug"],
+                        action="create",
+                        message="Would create",
+                    )
+                )
+
+    return BulkImportResult(
+        mode=mode,
+        total_rows=len(results),
+        created=created,
+        updated=updated,
+        skipped=skipped,
+        errors=errors,
+        results=results,
+    )
