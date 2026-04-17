@@ -1,5 +1,20 @@
 const isDev = process.env.NODE_ENV !== "production";
 
+/**
+ * Additional image hosts can be added at deploy time without editing this file via
+ * `NEXT_PUBLIC_IMAGE_CDN_HOSTS` (comma-separated, no protocol). Example:
+ *   NEXT_PUBLIC_IMAGE_CDN_HOSTS=cdn.sikapa.com,*.cdn.sikapa.com
+ */
+const extraCdnHosts = (process.env.NEXT_PUBLIC_IMAGE_CDN_HOSTS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .map((hostname) => ({
+    protocol: "https",
+    hostname,
+    pathname: "/**",
+  }));
+
 const nextConfig = {
   reactStrictMode: true,
   images: {
@@ -46,6 +61,7 @@ const nextConfig = {
         hostname: "sikapa-backend.onrender.com",
         pathname: "/**",
       },
+      ...extraCdnHosts,
     ],
   },
 };

@@ -1,8 +1,12 @@
 """
 Reviews schemas
 """
-from pydantic import BaseModel, Field, field_validator
+from __future__ import annotations
+
 from datetime import datetime
+from typing import List, Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text
 
@@ -29,8 +33,20 @@ class ReviewWriteEligibility(BaseModel):
     can_review: bool
 
 
+class ReviewMediaRead(BaseModel):
+    id: int
+    review_id: int
+    url: str
+    kind: Literal["image", "video"]
+    sort_order: int = 0
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ReviewSchema(BaseModel):
-    """Schema for review response"""
+    """Schema for review response (does not include media — use ReviewPublic for storefront)."""
     id: int
     product_id: int
     user_id: int
@@ -51,3 +67,4 @@ class ReviewPublic(BaseModel):
     content: str | None = None
     created_at: datetime
     reviewer_name: str
+    media: List[ReviewMediaRead] = []

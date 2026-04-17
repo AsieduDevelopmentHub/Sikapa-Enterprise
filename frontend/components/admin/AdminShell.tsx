@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRightFromBracket,
+  faArrowRotateLeft,
   faBars,
   faBox,
   faChartLine,
@@ -14,6 +15,7 @@ import {
   faFolderTree,
   faGear,
   faHouse,
+  faMagnifyingGlassChart,
   faShieldHalved,
   faStar,
   faStore,
@@ -36,11 +38,13 @@ const NAV_MAIN: AdminNavItem[] = [
   { href: "/system/products", label: "Products", icon: faBox },
   { href: "/system/categories", label: "Categories", icon: faFolderTree },
   { href: "/system/orders", label: "Orders", icon: faClipboardList },
+  { href: "/system/returns", label: "Returns", icon: faArrowRotateLeft },
   { href: "/system/customers", label: "Customers", icon: faUsers },
   { href: "/system/inventory", label: "Inventory", icon: faWarehouse },
   { href: "/system/coupons", label: "Coupons", icon: faTicket },
   { href: "/system/reviews", label: "Reviews", icon: faStar },
   { href: "/system/analytics", label: "Analytics", icon: faChartLine },
+  { href: "/system/search-analytics", label: "Search", icon: faMagnifyingGlassChart },
   { href: "/system/payments", label: "Payments", icon: faWallet },
   { href: "/system/staff", label: "Staff", icon: faShieldHalved },
   { href: "/system/settings", label: "Settings", icon: faGear },
@@ -211,7 +215,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-[calc(100vh-52px)] lg:min-h-screen">
         <aside className="hidden w-56 shrink-0 bg-sikapa-bg-deep lg:block lg:min-h-screen">{sidebar}</aside>
         <main className="min-w-0 flex-1">
-          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+          <div className="mx-auto w-full max-w-6xl px-3 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
       {/* accessToken kept warm for child fetches that use useAuth */}

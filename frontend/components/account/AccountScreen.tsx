@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { AccountAuthForm } from "@/components/auth/AccountAuthForm";
-import { AccountSignedInHub } from "@/components/account/AccountSignedInHub";
+import { AccountSignedInHub, type AccountPanel } from "@/components/account/AccountSignedInHub";
 import { useAuth } from "@/context/AuthContext";
 import { authPasswordResetRequest } from "@/lib/api/auth";
 import { validateEmail } from "@/lib/validation/input";
 
-export function AccountScreen() {
+export function AccountScreen({ initialPanel }: { initialPanel?: AccountPanel } = {}) {
   const { user, loading, accessToken } = useAuth();
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
@@ -24,7 +24,7 @@ export function AccountScreen() {
   }
 
   if (user && accessToken) {
-    return <AccountSignedInHub />;
+    return <AccountSignedInHub initialPanel={initialPanel} />;
   }
 
   async function requestReset(e: React.FormEvent) {
