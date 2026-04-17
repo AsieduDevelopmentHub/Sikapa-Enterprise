@@ -211,7 +211,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-[calc(100vh-52px)] lg:min-h-screen">
         <aside className="hidden w-56 shrink-0 bg-sikapa-bg-deep lg:block lg:min-h-screen">{sidebar}</aside>
         <main className="min-w-0 flex-1">
-          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+          <div className="mx-auto w-full max-w-6xl px-3 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
       {/* accessToken kept warm for child fetches that use useAuth */}

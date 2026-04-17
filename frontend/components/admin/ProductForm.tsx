@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   adminCreateProduct,
   adminUpdateProduct,
@@ -29,8 +29,6 @@ type Props = {
 export function ProductForm({ accessToken, mode, productId, initial, categoryHints }: Props) {
   const router = useRouter();
   const [name, setName] = useState(initial?.name ?? "");
-  const [slug, setSlug] = useState(initial?.slug ?? "");
-  const [slugTouched, setSlugTouched] = useState(!!initial);
   const [description, setDescription] = useState(initial?.description ?? "");
   const [price, setPrice] = useState(initial != null ? String(initial.price) : "");
   const [category, setCategory] = useState(initial?.category ?? "");
@@ -40,9 +38,7 @@ export function ProductForm({ accessToken, mode, productId, initial, categoryHin
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const onNameBlur = () => {
-    if (!slugTouched && name.trim()) setSlug(slugify(name));
-  };
+  const derivedSlug = useMemo(() => slugify(name.trim()), [name]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +47,7 @@ export function ProductForm({ accessToken, mode, productId, initial, categoryHin
     try {
       const fd = new FormData();
       fd.append("name", name.trim());
-      fd.append("slug", slug.trim() || slugify(name));
+      fd.append("slug", derivedSlug || slugify(name.trim()));
       if (description.trim()) fd.append("description", description.trim());
       fd.append("price", String(Number(price)));
       if (category.trim()) fd.append("category", category.trim());
@@ -78,7 +74,7 @@ export function ProductForm({ accessToken, mode, productId, initial, categoryHin
   const catNames = categoryHints.filter((c) => c.is_active).map((c) => c.name);
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="space-y-4">
+    <form onSubmit={(e) => void submit(e)} className="w-full min-w-0 max-w-full space-y-4">
       {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-small font-medium text-sikapa-text-secondary">
@@ -87,22 +83,20 @@ export function ProductForm({ accessToken, mode, productId, initial, categoryHin
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onBlur={onNameBlur}
             className="mt-1 w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-body outline-none ring-sikapa-gold focus:ring-2"
           />
         </label>
-        <label className="block text-small font-medium text-sikapa-text-secondary">
-          Slug *
+        <div className="block text-small font-medium text-sikapa-text-secondary">
+          <span className="block">URL slug</span>
           <input
-            required
-            value={slug}
-            onChange={(e) => {
-              setSlugTouched(true);
-              setSlug(e.target.value);
-            }}
-            className="mt-1 w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 font-mono text-small outline-none ring-sikapa-gold focus:ring-2"
+            readOnly
+            disabled
+            value={derivedSlug || "—"}
+            title="Generated from the product name"
+            className="mt-1 w-full cursor-not-allowed rounded-lg border border-black/[0.08] bg-sikapa-gray-soft/60 px-3 py-2 font-mono text-small text-sikapa-text-secondary outline-none"
           />
-        </label>
+          <p className="mt-1 text-[11px] font-normal text-sikapa-text-muted">Auto-generated from the name above.</p>
+        </div>
       </div>
       <label className="block text-small font-medium text-sikapa-text-secondary">
         Description
