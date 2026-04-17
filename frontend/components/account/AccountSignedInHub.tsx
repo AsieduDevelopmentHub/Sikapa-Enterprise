@@ -30,7 +30,7 @@ import {
   validatePhoneOptional,
 } from "@/lib/validation/input";
 
-type Panel =
+export type AccountPanel =
   | "home"
   | "settings"
   | "address"
@@ -41,6 +41,8 @@ type Panel =
   | "verify"
   | "newsletter"
   | "danger";
+
+type Panel = AccountPanel;
 
 function NavRow({
   label,
@@ -70,10 +72,10 @@ function NavRow({
   );
 }
 
-export function AccountSignedInHub() {
+export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPanel } = {}) {
   const { user, accessToken, logout, refreshProfile } = useAuth();
   const { preference, setPreference } = useTheme();
-  const [panel, setPanel] = useState<Panel>("home");
+  const [panel, setPanel] = useState<Panel>(initialPanel ?? "home");
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const [name, setName] = useState("");

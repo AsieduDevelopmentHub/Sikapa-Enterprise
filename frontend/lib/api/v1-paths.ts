@@ -46,6 +46,19 @@ export const V1 = {
     canReview: (productId: number) => `/reviews/product/${productId}/can-review`,
     mine: "/reviews/user/me",
     delete: (reviewId: number) => `/reviews/${reviewId}`,
+    media: (reviewId: number) => `/reviews/${reviewId}/media`,
+    mediaItem: (reviewId: number, mediaId: number) =>
+      `/reviews/${reviewId}/media/${mediaId}`,
+  },
+  returns: {
+    createForOrder: (orderId: number) => `/orders/${orderId}/returns`,
+    listForOrder: (orderId: number) => `/orders/${orderId}/returns`,
+    myList: "/returns/",
+    detail: (returnId: number) => `/returns/${returnId}`,
+    cancel: (returnId: number) => `/returns/${returnId}`,
+  },
+  productVariants: {
+    listForProduct: (productId: number) => `/products/${productId}/variants`,
   },
   wishlist: {
     list: "/wishlist/",
@@ -89,5 +102,15 @@ export const V1 = {
     userPromoteAdmin: (id: number) => `/admin/users/${id}/promote-admin`,
     userRevokeAdmin: (id: number) => `/admin/users/${id}/revoke-admin`,
     userStaffRole: (id: number) => `/admin/users/${id}/staff-role`,
+    returns: "/admin/returns",
+    return: (id: number) => `/admin/returns/${id}`,
+    returnStatus: (id: number) => `/admin/returns/${id}/status`,
+    searchSummary: "/admin/search-analytics/summary",
+    searchTop: "/admin/search-analytics/top",
+    searchZero: "/admin/search-analytics/zero-results",
+    variants: "/admin/variants",
+    variant: (id: number) => `/admin/variants/${id}`,
+    productsBulkImport: "/admin/products/bulk-import",
+    productsLowStock: "/admin/products/low-stock/list",
   },
 } as const;

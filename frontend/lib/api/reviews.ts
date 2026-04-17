@@ -1,6 +1,21 @@
-import { apiFetchJson, apiFetchJsonAuth, getApiV1Base } from "@/lib/api/client";
+import {
+  apiFetchFormAuth,
+  apiFetchJson,
+  apiFetchJsonAuth,
+  apiFetchJsonAuthMethod,
+  getApiV1Base,
+} from "@/lib/api/client";
 import { parseApiErrorBody } from "@/lib/api/error-message";
 import { V1 } from "@/lib/api/v1-paths";
+
+export type ReviewMediaRow = {
+  id: number;
+  review_id: number;
+  url: string;
+  kind: "image" | "video";
+  sort_order: number;
+  created_at: string;
+};
 
 export type ReviewRow = {
   id: number;
@@ -11,6 +26,7 @@ export type ReviewRow = {
   content: string | null;
   created_at: string;
   reviewer_name?: string;
+  media?: ReviewMediaRow[];
 };
 
 export async function reviewsWriteEligibility(
@@ -58,4 +74,33 @@ export async function reviewsDelete(accessToken: string, reviewId: number): Prom
   await apiFetchJsonAuth<undefined>(accessToken, V1.reviews.delete(reviewId), {
     method: "DELETE",
   });
+}
+
+export async function reviewsUploadMedia(
+  accessToken: string,
+  reviewId: number,
+  file: File,
+  sortOrder = 0
+): Promise<ReviewMediaRow> {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("sort_order", String(sortOrder));
+  return apiFetchFormAuth<ReviewMediaRow>(
+    accessToken,
+    V1.reviews.media(reviewId),
+    fd,
+    "POST"
+  );
+}
+
+export async function reviewsDeleteMedia(
+  accessToken: string,
+  reviewId: number,
+  mediaId: number
+): Promise<void> {
+  await apiFetchJsonAuthMethod<undefined>(
+    accessToken,
+    V1.reviews.mediaItem(reviewId, mediaId),
+    "DELETE"
+  );
 }
