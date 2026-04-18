@@ -528,20 +528,31 @@ export function CheckoutPageClient() {
                 </h2>
                 <ul className="mt-3 divide-y divide-sikapa-gray-soft/80 dark:divide-white/10">
                   {lines.map((l) => (
-                    <li key={l.product.id} className="flex gap-3 py-3 first:pt-0">
+                    <li key={l.lineKey} className="flex gap-3 py-3 first:pt-0">
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[10px] bg-sikapa-cream">
-                        <Image src={l.product.image} alt="" fill sizes="56px" className="object-cover" />
+                        <Image
+                          src={l.variantImage || l.product.image}
+                          alt=""
+                          fill
+                          sizes="56px"
+                          className="object-cover"
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
                           {l.product.name}
                         </p>
+                        {l.variantLabel && (
+                          <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
+                            {l.variantLabel}
+                          </p>
+                        )}
                         <p className="text-[11px] text-sikapa-text-muted dark:text-zinc-500">
-                          {formatGhs(l.product.price)} × {l.quantity}
+                          {formatGhs(l.unitPrice)} × {l.quantity}
                         </p>
                       </div>
                       <p className="shrink-0 text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
-                        {formatGhs(l.product.price * l.quantity)}
+                        {formatGhs(l.unitPrice * l.quantity)}
                       </p>
                     </li>
                   ))}
