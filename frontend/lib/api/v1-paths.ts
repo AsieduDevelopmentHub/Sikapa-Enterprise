@@ -60,6 +60,9 @@ export const V1 = {
   productVariants: {
     listForProduct: (productId: number) => `/products/${productId}/variants`,
   },
+  productImages: {
+    listForProduct: (productId: number) => `/products/${productId}/images`,
+  },
   wishlist: {
     list: "/wishlist/",
     add: "/wishlist/items",

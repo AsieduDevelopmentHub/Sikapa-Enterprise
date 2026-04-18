@@ -123,6 +123,35 @@ async def get_product_by_slug_endpoint(
     return await get_product_by_slug(session, slug)
 
 
+@router.get("/{product_id}/images")
+async def list_product_images_public(
+    product_id: int,
+    session: Session = Depends(get_session),
+):
+    """Public: list gallery images for a product (for storefront carousel)."""
+    from sqlmodel import select as _select
+    from app.models import ProductImage as _PI
+
+    rows = list(
+        session.exec(
+            _select(_PI)
+            .where(_PI.product_id == product_id)
+            .order_by(_PI.sort_order.asc(), _PI.id.asc())
+        ).all()
+    )
+    return [
+        {
+            "id": img.id,
+            "product_id": img.product_id,
+            "image_url": img.image_url,
+            "alt_text": img.alt_text,
+            "is_primary": img.is_primary,
+            "sort_order": img.sort_order,
+        }
+        for img in rows
+    ]
+
+
 @router.get("/{product_id}/variants")
 async def list_product_variants_public(
     product_id: int,
@@ -159,6 +188,8 @@ async def list_product_variants_public(
                 "attributes": attrs,
                 "price_delta": v.price_delta,
                 "in_stock": v.in_stock,
+                "image_url": getattr(v, "image_url", None),
+                "description": getattr(v, "description", None),
             }
         )
     return out

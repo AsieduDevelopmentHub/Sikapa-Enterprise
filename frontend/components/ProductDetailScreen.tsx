@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaBag, FaCart } from "@/components/FaIcons";
 import { ProductCarouselRail } from "@/components/product/ProductCarouselRail";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
@@ -13,10 +13,23 @@ import { StarRating } from "@/components/StarRating";
 import { useCart } from "@/context/CartContext";
 import { useCatalog } from "@/context/CatalogContext";
 import { useRecentlyViewedProducts, trackProductView } from "@/hooks/useRecentlyViewed";
+import { getBackendOrigin } from "@/lib/api/client";
+import {
+  fetchProductImages,
+  type ProductImagePublic,
+  type ProductVariantPublic,
+} from "@/lib/api/product-variants";
 import type { MockProduct } from "@/lib/mock-data";
 import { formatGhs } from "@/lib/mock-data";
 
 type Props = { product: MockProduct };
+
+function resolveImageSrc(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http") || url.startsWith("data:")) return url;
+  const origin = getBackendOrigin();
+  return origin ? `${origin}${url}` : url;
+}
 
 const RELATED_CAP = 10;
 
@@ -40,21 +53,89 @@ export function ProductDetailScreen({ product: p }: Props) {
     [p, products]
   );
 
+  const numericId = Number.parseInt(p.id, 10);
+  const hasNumericId = Number.isFinite(numericId);
+
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariantPublic | null>(null);
+  const [gallery, setGallery] = useState<ProductImagePublic[]>([]);
+  const [activeImage, setActiveImage] = useState<string>(p.image);
+
   useEffect(() => {
     trackProductView(p.id);
   }, [p.id]);
+
+  // Keep the hero image in sync when the route changes to a different product.
+  useEffect(() => {
+    setActiveImage(p.image);
+    setSelectedVariant(null);
+  }, [p.id, p.image]);
+
+  useEffect(() => {
+    if (!hasNumericId) return;
+    let cancelled = false;
+    fetchProductImages(numericId)
+      .then((rows) => {
+        if (cancelled) return;
+        setGallery(rows);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setGallery([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasNumericId, numericId]);
+
+  const onVariantChange = useCallback(
+    (v: ProductVariantPublic | null) => {
+      setSelectedVariant(v);
+      if (v?.image_url) {
+        setActiveImage(resolveImageSrc(v.image_url));
+      } else {
+        setActiveImage(p.image);
+      }
+    },
+    [p.image]
+  );
+
+  const effectivePrice = p.price + (selectedVariant?.price_delta ?? 0);
+  const effectiveDescription =
+    selectedVariant?.description?.trim() || p.description;
+  // Variants carry their own stock; when nothing is picked, fall back to product-level stock.
+  const effectiveStock = selectedVariant
+    ? selectedVariant.in_stock
+    : p.in_stock ?? null;
+  const hasStockInfo = typeof effectiveStock === "number";
+  const isOutOfStock = hasStockInfo && (effectiveStock ?? 0) <= 0;
+  const isLowStock =
+    hasStockInfo && !isOutOfStock && (effectiveStock ?? 0) <= 5;
+
+  const thumbnails = useMemo(() => {
+    const list: { key: string; src: string; label?: string | null }[] = [];
+    list.push({ key: "hero", src: p.image, label: "Primary" });
+    for (const img of gallery) {
+      const src = resolveImageSrc(img.image_url);
+      if (!list.some((x) => x.src === src)) {
+        list.push({ key: `g-${img.id}`, src, label: img.alt_text });
+      }
+    }
+    return list;
+  }, [gallery, p.image]);
 
   return (
     <div className="bg-sikapa-cream px-4 pb-28 pt-4 dark:bg-zinc-950">
       <div className="mx-auto max-w-mobile">
         <div className="relative aspect-square w-full overflow-hidden rounded-[12px] bg-white shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
           <Image
-            src={p.image}
+            key={activeImage}
+            src={activeImage}
             alt=""
             fill
             className="object-cover"
             sizes="(max-width:430px) 100vw, 400px"
             priority
+            unoptimized={activeImage.startsWith("http") && !activeImage.includes("images.unsplash.com")}
           />
           <ProductWishlistButton productId={p.id} size="md" className="absolute right-3 top-3 z-[1]" />
           <button
@@ -62,10 +143,36 @@ export function ProductDetailScreen({ product: p }: Props) {
             className="sikapa-tap-bounce absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center rounded-full bg-sikapa-gold text-white shadow-lg ring-2 ring-white/90 dark:ring-zinc-900"
             aria-label={`Add ${p.name} to cart`}
             onClick={() => addProduct(p.id)}
+            disabled={isOutOfStock}
           >
             <FaCart className="!h-5 !w-5" />
           </button>
         </div>
+
+        {thumbnails.length > 1 && (
+          <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {thumbnails.map((t) => {
+              const isActive = t.src === activeImage;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setActiveImage(t.src)}
+                  className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg ring-1 transition ${
+                    isActive
+                      ? "ring-2 ring-sikapa-gold"
+                      : "ring-black/[0.08] hover:ring-black/[0.2] dark:ring-white/10"
+                  }`}
+                  aria-label={t.label ?? "Product photo"}
+                  aria-pressed={isActive}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={t.src} alt="" className="h-full w-full object-cover" />
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-sikapa-text-muted dark:text-zinc-500">
           {p.categoryLabel}
@@ -73,8 +180,28 @@ export function ProductDetailScreen({ product: p }: Props) {
         <h1 className="mt-1 font-serif text-[1.35rem] font-semibold leading-tight text-sikapa-text-primary dark:text-zinc-100 sm:text-[1.5rem]">
           {p.name}
         </h1>
-        <div className="mt-2">
+        <div className="mt-2 flex items-center gap-2">
           <StarRating value={p.rating} />
+          {hasStockInfo && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                isOutOfStock
+                  ? "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                  : isLowStock
+                  ? "bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${
+                isOutOfStock ? "bg-rose-500" : isLowStock ? "bg-amber-500" : "bg-emerald-500"
+              }`} />
+              {isOutOfStock
+                ? "Out of stock"
+                : isLowStock
+                ? `Only ${effectiveStock} left`
+                : `${effectiveStock} in stock`}
+            </span>
+          )}
         </div>
 
         <div className="mt-4 rounded-[10px] bg-white px-4 py-3 ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
@@ -82,34 +209,42 @@ export function ProductDetailScreen({ product: p }: Props) {
             Price
           </p>
           <div className="mt-1">
-            <ProductPriceLabel product={p} size="md" />
+            {selectedVariant ? (
+              <p className="font-serif text-[1.3rem] font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                {formatGhs(effectivePrice)}
+              </p>
+            ) : (
+              <ProductPriceLabel product={p} size="md" />
+            )}
           </div>
         </div>
 
-        {Number.isFinite(Number.parseInt(p.id, 10)) && (
+        {hasNumericId && (
           <ProductVariantsDisplay
-            productId={Number.parseInt(p.id, 10)}
+            productId={numericId}
             basePrice={p.price}
+            onVariantChange={onVariantChange}
           />
         )}
 
         <div className="mt-4">
           <h2 className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">About this product</h2>
-          <p className="mt-2 text-body leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">{p.description}</p>
+          <p className="mt-2 text-body leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">{effectiveDescription}</p>
         </div>
 
-        {Number.isFinite(Number.parseInt(p.id, 10)) && (
-          <ProductReviewsSection productId={Number.parseInt(p.id, 10)} />
+        {hasNumericId && (
+          <ProductReviewsSection productId={numericId} />
         )}
 
         <div className="mt-8 flex flex-col gap-2.5 sm:flex-row">
           <button
             type="button"
-            className="sikapa-btn-gold sikapa-tap-bounce flex flex-1 items-center justify-center gap-2 rounded-[10px] py-3 text-small font-semibold text-white shadow-md"
+            className="sikapa-btn-gold sikapa-tap-bounce flex flex-1 items-center justify-center gap-2 rounded-[10px] py-3 text-small font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => addProduct(p.id)}
+            disabled={isOutOfStock}
           >
             <FaCart className="!h-4 !w-4 shrink-0" />
-            Add to cart
+            {isOutOfStock ? "Out of stock" : "Add to cart"}
           </button>
           <Link
             href="/shop"
@@ -200,17 +335,31 @@ export function ProductDetailScreen({ product: p }: Props) {
           <div className="min-w-0 flex-1">
             <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
               {p.categoryLabel}
+              {hasStockInfo && (
+                <span
+                  className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                    isOutOfStock
+                      ? "bg-rose-50 text-rose-700"
+                      : isLowStock
+                      ? "bg-amber-50 text-amber-800"
+                      : "bg-emerald-50 text-emerald-700"
+                  }`}
+                >
+                  {isOutOfStock ? "0 left" : `${effectiveStock} left`}
+                </span>
+              )}
             </p>
             <p className="truncate text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              {formatGhs(p.price)}
+              {formatGhs(effectivePrice)}
             </p>
           </div>
           <button
             type="button"
-            className="sikapa-btn-gold sikapa-tap-bounce shrink-0 rounded-full px-5 py-2.5 text-small font-semibold text-white shadow-md"
+            className="sikapa-btn-gold sikapa-tap-bounce shrink-0 rounded-full px-5 py-2.5 text-small font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => addProduct(p.id)}
+            disabled={isOutOfStock}
           >
-            Add to cart
+            {isOutOfStock ? "Out of stock" : "Add to cart"}
           </button>
         </div>
       </div>

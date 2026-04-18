@@ -24,14 +24,28 @@ type Props = {
   productId?: number;
   initial?: AdminProduct | null;
   categoryHints: AdminCategory[];
+  /** If false, hide internal identifiers (slug). Default: true. */
+  canSeeInternal?: boolean;
+  /** When the stored category is a numeric id, the resolved display name. */
+  initialCategoryName?: string;
 };
 
-export function ProductForm({ accessToken, mode, productId, initial, categoryHints }: Props) {
+export function ProductForm({
+  accessToken,
+  mode,
+  productId,
+  initial,
+  categoryHints,
+  canSeeInternal = true,
+  initialCategoryName,
+}: Props) {
   const router = useRouter();
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [price, setPrice] = useState(initial != null ? String(initial.price) : "");
-  const [category, setCategory] = useState(initial?.category ?? "");
+  const [category, setCategory] = useState(
+    initialCategoryName || initial?.category || ""
+  );
   const [inStock, setInStock] = useState(initial != null ? String(initial.in_stock) : "0");
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [file, setFile] = useState<File | null>(null);
@@ -76,7 +90,7 @@ export function ProductForm({ accessToken, mode, productId, initial, categoryHin
   return (
     <form onSubmit={(e) => void submit(e)} className="w-full min-w-0 max-w-full space-y-4">
       {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={`grid gap-4 ${canSeeInternal ? "sm:grid-cols-2" : ""}`}>
         <label className="block text-small font-medium text-sikapa-text-secondary">
           Name *
           <input
@@ -86,17 +100,19 @@ export function ProductForm({ accessToken, mode, productId, initial, categoryHin
             className="mt-1 w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-body outline-none ring-sikapa-gold focus:ring-2"
           />
         </label>
-        <div className="block text-small font-medium text-sikapa-text-secondary">
-          <span className="block">URL slug</span>
-          <input
-            readOnly
-            disabled
-            value={derivedSlug || "—"}
-            title="Generated from the product name"
-            className="mt-1 w-full cursor-not-allowed rounded-lg border border-black/[0.08] bg-sikapa-gray-soft/60 px-3 py-2 font-mono text-small text-sikapa-text-secondary outline-none"
-          />
-          <p className="mt-1 text-[11px] font-normal text-sikapa-text-muted">Auto-generated from the name above.</p>
-        </div>
+        {canSeeInternal && (
+          <div className="block text-small font-medium text-sikapa-text-secondary">
+            <span className="block">URL slug</span>
+            <input
+              readOnly
+              disabled
+              value={derivedSlug || "—"}
+              title="Generated from the product name"
+              className="mt-1 w-full cursor-not-allowed rounded-lg border border-black/[0.08] bg-sikapa-gray-soft/60 px-3 py-2 font-mono text-small text-sikapa-text-secondary outline-none"
+            />
+            <p className="mt-1 text-[11px] font-normal text-sikapa-text-muted">Auto-generated from the name above.</p>
+          </div>
+        )}
       </div>
       <label className="block text-small font-medium text-sikapa-text-secondary">
         Description
