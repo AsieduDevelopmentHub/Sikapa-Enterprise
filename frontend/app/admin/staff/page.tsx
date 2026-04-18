@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminFetchUsers,
@@ -9,6 +9,7 @@ import {
   adminRevokeAdmin,
   type AdminUser,
 } from "@/lib/api/admin";
+import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 
 const ROLE_PRESETS: Record<"super_admin" | "admin" | "staff", string[]> = {
   super_admin: [],
@@ -35,6 +36,8 @@ export default function AdminStaffPage() {
   const [candidateId, setCandidateId] = useState<number | "">("");
   const [candidateRole, setCandidateRole] = useState<"admin" | "staff">("staff");
   const [err, setErr] = useState<string | null>(null);
+  const [candidateQuery, setCandidateQuery] = useState("");
+  const [staffQuery, setStaffQuery] = useState("");
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -51,7 +54,28 @@ export default function AdminStaffPage() {
     void load();
   }, [load]);
 
-  const candidates = allUsers.filter((u) => !u.is_admin);
+  const candidates = useMemo(() => {
+    const base = allUsers.filter((u) => !u.is_admin);
+    const q = candidateQuery.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter((u) =>
+      `${u.name ?? ""} ${u.username ?? ""} ${u.email ?? ""}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [allUsers, candidateQuery]);
+
+  const visibleStaff = useMemo(() => {
+    const q = staffQuery.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((u) =>
+      `${u.name ?? ""} ${u.username ?? ""} ${u.email ?? ""} ${
+        u.admin_role ?? ""
+      } ${u.admin_permissions ?? ""}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [rows, staffQuery]);
 
   return (
     <div className="w-full min-w-0 max-w-full">
@@ -62,6 +86,19 @@ export default function AdminStaffPage() {
       <div className="mt-4">
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5">
           <p className="text-small font-semibold text-sikapa-text-primary">Add specific user as staff/admin</p>
+          <div className="mt-3">
+            <AdminSearchInput
+              value={candidateQuery}
+              onChange={setCandidateQuery}
+              placeholder="Filter users by name, username, or email…"
+              hint={
+                candidateQuery
+                  ? `${candidates.length} user${candidates.length === 1 ? "" : "s"} match`
+                  : undefined
+              }
+              maxWidthClassName="sm:max-w-md"
+            />
+          </div>
           <div className="mt-3 flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <select
               value={candidateId}
@@ -71,7 +108,7 @@ export default function AdminStaffPage() {
               <option value="">Select user…</option>
               {candidates.map((u) => (
                 <option key={u.id} value={u.id}>
-                  @{u.username} ({u.name || "No name"})
+                  {u.name || "No name"} (@{u.username})
                 </option>
               ))}
             </select>
@@ -111,8 +148,19 @@ export default function AdminStaffPage() {
         </div>
       </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
-      <ul className="mt-6 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-        {rows.map((u) => (
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+          Current staff & admins
+        </h2>
+        <AdminSearchInput
+          value={staffQuery}
+          onChange={setStaffQuery}
+          placeholder="Search staff…"
+          hint={staffQuery ? `${visibleStaff.length} of ${rows.length} shown` : undefined}
+        />
+      </div>
+      <ul className="mt-3 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+        {visibleStaff.map((u) => (
           <li
             key={u.id}
             className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
@@ -173,8 +221,10 @@ export default function AdminStaffPage() {
             </div>
           </li>
         ))}
-        {rows.length === 0 && !err && (
-          <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">No admins.</li>
+        {visibleStaff.length === 0 && !err && (
+          <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">
+            {staffQuery ? "No staff match your search." : "No admins."}
+          </li>
         )}
       </ul>
     </div>

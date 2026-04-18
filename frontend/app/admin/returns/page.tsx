@@ -4,11 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import {
+  adminFetchOrderDetail,
   adminFetchReturns,
+  adminFetchUsers,
   adminUpdateReturnStatus,
+  type AdminOrderDetail,
   type AdminReturn,
 } from "@/lib/api/admin";
 import { sanitizeMultiline } from "@/lib/validation/input";
+import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 
 const STATUS_FILTERS = [
   "all",
@@ -50,6 +54,8 @@ function statusBadgeClass(status: AdminReturn["status"]): string {
   }
 }
 
+type ItemLabel = { product_name: string; quantity: number };
+
 export default function AdminReturnsPage() {
   const { accessToken } = useAuth();
   const [filter, setFilter] = useState<Filter>("all");
@@ -58,22 +64,52 @@ export default function AdminReturnsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [notesById, setNotesById] = useState<Record<number, string>>({});
+  const [query, setQuery] = useState("");
+  const [userNameById, setUserNameById] = useState<Record<number, string>>({});
+  // Map order_item_id -> product_name (resolved from order details).
+  const [itemNameById, setItemNameById] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
     setErr(null);
     try {
-      const data = await adminFetchReturns(accessToken, {
-        status: filter === "all" ? undefined : filter,
-        limit: 100,
-      });
+      const [data, users] = await Promise.all([
+        adminFetchReturns(accessToken, {
+          status: filter === "all" ? undefined : filter,
+          limit: 100,
+        }),
+        adminFetchUsers(accessToken, { limit: 100 }),
+      ]);
       setRows(data);
       const initial: Record<number, string> = {};
       data.forEach((r) => {
         initial[r.id] = r.admin_notes ?? "";
       });
       setNotesById(initial);
+      const names: Record<number, string> = {};
+      for (const u of users) {
+        names[u.id] = u.name?.trim() || u.username || `User ${u.id}`;
+      }
+      setUserNameById(names);
+
+      // Resolve order-item -> product names for every unique order present in
+      // the returns list. One fetch per order; small N in practice.
+      const uniqueOrderIds = Array.from(new Set(data.map((r) => r.order_id)));
+      const orderDetails = await Promise.allSettled(
+        uniqueOrderIds.map((id) => adminFetchOrderDetail(accessToken, id))
+      );
+      const nextItemMap: Record<number, string> = {};
+      orderDetails.forEach((res) => {
+        if (res.status === "fulfilled") {
+          const detail = res.value as AdminOrderDetail;
+          for (const line of detail.items) {
+            nextItemMap[line.id] =
+              line.product_name ?? `Item #${line.id}`;
+          }
+        }
+      });
+      setItemNameById(nextItemMap);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load returns");
     } finally {
@@ -105,6 +141,38 @@ export default function AdminReturnsPage() {
 
   const totalPending = useMemo(() => rows.filter((r) => r.status === "pending").length, [rows]);
 
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      const userName = userNameById[r.user_id] ?? "";
+      const itemNames = r.items
+        .map((it) => itemNameById[it.order_item_id] ?? "")
+        .join(" ");
+      const hay = [
+        `#${r.id}`,
+        `order ${r.order_id}`,
+        `#${r.order_id}`,
+        userName,
+        r.reason,
+        r.details ?? "",
+        r.preferred_outcome,
+        r.status,
+        itemNames,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [rows, query, userNameById, itemNameById]);
+
+  const buildItemLabels = (ret: AdminReturn): ItemLabel[] =>
+    ret.items.map((it) => ({
+      product_name:
+        itemNameById[it.order_item_id] ?? `Item #${it.order_item_id}`,
+      quantity: it.quantity,
+    }));
+
   return (
     <div className="w-full min-w-0 max-w-full">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -125,36 +193,48 @@ export default function AdminReturnsPage() {
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {STATUS_FILTERS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold capitalize ${
-              filter === f
-                ? "bg-sikapa-crimson text-white"
-                : "bg-white text-sikapa-text-secondary ring-1 ring-black/[0.08]"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold capitalize ${
+                filter === f
+                  ? "bg-sikapa-crimson text-white"
+                  : "bg-white text-sikapa-text-secondary ring-1 ring-black/[0.08]"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <AdminSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search customer, order, product…"
+          hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
+        />
       </div>
 
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
 
       {loading ? (
         <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
-      ) : rows.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <div className="mt-6 rounded-xl bg-white p-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
-          No return requests match this filter yet.
+          {query
+            ? "No returns match your search."
+            : "No return requests match this filter yet."}
         </div>
       ) : (
         <div className="mt-6 space-y-4">
-          {rows.map((r) => {
+          {visibleRows.map((r) => {
             const allowed = NEXT_STATUSES[r.status] ?? [];
             const notes = notesById[r.id] ?? "";
+            const userLabel = userNameById[r.user_id] ?? `User #${r.user_id}`;
+            const itemLabels = buildItemLabels(r);
             return (
               <article
                 key={r.id}
@@ -172,7 +252,7 @@ export default function AdminReturnsPage() {
                       Order #{r.order_id}
                     </Link>
                     <span className="text-[11px] text-sikapa-text-muted">
-                      User #{r.user_id} · {new Date(r.created_at).toLocaleString()}
+                      {userLabel} · {new Date(r.created_at).toLocaleString()}
                     </span>
                   </div>
                   <span
@@ -205,9 +285,14 @@ export default function AdminReturnsPage() {
                       Items
                     </p>
                     <ul className="mt-1 space-y-0.5 text-small text-sikapa-text-secondary">
-                      {r.items.map((it) => (
-                        <li key={it.id}>
-                          Item #{it.order_item_id} × {it.quantity}
+                      {itemLabels.map((lbl, idx) => (
+                        <li key={`${r.id}-${idx}`} className="flex items-baseline gap-2">
+                          <span className="min-w-0 truncate" title={lbl.product_name}>
+                            {lbl.product_name}
+                          </span>
+                          <span className="shrink-0 text-[11px] text-sikapa-text-muted">
+                            × {lbl.quantity}
+                          </span>
                         </li>
                       ))}
                     </ul>

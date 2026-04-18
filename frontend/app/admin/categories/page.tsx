@@ -9,6 +9,7 @@ import {
   adminUpdateCategory,
   type AdminCategory,
 } from "@/lib/api/admin";
+import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 
 function slugify(name: string): string {
   return name
@@ -26,6 +27,13 @@ export default function AdminCategoriesPage() {
   const [err, setErr] = useState<string | null>(null);
   const derivedSlug = useMemo(() => slugify(name.trim()), [name]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((c) => `${c.name} ${c.slug}`.toLowerCase().includes(q));
+  }, [rows, query]);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -99,11 +107,19 @@ export default function AdminCategoriesPage() {
         </button>
       </form>
 
+      <div className="mt-6">
+        <AdminSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search categories by name or slug…"
+          hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
+        />
+      </div>
       {loading ? (
         <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
       ) : (
-        <ul className="mt-6 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-          {rows.map((c) => (
+        <ul className="mt-4 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+          {visibleRows.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
               <div>
                 <p className="font-semibold">{c.name}</p>
@@ -147,8 +163,10 @@ export default function AdminCategoriesPage() {
               </div>
             </li>
           ))}
-          {rows.length === 0 && (
-            <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">No categories.</li>
+          {visibleRows.length === 0 && (
+            <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">
+              {query ? "No categories match your search." : "No categories."}
+            </li>
           )}
         </ul>
       )}

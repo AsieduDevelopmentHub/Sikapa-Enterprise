@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminActivateUser,
@@ -8,12 +8,14 @@ import {
   adminFetchUsers,
   type AdminUser,
 } from "@/lib/api/admin";
+import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 
 export default function AdminCustomersPage() {
   const { accessToken, user: me } = useAuth();
   const [rows, setRows] = useState<AdminUser[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -32,10 +34,29 @@ export default function AdminCustomersPage() {
     void load();
   }, [load]);
 
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((u) => {
+      const hay = `${u.name ?? ""} ${u.username ?? ""} ${u.email ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [rows, query]);
+
   return (
     <div>
-      <h1 className="font-serif text-page-title font-semibold">Customers</h1>
-      <p className="text-small text-sikapa-text-secondary">Registered shoppers (excludes admin accounts).</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-serif text-page-title font-semibold">Customers</h1>
+          <p className="text-small text-sikapa-text-secondary">Registered shoppers (excludes admin accounts).</p>
+        </div>
+        <AdminSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search name, username, or email…"
+          hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
+        />
+      </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       {loading ? (
         <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
@@ -51,7 +72,7 @@ export default function AdminCustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-sikapa-gray-soft">
-              {rows.map((u) => (
+              {visibleRows.map((u) => (
                 <tr key={u.id}>
                   <td className="px-4 py-3">
                     <p className="font-semibold">{u.name}</p>
@@ -106,8 +127,10 @@ export default function AdminCustomersPage() {
               ))}
             </tbody>
           </table>
-          {rows.length === 0 && (
-            <p className="px-4 py-8 text-center text-small text-sikapa-text-muted">No customers.</p>
+          {visibleRows.length === 0 && (
+            <p className="px-4 py-8 text-center text-small text-sikapa-text-muted">
+              {query ? "No customers match your search." : "No customers."}
+            </p>
           )}
         </div>
       )}

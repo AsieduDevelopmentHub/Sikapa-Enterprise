@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchLowStock, type AdminProduct } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
+import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 
 export default function AdminLowStockPage() {
   const { accessToken } = useAuth();
@@ -12,6 +13,7 @@ export default function AdminLowStockPage() {
   const [rows, setRows] = useState<AdminProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -31,6 +33,14 @@ export default function AdminLowStockPage() {
     void load();
   }, [load]);
 
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((p) =>
+      `${p.name} ${p.slug ?? ""} ${p.sku ?? ""}`.toLowerCase().includes(q)
+    );
+  }, [rows, query]);
+
   return (
     <div className="w-full min-w-0 max-w-5xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -48,37 +58,47 @@ export default function AdminLowStockPage() {
         </Link>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <label className="text-small text-sikapa-text-secondary">
-          Threshold
-          <input
-            type="number"
-            min={0}
-            max={1000}
-            value={threshold}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              setThreshold(Number.isFinite(n) && n >= 0 ? n : 0);
-            }}
-            className="ml-2 w-24 rounded-lg border border-sikapa-gray-soft bg-white px-2 py-1 text-small focus:border-sikapa-gold focus:outline-none"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="rounded-full bg-sikapa-crimson px-4 py-1.5 text-small font-semibold text-white"
-        >
-          Refresh
-        </button>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-small text-sikapa-text-secondary">
+            Threshold
+            <input
+              type="number"
+              min={0}
+              max={1000}
+              value={threshold}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                setThreshold(Number.isFinite(n) && n >= 0 ? n : 0);
+              }}
+              className="ml-2 w-24 rounded-lg border border-sikapa-gray-soft bg-white px-2 py-1 text-small focus:border-sikapa-gold focus:outline-none"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="rounded-full bg-sikapa-crimson px-4 py-1.5 text-small font-semibold text-white"
+          >
+            Refresh
+          </button>
+        </div>
+        <AdminSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search product or SKU…"
+          hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
+        />
       </div>
 
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
 
       {loading ? (
         <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
-      ) : rows.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <div className="mt-6 rounded-xl bg-white p-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
-          All products are above the threshold of {threshold}.
+          {query
+            ? "No products match your search."
+            : `All products are above the threshold of ${threshold}.`}
         </div>
       ) : (
         <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
@@ -92,7 +112,7 @@ export default function AdminLowStockPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-sikapa-gray-soft">
-              {rows.map((p) => (
+              {visibleRows.map((p) => (
                 <tr key={p.id}>
                   <td className="px-4 py-3">
                     <div>
