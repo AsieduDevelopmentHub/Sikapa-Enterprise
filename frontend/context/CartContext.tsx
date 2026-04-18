@@ -165,7 +165,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (source === "mock") {
         addProductInternal(productId, qty, opts);
         setCartActionError(
-          "Live catalog is offline, so your bag is saved on this device only. Reconnect the shop to sync purchases."
+          "We're offline — your cart is saved on this device and will sync when you're back online."
         );
         return;
       }

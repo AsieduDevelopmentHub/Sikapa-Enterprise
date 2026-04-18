@@ -10,6 +10,7 @@ import {
   type TopSearchRow,
   type ZeroResultRow,
 } from "@/lib/api/admin";
+import { AdminSearchAnalyticsSkeleton } from "@/components/admin/Skeleton";
 
 const DAY_OPTIONS = [7, 30, 90] as const;
 
@@ -84,7 +85,7 @@ export default function AdminSearchAnalyticsPage() {
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
 
       {loading ? (
-        <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
+        <AdminSearchAnalyticsSkeleton />
       ) : (
         <>
           <section className="mt-6 grid gap-3 sm:grid-cols-3">

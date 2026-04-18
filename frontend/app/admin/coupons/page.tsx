@@ -11,11 +11,13 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminCouponsTableSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminCouponsPage() {
   const { accessToken } = useAuth();
   const [rows, setRows] = useState<CouponRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState({
     code: "",
@@ -33,6 +35,8 @@ export default function AdminCouponsPage() {
       setRows(await adminFetchCoupons(accessToken));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load coupons");
+    } finally {
+      setReady(true);
     }
   }, [accessToken]);
 
@@ -140,7 +144,11 @@ export default function AdminCouponsPage() {
           hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
         />
       </div>
-      <div className="mt-4 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+      <div className="mt-4">
+        {!ready && !err ? (
+          <AdminCouponsTableSkeleton />
+        ) : (
+        <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
         <table className="w-full min-w-[740px] text-left text-small">
           <thead className="border-b border-black/[0.06] text-[11px] uppercase tracking-wider text-sikapa-text-muted">
             <tr>
@@ -199,7 +207,7 @@ export default function AdminCouponsPage() {
                 </td>
               </tr>
             ))}
-            {visibleRows.length === 0 && (
+            {visibleRows.length === 0 && ready && (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-small text-sikapa-text-muted">
                   {query ? "No coupons match your search." : "No coupons yet."}
@@ -208,6 +216,8 @@ export default function AdminCouponsPage() {
             )}
           </tbody>
         </table>
+        </div>
+        )}
       </div>
     </div>
   );

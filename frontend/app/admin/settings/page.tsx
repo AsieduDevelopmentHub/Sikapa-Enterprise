@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchSettings, adminUpsertSetting, type BusinessSettingRow } from "@/lib/api/admin";
+import { AdminSettingsPageSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminSettingsPage() {
   const { accessToken } = useAuth();
@@ -10,6 +11,7 @@ export default function AdminSettingsPage() {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -17,6 +19,8 @@ export default function AdminSettingsPage() {
       setRows(await adminFetchSettings(accessToken));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load settings");
+    } finally {
+      setReady(true);
     }
   }, [accessToken]);
 
@@ -44,6 +48,10 @@ export default function AdminSettingsPage() {
         Editable business settings stored in the database.
       </p>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
+      {!ready && !err ? (
+        <AdminSettingsPageSkeleton />
+      ) : (
+        <>
       <form
         onSubmit={(e) => void save(e)}
         className="mt-6 grid gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06] sm:grid-cols-[1fr_2fr_auto]"
@@ -85,7 +93,7 @@ export default function AdminSettingsPage() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {rows.length === 0 && ready && (
               <tr>
                 <td colSpan={3} className="px-4 py-8 text-center text-small text-sikapa-text-muted">
                   No settings saved yet.
@@ -95,6 +103,8 @@ export default function AdminSettingsPage() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -2,8 +2,34 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { adminFetchDashboard, adminFetchRevenue, type AdminDashboardMetrics, type RevenueStat } from "@/lib/api/admin";
+import {
+  adminFetchDashboard,
+  adminFetchRevenue,
+  type AdminDashboardMetrics,
+  type RevenueStat,
+} from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
+import { RevenueTrendChart } from "@/components/admin/charts/RevenueTrendChart";
+import { OrderStatusDonut } from "@/components/admin/charts/OrderStatusDonut";
+import {
+  Skeleton,
+  SkeletonChart,
+  SkeletonDonut,
+  SkeletonStatGrid,
+} from "@/components/admin/Skeleton";
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
+        {label}
+      </p>
+      <p className="mt-1 font-serif text-[1.15rem] font-semibold text-sikapa-text-primary">
+        {value}
+      </p>
+    </div>
+  );
+}
 
 export default function AdminAnalyticsPage() {
   const { accessToken } = useAuth();
@@ -11,18 +37,38 @@ export default function AdminAnalyticsPage() {
   const [dash, setDash] = useState<AdminDashboardMetrics | null>(null);
   const [rev, setRev] = useState<RevenueStat[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
+    setLoading(true);
+    setErr(null);
     try {
-      const [d, r] = await Promise.all([
+      const [dRes, rRes] = await Promise.allSettled([
         adminFetchDashboard(accessToken, days),
         adminFetchRevenue(accessToken, days),
       ]);
-      setDash(d);
-      setRev(r);
+      if (dRes.status === "fulfilled") setDash(dRes.value);
+      if (rRes.status === "fulfilled") setRev(rRes.value);
+
+      const failures = [dRes, rRes].filter(
+        (r): r is PromiseRejectedResult => r.status === "rejected"
+      );
+      if (failures.length > 0) {
+        const first = failures[0].reason;
+        const msg = first instanceof Error ? first.message : String(first);
+        setErr(
+          msg.includes("403")
+            ? "Some sections are hidden for your account."
+            : "Some sections couldn't load. Try again."
+        );
+      }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed");
+      setErr(e instanceof Error ? e.message : "Failed to load analytics.");
+    } finally {
+      setLoading(false);
+      setLoaded(true);
     }
   }, [accessToken, days]);
 
@@ -30,24 +76,29 @@ export default function AdminAnalyticsPage() {
     void load();
   }, [load]);
 
-  const max = Math.max(...rev.map((x) => x.revenue), 1);
-  const chart = rev.slice(-21);
+  const showSkeleton = loading && !loaded;
 
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-serif text-page-title font-semibold">Analytics</h1>
-          <p className="text-small text-sikapa-text-secondary">Revenue and order velocity from live API data.</p>
+          <h1 className="font-serif text-page-title font-semibold text-sikapa-text-primary">
+            Analytics
+          </h1>
+          <p className="mt-1 text-small text-sikapa-text-secondary">
+            Revenue and order velocity.
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {[7, 30, 90].map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => setDays(d)}
-              className={`rounded-full px-4 py-1.5 text-small font-semibold ${
-                days === d ? "bg-sikapa-crimson text-white" : "bg-white ring-1 ring-black/[0.08]"
+              className={`rounded-full px-4 py-1.5 text-small font-semibold transition-colors ${
+                days === d
+                  ? "bg-sikapa-crimson text-white"
+                  : "bg-white text-sikapa-text-secondary ring-1 ring-black/[0.08] hover:bg-sikapa-gray-soft"
               }`}
             >
               {d}d
@@ -55,45 +106,72 @@ export default function AdminAnalyticsPage() {
           ))}
         </div>
       </div>
-      {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
-      {dash && (
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
-            <p className="text-[11px] font-semibold uppercase text-sikapa-text-muted">Revenue</p>
-            <p className="mt-1 font-serif text-xl font-semibold">{formatGhs(dash.total_revenue)}</p>
-          </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
-            <p className="text-[11px] font-semibold uppercase text-sikapa-text-muted">Orders</p>
-            <p className="mt-1 font-serif text-xl font-semibold">{dash.total_orders}</p>
-          </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
-            <p className="text-[11px] font-semibold uppercase text-sikapa-text-muted">New users</p>
-            <p className="mt-1 font-serif text-xl font-semibold">{dash.new_users}</p>
-          </div>
+
+      {err && (
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-small text-red-800 ring-1 ring-red-100">
+          {err}
+        </p>
+      )}
+
+      {showSkeleton ? (
+        <SkeletonStatGrid count={4} />
+      ) : dash ? (
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Revenue" value={formatGhs(dash.total_revenue)} />
+          <StatCard label="Orders" value={String(dash.total_orders)} />
+          <StatCard label="New customers" value={String(dash.new_users)} />
+          <StatCard label="Avg. order" value={formatGhs(dash.avg_order_value)} />
+        </div>
+      ) : (
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Revenue" value="—" />
+          <StatCard label="Orders" value="—" />
+          <StatCard label="New customers" value="—" />
+          <StatCard label="Avg. order" value="—" />
         </div>
       )}
-      <section className="mt-8 rounded-xl bg-white p-6 shadow-sm ring-1 ring-black/[0.06]">
-        <h2 className="font-serif text-section-title font-semibold">Daily revenue</h2>
-        <p className="text-[11px] text-sikapa-text-muted">Last {chart.length} days with paid orders</p>
-        {chart.length === 0 ? (
-          <p className="mt-4 text-small text-sikapa-text-muted">No paid-order revenue in this range yet.</p>
-        ) : (
-          <div className="mt-6 flex h-52 items-end gap-1">
-            {chart.map((s) => {
-              const h = Math.round((s.revenue / max) * 100);
-              return (
-                <div key={s.date} className="flex min-w-0 flex-1 flex-col items-center justify-end">
-                  <div
-                    className="w-full max-w-[12px] rounded-t bg-sikapa-crimson/80"
-                    style={{ height: `${Math.max(h, 3)}%` }}
-                    title={`${s.date}: ${formatGhs(s.revenue)} (${s.order_count} orders)`}
-                  />
-                </div>
-              );
-            })}
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+                Revenue trend
+              </h2>
+              <div className="mt-1 text-[11px] text-sikapa-text-muted">
+                {showSkeleton ? (
+                  <Skeleton className="h-3 w-52" rounded="md" />
+                ) : rev.length > 0 ? (
+                  `Daily gross revenue over the last ${Math.min(rev.length, days)} days.`
+                ) : (
+                  `No revenue recorded in the last ${days} days.`
+                )}
+              </div>
+            </div>
           </div>
-        )}
-      </section>
+          <div className="mt-4 text-sikapa-crimson">
+            {showSkeleton ? <SkeletonChart /> : <RevenueTrendChart stats={rev} window={days} />}
+          </div>
+        </section>
+
+        <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+            Orders by status
+          </h2>
+          <p className="mt-1 text-[11px] text-sikapa-text-muted">
+            Share of orders by fulfilment state in the selected window.
+          </p>
+          {showSkeleton ? (
+            <SkeletonDonut />
+          ) : dash ? (
+            <OrderStatusDonut stats={dash.order_stats} />
+          ) : (
+            <p className="mt-4 text-small text-sikapa-text-muted">
+              Status breakdown isn&apos;t available right now.
+            </p>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

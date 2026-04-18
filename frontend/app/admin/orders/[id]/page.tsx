@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
+import { AdminOrderDetailSkeleton } from "@/components/admin/Skeleton";
 
 /** Quick status changes (shipped / cancelled use dedicated forms below). */
 const QUICK_STATUSES = ["pending", "processing", "delivered"] as const;
@@ -120,7 +121,15 @@ export default function AdminOrderDetailPage() {
   };
 
   if (!order && !err) {
-    return <p className="text-small text-sikapa-text-muted">Loading…</p>;
+    return (
+      <div className="w-full min-w-0 max-w-full">
+        <Link href="/system/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
+          ← Orders
+        </Link>
+        <h1 className="mt-3 font-serif text-page-title font-semibold">Order</h1>
+        <AdminOrderDetailSkeleton />
+      </div>
+    );
   }
 
   if (err || !order) {

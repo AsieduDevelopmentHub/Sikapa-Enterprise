@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { adminFetchCategories, adminFetchProduct, type AdminCategory, type AdminProduct } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
+import { AdminProductEditSkeleton } from "@/components/admin/Skeleton";
 
 /** Staff/sub-admin roles should not see internal identifiers (slug/SKU). */
 function isInternalViewer(role: string | undefined | null): boolean {
@@ -77,7 +78,7 @@ export default function AdminProductEditPage() {
       </Link>
       <h1 className="mt-3 font-serif text-page-title font-semibold">Edit product</h1>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
-      {!product && !err && <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>}
+      {!product && !err && <AdminProductEditSkeleton />}
       {product && (
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_1.2fr]">
           <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">

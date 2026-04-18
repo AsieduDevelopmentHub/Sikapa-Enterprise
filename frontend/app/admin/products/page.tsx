@@ -8,6 +8,7 @@ import { adminDeleteProduct, adminFetchProducts, type AdminProduct } from "@/lib
 import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminTableSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminProductsPage() {
   const { accessToken } = useAuth();
@@ -85,7 +86,9 @@ export default function AdminProductsPage() {
         />
       </div>
       {loading ? (
-        <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
+        <div className="mt-4">
+          <AdminTableSkeleton minWidthClass="min-w-[640px]" columns={5} />
+        </div>
       ) : (
         <div className="mt-4 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
           <table className="w-full min-w-[640px] text-left text-small">

@@ -10,6 +10,7 @@ import {
   type AdminUser,
 } from "@/lib/api/admin";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminStaffListSkeleton } from "@/components/admin/Skeleton";
 
 const ROLE_PRESETS: Record<"super_admin" | "admin" | "staff", string[]> = {
   super_admin: [],
@@ -38,6 +39,7 @@ export default function AdminStaffPage() {
   const [err, setErr] = useState<string | null>(null);
   const [candidateQuery, setCandidateQuery] = useState("");
   const [staffQuery, setStaffQuery] = useState("");
+  const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -47,6 +49,8 @@ export default function AdminStaffPage() {
       setRows(data.filter((u) => u.is_admin));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setReady(true);
     }
   }, [accessToken]);
 
@@ -159,6 +163,9 @@ export default function AdminStaffPage() {
           hint={staffQuery ? `${visibleStaff.length} of ${rows.length} shown` : undefined}
         />
       </div>
+      {!ready && !err ? (
+        <AdminStaffListSkeleton />
+      ) : (
       <ul className="mt-3 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
         {visibleStaff.map((u) => (
           <li
@@ -221,12 +228,13 @@ export default function AdminStaffPage() {
             </div>
           </li>
         ))}
-        {visibleStaff.length === 0 && !err && (
+        {visibleStaff.length === 0 && !err && ready && (
           <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">
             {staffQuery ? "No staff match your search." : "No admins."}
           </li>
         )}
       </ul>
+      )}
     </div>
   );
 }

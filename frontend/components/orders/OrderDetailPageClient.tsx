@@ -17,6 +17,7 @@ import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
 import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline";
 import { formatGhs } from "@/lib/mock-data";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
+import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 
 function regionLabel(slug: string | null | undefined): string | null {
   if (!slug?.trim()) return null;
@@ -142,8 +143,28 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
 
   if (authLoading) {
     return (
-      <main className="min-h-[40vh] bg-sikapa-cream px-4 py-16 text-center text-small text-sikapa-text-secondary dark:bg-zinc-950 dark:text-zinc-400">
-        Loading…
+      <main className="bg-sikapa-cream pb-10 dark:bg-zinc-950" aria-hidden>
+        <ScreenHeader variant="inner" title={`Order #${orderIdParam}`} left="back" backHref="/orders" right="profile" />
+        <div className="mx-auto max-w-mobile space-y-4 px-4 pt-2">
+          <div className="rounded-[12px] bg-white p-4 ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+            <SkeletonBlock className="h-5 w-32 rounded-full" />
+            <SkeletonBlock className="mt-3 h-3 w-40 rounded" />
+          </div>
+          <div className="rounded-[12px] bg-white p-4 ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+            <SkeletonBlock className="h-4 w-16 rounded" />
+            <div className="mt-3 space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <SkeletonBlock className="h-[64px] w-[64px] rounded-[10px]" />
+                  <div className="flex-1 space-y-2">
+                    <SkeletonBlock className="h-3 w-2/3 rounded" />
+                    <SkeletonBlock className="h-3 w-1/2 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </main>
     );
   }
@@ -197,7 +218,11 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
         )}
 
         {loading && !detail ? (
-          <p className="text-small text-sikapa-text-muted dark:text-zinc-500">Loading order…</p>
+          <div className="rounded-[12px] bg-white p-4 ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10" aria-hidden>
+            <SkeletonBlock className="h-4 w-32 rounded" />
+            <SkeletonBlock className="mt-3 h-3 w-44 rounded" />
+            <SkeletonBlock className="mt-2 h-3 w-56 rounded" />
+          </div>
         ) : null}
 
         {detail ? (

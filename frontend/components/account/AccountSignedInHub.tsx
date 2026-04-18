@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AccountTwoFactorPanel } from "@/components/account/AccountTwoFactorPanel";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -13,8 +13,6 @@ import {
   authVerifyEmail,
 } from "@/lib/api/auth";
 import { newsletterSubscribe } from "@/lib/api/subscriptions";
-import type { WishlistItemRead } from "@/lib/api/wishlist";
-import { wishlistList } from "@/lib/api/wishlist";
 import {
   GHANA_CITY_OTHER,
   GHANA_REGIONS,
@@ -37,7 +35,6 @@ export type AccountPanel =
   | "appearance"
   | "security"
   | "notifications"
-  | "wishlist"
   | "verify"
   | "newsletter"
   | "danger";
@@ -115,9 +112,6 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
   const [delPw, setDelPw] = useState("");
   const [delBusy, setDelBusy] = useState(false);
 
-  const [wishItems, setWishItems] = useState<WishlistItemRead[]>([]);
-  const [wishLoading, setWishLoading] = useState(false);
-
   const token = accessToken as string;
   const u = user!;
 
@@ -153,23 +147,6 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
     setShipContactPhone(u.shipping_contact_phone ?? u.phone ?? "");
     if (!u.email_verified && u.email && !u.email_is_placeholder) setInboxEmail(u.email);
   }, [u]);
-
-  const loadWishlist = useCallback(async () => {
-    if (!accessToken) return;
-    setWishLoading(true);
-    try {
-      const rows = await wishlistList(accessToken);
-      setWishItems(rows);
-    } catch {
-      setBanner({ type: "err", text: "Could not load wishlist." });
-    } finally {
-      setWishLoading(false);
-    }
-  }, [accessToken]);
-
-  useEffect(() => {
-    if (panel === "wishlist") void loadWishlist();
-  }, [panel, loadWishlist]);
 
   const displayName = (u.name || "").trim() || u.username || u.email || "User";
 
@@ -407,7 +384,6 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
             <NavRow label="Appearance" hint="Light, dark, or system" onClick={() => setPanel("appearance")} />
             <NavRow label="Security" hint="Password and two-step sign-in" onClick={() => setPanel("security")} />
             <NavRow label="Notifications" hint="How we reach you" onClick={() => setPanel("notifications")} />
-            <NavRow label="Wishlist" hint="Saved products" onClick={() => setPanel("wishlist")} />
             {!!u.email && !u.email_verified && !u.email_is_placeholder && (
               <NavRow label="Verify email" hint="Enter the code we sent you" onClick={() => setPanel("verify")} />
             )}
@@ -803,32 +779,6 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
               ? `Order updates, delivery notes, and account security alerts are sent to your email on file (${u.email}).`
               : "No email is on this account yet. Add one to receive email notifications."}
           </p>
-        </section>
-      )}
-
-      {panel === "wishlist" && (
-        <section className="rounded-[12px] bg-white p-5 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
-          <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-            Wishlist
-          </h2>
-          {wishLoading ? (
-            <p className="mt-3 text-small text-sikapa-text-muted">Loading…</p>
-          ) : wishItems.length === 0 ? (
-            <p className="mt-3 text-small text-sikapa-text-secondary">No saved products yet.</p>
-          ) : (
-            <ul className="mt-4 divide-y divide-sikapa-gray-soft dark:divide-white/10">
-              {wishItems.map((w) => (
-                <li key={w.id} className="py-3 first:pt-0">
-                  <Link
-                    href={`/product/${w.product_id}`}
-                    className="font-semibold text-sikapa-gold hover:underline dark:text-amber-200"
-                  >
-                    {w.product_name || `Product #${w.product_id}`}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
         </section>
       )}
 
