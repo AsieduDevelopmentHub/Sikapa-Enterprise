@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useCatalog } from "@/context/CatalogContext";
 import { HomeProductCarouselCard } from "@/components/home/HomeProductCarouselCard";
+import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 
 export function FeaturedProducts() {
   const { products, loading } = useCatalog();
@@ -23,7 +24,18 @@ export function FeaturedProducts() {
           >
             Featured
           </h2>
-          <p className="mt-2 text-small text-sikapa-text-secondary dark:text-zinc-400">Loading products…</p>
+          <div className="mt-3 flex gap-3 overflow-hidden pb-1" aria-hidden>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-[45%] shrink-0 overflow-hidden rounded-[12px] bg-white p-2 ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10"
+              >
+                <SkeletonBlock className="aspect-square w-full rounded-[10px]" />
+                <SkeletonBlock className="mt-2 h-3 w-5/6 rounded" />
+                <SkeletonBlock className="mt-1 h-3 w-2/3 rounded" />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );

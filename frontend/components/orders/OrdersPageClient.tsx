@@ -10,6 +10,7 @@ import { paystackInitialize } from "@/lib/api/payments";
 import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
 import { formatGhs } from "@/lib/mock-data";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
+import { OrderListSkeleton, SkeletonBlock } from "@/components/StorefrontSkeletons";
 
 const STATUS_FILTERS = ["all", "pending", "processing", "shipped", "delivered", "cancelled"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -80,8 +81,12 @@ export function OrdersPageClient() {
 
   if (authLoading) {
     return (
-      <main className="min-h-[40vh] bg-sikapa-cream px-4 py-16 text-center text-small text-sikapa-text-secondary dark:bg-zinc-950 dark:text-zinc-400">
-        Loading…
+      <main className="bg-sikapa-cream pb-4 dark:bg-zinc-950">
+        <ScreenHeader variant="inner" title="My Orders" left="menu" right="profile" />
+        <div className="mx-auto max-w-mobile px-4 pb-2 pt-3">
+          <SkeletonBlock className="h-11 w-28 rounded-[10px]" />
+        </div>
+        <OrderListSkeleton />
       </main>
     );
   }
@@ -143,7 +148,7 @@ export function OrdersPageClient() {
       )}
 
       {loading ? (
-        <p className="mx-auto max-w-mobile px-4 py-6 text-small text-sikapa-text-muted dark:text-zinc-500">Loading orders…</p>
+        <OrderListSkeleton />
       ) : filtered.length === 0 ? (
         <div className="mx-auto max-w-mobile px-4 py-10 text-center text-small text-sikapa-text-secondary dark:text-zinc-400">
           {rows.length === 0 ? "No orders yet." : "No orders match this filter."}

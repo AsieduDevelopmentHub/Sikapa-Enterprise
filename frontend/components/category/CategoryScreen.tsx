@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ProductCardGrid } from "@/components/product/ProductCardGrid";
 import { useCatalog } from "@/context/CatalogContext";
+import { ProductGridSkeleton } from "@/components/StorefrontSkeletons";
 import {
   filterByPriceAndRating,
   sortProducts,
@@ -120,7 +121,7 @@ export function CategoryScreen({ slug }: Props) {
 
         <div className="mt-5">
           {loading && products.length === 0 ? (
-            <p className="py-8 text-center text-small text-sikapa-text-secondary dark:text-zinc-400">Loading…</p>
+            <ProductGridSkeleton />
           ) : filtered.length === 0 ? (
             <div className="rounded-[12px] bg-white p-6 text-center text-small text-sikapa-text-secondary ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:text-zinc-400 dark:ring-white/10">
               <p className="font-semibold text-sikapa-text-primary dark:text-zinc-100">

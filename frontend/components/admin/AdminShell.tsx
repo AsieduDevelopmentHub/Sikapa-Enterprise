@@ -26,6 +26,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 
 export type AdminNavItem = {
   href: string;
@@ -94,8 +95,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-sikapa-cream font-sans text-sikapa-text-secondary">
-        Loading…
+      <div className="min-h-screen bg-sikapa-cream p-6" aria-hidden>
+        <div className="mx-auto flex w-full max-w-6xl gap-4">
+          <div className="hidden w-56 shrink-0 space-y-3 rounded-xl bg-sikapa-bg-deep p-4 lg:block">
+            <SkeletonBlock className="h-8 w-28 rounded" />
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonBlock key={i} className="h-8 w-full rounded" />
+            ))}
+          </div>
+          <div className="flex-1 space-y-4">
+            <SkeletonBlock className="h-8 w-40 rounded" />
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <SkeletonBlock key={i} className="h-24 w-full rounded-xl" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
