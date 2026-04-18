@@ -16,6 +16,7 @@ import { useRecentlyViewedProducts, trackProductView } from "@/hooks/useRecently
 import { getBackendOrigin } from "@/lib/api/client";
 import {
   fetchProductImages,
+  fetchProductVariants,
   type ProductImagePublic,
   type ProductVariantPublic,
 } from "@/lib/api/product-variants";
@@ -58,6 +59,7 @@ export function ProductDetailScreen({ product: p }: Props) {
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantPublic | null>(null);
   const [gallery, setGallery] = useState<ProductImagePublic[]>([]);
+  const [variants, setVariants] = useState<ProductVariantPublic[]>([]);
   const [activeImage, setActiveImage] = useState<string>(p.image);
 
   useEffect(() => {
@@ -81,6 +83,15 @@ export function ProductDetailScreen({ product: p }: Props) {
       .catch(() => {
         if (cancelled) return;
         setGallery([]);
+      });
+    fetchProductVariants(numericId)
+      .then((rows) => {
+        if (cancelled) return;
+        setVariants(rows);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setVariants([]);
       });
     return () => {
       cancelled = true;
@@ -112,7 +123,12 @@ export function ProductDetailScreen({ product: p }: Props) {
     hasStockInfo && !isOutOfStock && (effectiveStock ?? 0) <= 5;
 
   const thumbnails = useMemo(() => {
-    const list: { key: string; src: string; label?: string | null }[] = [];
+    const list: {
+      key: string;
+      src: string;
+      label?: string | null;
+      variantId?: number;
+    }[] = [];
     list.push({ key: "hero", src: p.image, label: "Primary" });
     for (const img of gallery) {
       const src = resolveImageSrc(img.image_url);
@@ -120,8 +136,35 @@ export function ProductDetailScreen({ product: p }: Props) {
         list.push({ key: `g-${img.id}`, src, label: img.alt_text });
       }
     }
+    // Variant-specific photos appear in the same strip so shoppers can
+    // eyeball every colour/size option without opening the variants panel.
+    for (const v of variants) {
+      if (!v.image_url) continue;
+      const src = resolveImageSrc(v.image_url);
+      if (!list.some((x) => x.src === src)) {
+        list.push({
+          key: `v-${v.id}`,
+          src,
+          label: v.name,
+          variantId: v.id,
+        });
+      }
+    }
     return list;
-  }, [gallery, p.image]);
+  }, [gallery, variants, p.image]);
+
+  // Selecting a variant thumbnail should also pick the variant (so price/
+  // stock/description update) — match by id when available.
+  const onThumbnailPick = useCallback(
+    (t: (typeof thumbnails)[number]) => {
+      setActiveImage(t.src);
+      if (t.variantId != null) {
+        const v = variants.find((x) => x.id === t.variantId) ?? null;
+        setSelectedVariant(v);
+      }
+    },
+    [variants]
+  );
 
   return (
     <div className="bg-sikapa-cream px-4 pb-28 pt-4 dark:bg-zinc-950">
@@ -153,11 +196,12 @@ export function ProductDetailScreen({ product: p }: Props) {
           <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {thumbnails.map((t) => {
               const isActive = t.src === activeImage;
+              const isVariant = t.variantId != null;
               return (
                 <button
                   key={t.key}
                   type="button"
-                  onClick={() => setActiveImage(t.src)}
+                  onClick={() => onThumbnailPick(t)}
                   className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg ring-1 transition ${
                     isActive
                       ? "ring-2 ring-sikapa-gold"
@@ -165,9 +209,15 @@ export function ProductDetailScreen({ product: p }: Props) {
                   }`}
                   aria-label={t.label ?? "Product photo"}
                   aria-pressed={isActive}
+                  title={t.label ?? undefined}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={t.src} alt="" className="h-full w-full object-cover" />
+                  {isVariant && (
+                    <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-black/55 px-1 py-[1px] text-[9px] font-semibold text-white">
+                      {t.label}
+                    </span>
+                  )}
                 </button>
               );
             })}
