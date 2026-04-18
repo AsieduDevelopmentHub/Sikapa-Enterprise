@@ -11,6 +11,7 @@ import {
   type InventoryAdjustmentRow,
 } from "@/lib/api/admin";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminInventoryPageSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminInventoryPage() {
   const { accessToken } = useAuth();
@@ -22,6 +23,7 @@ export default function AdminInventoryPage() {
   const [err, setErr] = useState<string | null>(null);
   const [stockQuery, setStockQuery] = useState("");
   const [logQuery, setLogQuery] = useState("");
+  const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -34,6 +36,8 @@ export default function AdminInventoryPage() {
       setLogs(changes);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setReady(true);
     }
   }, [accessToken]);
 
@@ -101,6 +105,10 @@ export default function AdminInventoryPage() {
         Stock levels across the catalog. Every stock change is recorded in an audit log.
       </p>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
+      {!ready && !err ? (
+        <AdminInventoryPageSkeleton />
+      ) : (
+      <>
       <form
         onSubmit={(e) => void adjust(e)}
         className="mt-6 grid gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06] sm:grid-cols-4"
@@ -153,7 +161,7 @@ export default function AdminInventoryPage() {
             }
           />
         </div>
-        {filteredStock.length === 0 && !err ? (
+        {filteredStock.length === 0 && !err && ready ? (
           <p className="mt-3 rounded-xl bg-white px-4 py-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
             {stockQuery ? "No products match your search." : "No products."}
           </p>
@@ -244,7 +252,7 @@ export default function AdminInventoryPage() {
             }
           />
         </div>
-        {filteredLogs.length === 0 ? (
+        {filteredLogs.length === 0 && ready ? (
           <p className="mt-3 rounded-xl bg-white px-4 py-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
             {logQuery ? "No movements match your search." : "No inventory movement logs yet."}
           </p>
@@ -341,6 +349,8 @@ export default function AdminInventoryPage() {
           </>
         )}
       </section>
+      </>
+      )}
     </div>
   );
 }

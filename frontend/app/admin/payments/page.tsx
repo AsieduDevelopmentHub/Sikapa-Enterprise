@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminPaymentsPageSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminPaymentsPage() {
   const { accessToken } = useAuth();
@@ -19,6 +20,7 @@ export default function AdminPaymentsPage() {
   const [customerByOrder, setCustomerByOrder] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -41,6 +43,8 @@ export default function AdminPaymentsPage() {
       setCustomerByOrder(nameByOrder);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setReady(true);
     }
   }, [accessToken]);
 
@@ -83,11 +87,13 @@ export default function AdminPaymentsPage() {
         />
       </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
-      {visibleRows.length === 0 && !err ? (
+      {!ready && !err && <AdminPaymentsPageSkeleton />}
+      {ready && !err && visibleRows.length === 0 && (
         <div className="mt-6 rounded-xl bg-white px-4 py-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
           {query ? "No transactions match your search." : "No transactions recorded."}
         </div>
-      ) : (
+      )}
+      {ready && !err && visibleRows.length > 0 && (
         <>
           <ul className="mt-6 space-y-3 md:hidden">
             {visibleRows.map((t) => (

@@ -10,6 +10,7 @@ import {
   type AdminVariant,
 } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
+import { AdminVariantRowsSkeleton } from "@/components/admin/Skeleton";
 
 type Props = {
   accessToken: string;
@@ -211,7 +212,7 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
       {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
 
       {loading ? (
-        <p className="mt-3 text-small text-sikapa-text-muted">Loading…</p>
+        <AdminVariantRowsSkeleton rows={3} />
       ) : (
         <div className="mt-4 space-y-3">
           {variants.map((v) => {
