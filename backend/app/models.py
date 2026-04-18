@@ -154,10 +154,18 @@ class Category(SQLModel, table=True):
 
 
 class CartItem(SQLModel, table=True):
-    """Shopping cart items"""
+    """Shopping cart items.
+
+    A row is keyed by (user_id, product_id, variant_id) — two rows for the
+    same product but different variants are deliberately allowed so shoppers
+    can add e.g. "Red / Small" and "Blue / Medium" of the same shirt.
+    """
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
     product_id: int = Field(foreign_key="product.id", index=True)
+    variant_id: Optional[int] = Field(
+        default=None, foreign_key="productvariant.id", index=True
+    )
     quantity: int = Field(gt=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -212,6 +220,12 @@ class OrderItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     order_id: int = Field(foreign_key="order.id", index=True)
     product_id: int = Field(foreign_key="product.id")
+    variant_id: Optional[int] = Field(
+        default=None, foreign_key="productvariant.id", index=True
+    )
+    # Snapshot of the variant label at purchase time so historical orders stay
+    # readable even if an admin later renames or deletes the variant.
+    variant_name: Optional[str] = Field(default=None, max_length=160)
     quantity: int = Field(gt=0)
     price_at_purchase: float = Field(ge=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
