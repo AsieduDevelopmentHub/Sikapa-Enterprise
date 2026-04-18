@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
-from app.models import Order, OrderItem, CartItem, Product, Invoice, User
+from app.models import Order, OrderItem, CartItem, Product, ProductVariant, Invoice, User
 from app.api.v1.orders.schemas import OrderCreateSchema
 from app.core.email_service import EmailService
 from app.core.invoice_service import InvoiceService
@@ -66,14 +66,34 @@ async def create_order_from_cart(
                 detail=f"Product {cart_item.product_id} not found during order creation"
             )
 
+        # Resolve variant (if any) so we can (a) charge the variant-adjusted
+        # price, (b) decrement the variant's stock instead of the parent's,
+        # and (c) snapshot the variant label on the order row.
+        variant: ProductVariant | None = None
+        variant_id = getattr(cart_item, "variant_id", None)
+        if variant_id is not None:
+            variant = session.get(ProductVariant, variant_id)
+            if not variant or variant.product_id != product.id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Selected option for product {product.id} is no longer available",
+                )
+
+        unit_price = float(product.price) + float(variant.price_delta) if variant else float(product.price)
+
         order_item = OrderItem(
             order_id=order.id,
             product_id=cart_item.product_id,
+            variant_id=variant.id if variant else None,
+            variant_name=variant.name if variant else None,
             quantity=cart_item.quantity,
-            price_at_purchase=product.price
+            price_at_purchase=round(unit_price, 2),
         )
         session.add(order_item)
 
+        if variant:
+            variant.in_stock = max(0, variant.in_stock - cart_item.quantity)
+            session.add(variant)
         product.in_stock -= cart_item.quantity
         product.sales_count += cart_item.quantity
         session.add(product)

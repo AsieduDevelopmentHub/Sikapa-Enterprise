@@ -2,11 +2,10 @@
 Shopping cart API routes
 """
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from fastapi import APIRouter, Depends, status
+from sqlmodel import Session
 
 from app.db import get_session
-from app.models import CartItem, Product
 from app.api.v1.auth.dependencies import get_current_active_user
 from app.api.v1.cart.schemas import (
     CartItemSchema,
@@ -50,21 +49,7 @@ async def add_cart_item(
     current_user=Depends(get_current_active_user),
     session: Session = Depends(get_session)
 ):
-    """Add item to cart."""
-    # Verify product exists
-    product = session.exec(select(Product).where(Product.id == item.product_id)).first()
-    if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found"
-        )
-    
-    if item.quantity > product.in_stock:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Only {product.in_stock} units available"
-        )
-
+    """Add item to cart. Stock + variant validity is enforced in the service."""
     return await add_to_cart(session, current_user.id, item)
 
 
