@@ -4,10 +4,12 @@ import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   adminDeleteProductImage,
   adminFetchProductImages,
+  adminFetchVariants,
   adminReorderProductImages,
   adminSetPrimaryImage,
   adminUploadProductImage,
   type AdminProductImage,
+  type AdminVariant,
 } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
 
@@ -32,6 +34,7 @@ function resolveSrc(url: string, origin: string): string {
  */
 export function ProductImagesManager({ accessToken, productId, onPrimaryChange }: Props) {
   const [items, setItems] = useState<AdminProductImage[]>([]);
+  const [variants, setVariants] = useState<AdminVariant[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,8 +45,16 @@ export function ProductImagesManager({ accessToken, productId, onPrimaryChange }
     setLoading(true);
     setErr(null);
     try {
-      const data = await adminFetchProductImages(accessToken, productId);
-      setItems(data);
+      // Pull images + variants in parallel so the "variant photos" strip
+      // stays in sync with edits from ProductVariantsManager.
+      const [imgs, vs] = await Promise.all([
+        adminFetchProductImages(accessToken, productId),
+        adminFetchVariants(accessToken, { product_id: productId, limit: 100 }).catch(
+          () => [] as AdminVariant[]
+        ),
+      ]);
+      setItems(imgs);
+      setVariants(vs);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load images");
     } finally {
@@ -54,6 +65,8 @@ export function ProductImagesManager({ accessToken, productId, onPrimaryChange }
   useEffect(() => {
     void load();
   }, [load]);
+
+  const variantPhotos = variants.filter((v) => !!v.image_url);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || !files.length) return;
@@ -231,6 +244,43 @@ export function ProductImagesManager({ accessToken, productId, onPrimaryChange }
             </li>
           ))}
         </ul>
+      )}
+
+      {variantPhotos.length > 0 && (
+        <div className="mt-6 border-t border-sikapa-gray-soft/70 pt-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="font-serif text-[0.95rem] font-semibold text-sikapa-text-primary">
+              Variant photos
+            </h3>
+            <p className="text-[11px] text-sikapa-text-muted">
+              Managed from the <span className="font-semibold">Variants</span> section below.
+            </p>
+          </div>
+          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {variantPhotos.map((v) => (
+              <li
+                key={`variant-${v.id}`}
+                className="relative overflow-hidden rounded-lg border border-dashed border-sikapa-gray-soft bg-sikapa-cream/40"
+                title={v.name}
+              >
+                <div className="relative aspect-square w-full bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={resolveSrc(v.image_url ?? "", origin)}
+                    alt={v.name}
+                    className="h-full w-full object-cover"
+                  />
+                  <span className="absolute left-1.5 top-1.5 rounded-full bg-sikapa-crimson/95 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
+                    Variant
+                  </span>
+                </div>
+                <p className="truncate px-2 py-1.5 text-[11px] font-semibold text-sikapa-text-secondary">
+                  {v.name}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   );

@@ -17,10 +17,17 @@ permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lighthouse:
     name: Lighthouse CI
     runs-on: ubuntu-latest
+    # Lighthouse is a signal, not a gate. Keep the job green while we burn in
+    # the numbers; flip to `false` when budgets in lighthouserc.json are real.
+    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,6 +50,11 @@ jobs:
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
         run: npm run build
 
+      - name: Install Chrome for Lighthouse
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli@0.13.x
 
@@ -51,3 +63,4 @@ jobs:
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
         run: lhci autorun --config=./lighthouserc.json
+        continue-on-error: true
