@@ -1,0 +1,237 @@
+"use client";
+
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  adminDeleteProductImage,
+  adminFetchProductImages,
+  adminReorderProductImages,
+  adminSetPrimaryImage,
+  adminUploadProductImage,
+  type AdminProductImage,
+} from "@/lib/api/admin";
+import { getBackendOrigin } from "@/lib/api/client";
+
+type Props = {
+  accessToken: string;
+  productId: number;
+  /** Called after primary image changes so callers can refetch the parent product. */
+  onPrimaryChange?: () => void;
+};
+
+function resolveSrc(url: string, origin: string): string {
+  return url.startsWith("http") ? url : `${origin}${url}`;
+}
+
+/**
+ * Multi-image uploader for a product. Marketplace best practice is 4-8 photos
+ * per product, so this grid supports that with:
+ *   - click-to-upload / drag-drop picker for multiple files at once
+ *   - primary star toggle (syncs the Product.image_url used by list pages)
+ *   - reorder via move-up/move-down buttons
+ *   - individual delete
+ */
+export function ProductImagesManager({ accessToken, productId, onPrimaryChange }: Props) {
+  const [items, setItems] = useState<AdminProductImage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const origin = typeof window !== "undefined" ? getBackendOrigin() : "";
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const data = await adminFetchProductImages(accessToken, productId);
+      setItems(data);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load images");
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, productId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const hadAny = items.length > 0;
+      for (let i = 0; i < files.length; i += 1) {
+        const file = files[i];
+        await adminUploadProductImage(accessToken, productId, file, {
+          primary: !hadAny && i === 0,
+        });
+      }
+      await load();
+      if (!hadAny) onPrimaryChange?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const onPickChange = (e: ChangeEvent<HTMLInputElement>) =>
+    void handleFiles(e.target.files);
+
+  const onSetPrimary = async (imageId: number) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await adminSetPrimaryImage(accessToken, productId, imageId);
+      await load();
+      onPrimaryChange?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not set primary");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onDelete = async (imageId: number) => {
+    if (!confirm("Remove this image?")) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const wasPrimary = !!items.find((x) => x.id === imageId)?.is_primary;
+      await adminDeleteProductImage(accessToken, productId, imageId);
+      await load();
+      if (wasPrimary) onPrimaryChange?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onMove = async (imageId: number, dir: -1 | 1) => {
+    const idx = items.findIndex((x) => x.id === imageId);
+    if (idx < 0) return;
+    const target = idx + dir;
+    if (target < 0 || target >= items.length) return;
+    const next = items.slice();
+    const [moved] = next.splice(idx, 1);
+    next.splice(target, 0, moved);
+    setItems(next);
+    setBusy(true);
+    setErr(null);
+    try {
+      await adminReorderProductImages(
+        accessToken,
+        productId,
+        next.map((x) => x.id)
+      );
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Reorder failed");
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 className="font-serif text-section-title font-semibold">Gallery images</h2>
+          <p className="text-small text-sikapa-text-secondary">
+            Upload several photos so shoppers can inspect the product. The star marks
+            the hero image shown on list pages.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+          className="rounded-full bg-sikapa-crimson px-4 py-1.5 text-small font-semibold text-white disabled:opacity-60"
+        >
+          {busy ? "Working…" : "Upload photos"}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="sr-only"
+          onChange={onPickChange}
+        />
+      </header>
+
+      {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
+
+      {loading ? (
+        <p className="mt-3 text-small text-sikapa-text-muted">Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="mt-3 text-small text-sikapa-text-muted">
+          No images yet. Upload one or more files above — the first will become the primary.
+        </p>
+      ) : (
+        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {items.map((img, idx) => (
+            <li
+              key={img.id}
+              className="relative overflow-hidden rounded-lg border border-sikapa-gray-soft bg-sikapa-cream/40"
+            >
+              <div className="relative aspect-square w-full bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolveSrc(img.image_url, origin)}
+                  alt={img.alt_text ?? "Product photo"}
+                  className="h-full w-full object-cover"
+                />
+                {img.is_primary && (
+                  <span className="absolute left-1.5 top-1.5 rounded-full bg-sikapa-gold/95 px-2 py-0.5 text-[10px] font-semibold text-white shadow">
+                    Primary
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-1 p-1.5">
+                <button
+                  type="button"
+                  disabled={busy || img.is_primary}
+                  onClick={() => void onSetPrimary(img.id)}
+                  className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-sikapa-text-secondary ring-1 ring-black/[0.1] disabled:opacity-40"
+                  title="Make primary"
+                >
+                  Set primary
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || idx === 0}
+                  onClick={() => void onMove(img.id, -1)}
+                  className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-sikapa-text-secondary ring-1 ring-black/[0.1] disabled:opacity-40"
+                  title="Move earlier"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || idx === items.length - 1}
+                  onClick={() => void onMove(img.id, 1)}
+                  className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-sikapa-text-secondary ring-1 ring-black/[0.1] disabled:opacity-40"
+                  title="Move later"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void onDelete(img.id)}
+                  className="ml-auto rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-rose-700 ring-1 ring-rose-200 disabled:opacity-40"
+                >
+                  Remove
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

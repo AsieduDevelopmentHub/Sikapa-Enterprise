@@ -11,12 +11,13 @@ import json
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session, select
 
 from app.api.v1.auth.dependencies import require_admin_permission
-from app.core.sanitization import sanitize_plain_text
+from app.api.v1.admin.services import upload_product_image
+from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text
 from app.db import get_session
 from app.models import Product, ProductVariant, User
 
@@ -33,6 +34,8 @@ class VariantRead(BaseModel):
     in_stock: int
     is_active: bool
     sort_order: int
+    image_url: Optional[str] = None
+    description: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -49,6 +52,15 @@ class VariantCreate(BaseModel):
     in_stock: int = Field(default=0, ge=0)
     is_active: bool = True
     sort_order: int = Field(default=0)
+    image_url: Optional[str] = Field(default=None, max_length=1024)
+    description: Optional[str] = Field(default=None, max_length=4000)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def _clean_desc(cls, v):
+        if v is None:
+            return None
+        return sanitize_multiline_text(v, max_length=4000)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -71,6 +83,15 @@ class VariantUpdate(BaseModel):
     in_stock: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
+    image_url: Optional[str] = Field(default=None, max_length=1024)
+    description: Optional[str] = Field(default=None, max_length=4000)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def _clean_desc(cls, v):
+        if v is None:
+            return None
+        return sanitize_multiline_text(v, max_length=4000)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -120,6 +141,8 @@ def _to_read(v: ProductVariant) -> VariantRead:
         in_stock=v.in_stock,
         is_active=v.is_active,
         sort_order=v.sort_order,
+        image_url=getattr(v, "image_url", None),
+        description=getattr(v, "description", None),
         created_at=v.created_at,
         updated_at=v.updated_at,
     )
@@ -166,6 +189,8 @@ async def create_variant(
         in_stock=int(body.in_stock),
         is_active=bool(body.is_active),
         sort_order=int(body.sort_order),
+        image_url=body.image_url,
+        description=body.description,
         created_at=now,
         updated_at=now,
     )
@@ -202,6 +227,32 @@ async def update_variant(
         v.is_active = bool(data["is_active"])
     if "sort_order" in data and data["sort_order"] is not None:
         v.sort_order = int(data["sort_order"])
+    if "image_url" in data:
+        v.image_url = data["image_url"]
+    if "description" in data:
+        v.description = data["description"]
+    v.updated_at = datetime.utcnow()
+    session.add(v)
+    session.commit()
+    session.refresh(v)
+    return _to_read(v)
+
+
+@router.post("/{variant_id}/image", response_model=VariantRead)
+async def upload_variant_image(
+    variant_id: int,
+    image: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin_permission("manage_products")),
+):
+    """Upload a photo for this variant. Replaces the existing image URL."""
+    v = session.get(ProductVariant, variant_id)
+    if not v:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Variant not found"
+        )
+    url = await upload_product_image(image, session, folder="variants")
+    v.image_url = url
     v.updated_at = datetime.utcnow()
     session.add(v)
     session.commit()

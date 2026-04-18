@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   adminCreateVariant,
   adminDeleteVariant,
   adminFetchVariants,
   adminUpdateVariant,
+  adminUploadVariantImage,
   type AdminVariant,
 } from "@/lib/api/admin";
+import { getBackendOrigin } from "@/lib/api/client";
 
 type Props = {
   accessToken: string;
@@ -22,6 +24,7 @@ type DraftVariant = {
   in_stock: string;
   is_active: boolean;
   sort_order: string;
+  description: string;
 };
 
 const EMPTY_DRAFT: DraftVariant = {
@@ -32,6 +35,7 @@ const EMPTY_DRAFT: DraftVariant = {
   in_stock: "0",
   is_active: true,
   sort_order: "0",
+  description: "",
 };
 
 function attrsToString(attrs: Record<string, unknown> | null | undefined): string {
@@ -72,8 +76,11 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | "new" | null>(null);
+  const [uploadingFor, setUploadingFor] = useState<number | null>(null);
   const [draft, setDraft] = useState<DraftVariant>(EMPTY_DRAFT);
   const [edits, setEdits] = useState<Record<number, DraftVariant>>({});
+  const fileInputs = useRef<Record<number, HTMLInputElement | null>>({});
+  const origin = typeof window !== "undefined" ? getBackendOrigin() : "";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,6 +98,7 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
           in_stock: String(v.in_stock ?? 0),
           is_active: v.is_active,
           sort_order: String(v.sort_order ?? 0),
+          description: v.description ?? "",
         };
       }
       setEdits(nextEdits);
@@ -122,6 +130,7 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
         in_stock: parseIntSafe(draft.in_stock, 0),
         is_active: draft.is_active,
         sort_order: parseIntSafe(draft.sort_order, 0),
+        description: draft.description.trim() || null,
       });
       setDraft(EMPTY_DRAFT);
       await load();
@@ -146,12 +155,26 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
         in_stock: parseIntSafe(d.in_stock, 0),
         is_active: d.is_active,
         sort_order: parseIntSafe(d.sort_order, 0),
+        description: d.description.trim() || null,
       });
       await load();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSaving(null);
+    }
+  };
+
+  const uploadImage = async (id: number, file: File) => {
+    setUploadingFor(id);
+    setErr(null);
+    try {
+      await adminUploadVariantImage(accessToken, id, file);
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Image upload failed");
+    } finally {
+      setUploadingFor(null);
     }
   };
 
@@ -200,14 +223,60 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
               in_stock: String(v.in_stock ?? 0),
               is_active: v.is_active,
               sort_order: String(v.sort_order ?? 0),
+              description: v.description ?? "",
             };
             const set = (patch: Partial<DraftVariant>) =>
               setEdits((prev) => ({ ...prev, [v.id]: { ...d, ...patch } }));
+            const imgSrc = v.image_url
+              ? v.image_url.startsWith("http")
+                ? v.image_url
+                : `${origin}${v.image_url}`
+              : null;
             return (
               <div
                 key={v.id}
                 className="rounded-lg border border-sikapa-gray-soft bg-sikapa-cream/40 p-3"
               >
+                <div className="mb-3 flex flex-wrap items-center gap-3">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-black/[0.08]">
+                    {imgSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imgSrc} alt={v.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] text-sikapa-text-muted">
+                        No image
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={uploadingFor === v.id}
+                    onClick={() => fileInputs.current[v.id]?.click()}
+                    className="rounded-full bg-white px-3 py-1.5 text-small font-semibold text-sikapa-text-secondary ring-1 ring-black/[0.1] disabled:opacity-60"
+                  >
+                    {uploadingFor === v.id
+                      ? "Uploading…"
+                      : imgSrc
+                      ? "Replace photo"
+                      : "Add photo"}
+                  </button>
+                  <input
+                    ref={(el) => {
+                      fileInputs.current[v.id] = el;
+                    }}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void uploadImage(v.id, f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <p className="text-[11px] text-sikapa-text-muted">
+                    Shown when a shopper selects this variant on the product page.
+                  </p>
+                </div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <Field label="Name">
                     <input
@@ -264,6 +333,15 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
                       />
                       <span>{d.is_active ? "Live" : "Hidden"}</span>
                     </label>
+                  </Field>
+                  <Field label="Description" className="sm:col-span-2 lg:col-span-4">
+                    <textarea
+                      value={d.description}
+                      onChange={(e) => set({ description: e.target.value })}
+                      placeholder="Optional copy shown when this variant is selected on the product page."
+                      rows={2}
+                      className="input-base"
+                    />
                   </Field>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -349,7 +427,20 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
                   <span>{draft.is_active ? "Live" : "Hidden"}</span>
                 </label>
               </Field>
+              <Field label="Description" className="sm:col-span-2 lg:col-span-4">
+                <textarea
+                  value={draft.description}
+                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                  placeholder="Optional — shown instead of the base description when this variant is selected."
+                  rows={2}
+                  className="input-base"
+                />
+              </Field>
             </div>
+            <p className="mt-2 text-[11px] text-sikapa-text-muted">
+              Add a photo for this variant after it is created (the image replaces the
+              main product photo when a shopper taps the option).
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"

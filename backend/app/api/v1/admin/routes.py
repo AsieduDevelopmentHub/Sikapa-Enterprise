@@ -16,6 +16,7 @@ from app.api.v1.admin.settings import router as settings_router
 from app.api.v1.admin.returns import router as returns_admin_router
 from app.api.v1.admin.search_analytics import router as search_analytics_router
 from app.api.v1.admin.variants import router as variants_router
+from app.api.v1.admin.product_images import router as product_images_router
 
 router = APIRouter(prefix="/admin")
 
@@ -33,3 +34,6 @@ router.include_router(settings_router, prefix="/settings")
 router.include_router(returns_admin_router, prefix="/returns")
 router.include_router(search_analytics_router, prefix="/search-analytics")
 router.include_router(variants_router, prefix="/variants")
+# Product image gallery (multi-image uploads). Nested under /admin/products/{id}/images
+# but registered as a sibling router so it doesn't conflict with core CRUD.
+router.include_router(product_images_router, prefix="/products")
