@@ -43,16 +43,40 @@ export function AdminDashboardContent() {
     setLoading(true);
     setErr(null);
     try {
-      const [d, rev, orders, products] = await Promise.all([
+      // Use allSettled so a single permission-scoped endpoint (e.g. the
+      // product list returning 403 for staff without `manage_products`) does
+      // NOT blank out the entire dashboard — the revenue chart and other
+      // widgets keep rendering even when a sibling call fails.
+      const [dRes, revRes, ordersRes, productsRes] = await Promise.allSettled([
         adminFetchDashboard(accessToken, days),
         adminFetchRevenue(accessToken, days),
         adminFetchOrders(accessToken, { limit: 10 }),
         adminFetchProducts(accessToken, { limit: 40 }),
       ]);
-      setData(d);
-      setRevenue(rev);
-      setRecent(orders);
-      setLowStock(products.filter((p) => p.is_active && p.in_stock <= 5).slice(0, 8));
+
+      if (dRes.status === "fulfilled") setData(dRes.value);
+      if (revRes.status === "fulfilled") setRevenue(revRes.value);
+      if (ordersRes.status === "fulfilled") setRecent(ordersRes.value);
+      if (productsRes.status === "fulfilled") {
+        setLowStock(
+          productsRes.value
+            .filter((p) => p.is_active && p.in_stock <= 5)
+            .slice(0, 8)
+        );
+      }
+
+      const failures = [dRes, revRes, ordersRes, productsRes].filter(
+        (r): r is PromiseRejectedResult => r.status === "rejected"
+      );
+      if (failures.length > 0) {
+        const first = failures[0].reason;
+        const msg = first instanceof Error ? first.message : String(first);
+        setErr(
+          msg.includes("403")
+            ? "Some panels are hidden because your role does not have access to them."
+            : `Some panels failed to load: ${msg}`
+        );
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not load dashboard";
       setErr(msg.includes("403") ? "You do not have access to this area." : msg);
@@ -96,7 +120,9 @@ export function AdminDashboardContent() {
       {err && (
         <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-small text-red-800 ring-1 ring-red-100">{err}</p>
       )}
-      {loading && !data && <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>}
+      {loading && !data && revenue.length === 0 && (
+        <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
+      )}
 
       {data && (
         <>
@@ -111,20 +137,26 @@ export function AdminDashboardContent() {
             <StatCard label="Active carts" value={String(data.active_carts)} />
             <StatCard label="Users (total)" value={String(data.total_users)} />
           </div>
+        </>
+      )}
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-              <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
-                Revenue trend
-              </h2>
-              <p className="mt-1 text-[11px] text-sikapa-text-muted">
-                Daily gross revenue over the last {Math.min(revenue.length, days)} days.
-              </p>
-              <div className="mt-4 text-sikapa-crimson">
-                <RevenueTrendChart stats={revenue} window={days} />
-              </div>
-            </section>
+      {/* Render charts outside the `data` gate so the revenue graph still
+          renders when only the dashboard metrics call fails. */}
+      {(revenue.length > 0 || data) && (
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+            <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+              Revenue trend
+            </h2>
+            <p className="mt-1 text-[11px] text-sikapa-text-muted">
+              Daily gross revenue over the last {Math.min(revenue.length, days)} days.
+            </p>
+            <div className="mt-4 text-sikapa-crimson">
+              <RevenueTrendChart stats={revenue} window={days} />
+            </div>
+          </section>
 
+          {data && (
             <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
               <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
                 Orders by status
@@ -134,8 +166,12 @@ export function AdminDashboardContent() {
               </p>
               <OrderStatusDonut stats={data.order_stats} />
             </section>
-          </div>
+          )}
+        </div>
+      )}
 
+      {data && (
+        <>
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
             <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
               <div className="flex items-center justify-between">

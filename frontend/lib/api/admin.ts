@@ -625,6 +625,8 @@ export type AdminVariant = {
   in_stock: number;
   is_active: boolean;
   sort_order: number;
+  image_url?: string | null;
+  description?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -652,6 +654,8 @@ export async function adminCreateVariant(
     in_stock?: number;
     is_active?: boolean;
     sort_order?: number;
+    image_url?: string | null;
+    description?: string | null;
   }
 ): Promise<AdminVariant> {
   return apiFetchJsonAuth<AdminVariant>(accessToken, `${V1.admin.variants}/`, {
@@ -672,6 +676,8 @@ export async function adminUpdateVariant(
     in_stock: number;
     is_active: boolean;
     sort_order: number;
+    image_url: string | null;
+    description: string | null;
   }>
 ): Promise<AdminVariant> {
   return apiFetchJsonAuth<AdminVariant>(accessToken, V1.admin.variant(variantId), {
@@ -681,11 +687,106 @@ export async function adminUpdateVariant(
   });
 }
 
+export async function adminUploadVariantImage(
+  accessToken: string,
+  variantId: number,
+  file: File
+): Promise<AdminVariant> {
+  const fd = new FormData();
+  fd.append("image", file);
+  return apiFetchFormAuth<AdminVariant>(
+    accessToken,
+    `${V1.admin.variant(variantId)}/image`,
+    fd,
+    "POST"
+  );
+}
+
 export async function adminDeleteVariant(
   accessToken: string,
   variantId: number
 ): Promise<void> {
   await apiFetchJsonAuthMethod<undefined>(accessToken, V1.admin.variant(variantId), "DELETE");
+}
+
+// ---- Product image gallery ----
+
+export type AdminProductImage = {
+  id: number;
+  product_id: number;
+  image_url: string;
+  alt_text?: string | null;
+  is_primary: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+export async function adminFetchProductImages(
+  accessToken: string,
+  productId: number
+): Promise<AdminProductImage[]> {
+  return apiFetchJsonAuth<AdminProductImage[]>(
+    accessToken,
+    `${V1.admin.product(productId)}/images`
+  );
+}
+
+export async function adminUploadProductImage(
+  accessToken: string,
+  productId: number,
+  file: File,
+  options?: { altText?: string; primary?: boolean }
+): Promise<AdminProductImage> {
+  const fd = new FormData();
+  fd.append("image", file);
+  if (options?.altText) fd.append("alt_text", options.altText);
+  if (options?.primary != null) fd.append("is_primary", String(options.primary));
+  return apiFetchFormAuth<AdminProductImage>(
+    accessToken,
+    `${V1.admin.product(productId)}/images`,
+    fd,
+    "POST"
+  );
+}
+
+export async function adminSetPrimaryImage(
+  accessToken: string,
+  productId: number,
+  imageId: number
+): Promise<AdminProductImage> {
+  return apiFetchJsonAuth<AdminProductImage>(
+    accessToken,
+    `${V1.admin.product(productId)}/images/${imageId}/primary`,
+    { method: "PATCH" }
+  );
+}
+
+export async function adminReorderProductImages(
+  accessToken: string,
+  productId: number,
+  order: number[]
+): Promise<AdminProductImage[]> {
+  return apiFetchJsonAuth<AdminProductImage[]>(
+    accessToken,
+    `${V1.admin.product(productId)}/images/reorder`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    }
+  );
+}
+
+export async function adminDeleteProductImage(
+  accessToken: string,
+  productId: number,
+  imageId: number
+): Promise<void> {
+  await apiFetchJsonAuthMethod<undefined>(
+    accessToken,
+    `${V1.admin.product(productId)}/images/${imageId}`,
+    "DELETE"
+  );
 }
 
 // ---- Low-stock list ----
