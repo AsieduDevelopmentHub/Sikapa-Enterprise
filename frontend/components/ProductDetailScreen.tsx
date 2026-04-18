@@ -117,6 +117,19 @@ export function ProductDetailScreen({ product: p }: Props) {
   const effectiveStock = selectedVariant
     ? selectedVariant.in_stock
     : p.in_stock ?? null;
+
+  // A synthetic product snapshot used to render <ProductPriceLabel> with the
+  // variant-adjusted price while keeping the SAME font, size, and colour as the
+  // base render path. When a variant is selected we drop `compareAtPrice` because
+  // variant deltas invalidate the discount comparison.
+  const priceSnapshot: MockProduct = useMemo(() => {
+    if (!selectedVariant) return p;
+    return {
+      ...p,
+      price: effectivePrice,
+      compareAtPrice: undefined,
+    };
+  }, [p, selectedVariant, effectivePrice]);
   const hasStockInfo = typeof effectiveStock === "number";
   const isOutOfStock = hasStockInfo && (effectiveStock ?? 0) <= 0;
   const isLowStock =
@@ -153,14 +166,20 @@ export function ProductDetailScreen({ product: p }: Props) {
     return list;
   }, [gallery, variants, p.image]);
 
-  // Selecting a variant thumbnail should also pick the variant (so price/
-  // stock/description update) — match by id when available.
+  // Thumbnail click rules:
+  //   - variant tile: select that variant (drives price/stock/description).
+  //   - primary "hero" tile OR any plain gallery tile: clear the variant
+  //     so the base product data is restored in the UI (otherwise a stale
+  //     variant keeps driving the price/stock long after the user taps back
+  //     to the default photo).
   const onThumbnailPick = useCallback(
     (t: (typeof thumbnails)[number]) => {
       setActiveImage(t.src);
       if (t.variantId != null) {
         const v = variants.find((x) => x.id === t.variantId) ?? null;
         setSelectedVariant(v);
+      } else {
+        setSelectedVariant(null);
       }
     },
     [variants]
@@ -259,12 +278,11 @@ export function ProductDetailScreen({ product: p }: Props) {
             Price
           </p>
           <div className="mt-1">
-            {selectedVariant ? (
-              <p className="font-serif text-[1.3rem] font-semibold text-sikapa-text-primary dark:text-zinc-100">
-                {formatGhs(effectivePrice)}
+            <ProductPriceLabel product={priceSnapshot} size="md" />
+            {selectedVariant && (
+              <p className="mt-0.5 text-[11px] font-medium text-sikapa-text-muted dark:text-zinc-500">
+                {selectedVariant.name}
               </p>
-            ) : (
-              <ProductPriceLabel product={p} size="md" />
             )}
           </div>
         </div>

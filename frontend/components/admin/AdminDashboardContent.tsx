@@ -140,33 +140,43 @@ export function AdminDashboardContent() {
         </>
       )}
 
-      {/* Render charts outside the `data` gate so the revenue graph still
-          renders when only the dashboard metrics call fails. */}
-      {(revenue.length > 0 || data) && (
+      {/* Render charts unconditionally (once auth is ready) so admins always
+          see either the graph or the "no revenue in this range" empty state —
+          previously the whole section was hidden when both `data` and `revenue`
+          were empty, which looked like "analytics not showing". */}
+      {accessToken && (
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
               Revenue trend
             </h2>
             <p className="mt-1 text-[11px] text-sikapa-text-muted">
-              Daily gross revenue over the last {Math.min(revenue.length, days)} days.
+              {loading && revenue.length === 0
+                ? "Loading revenue…"
+                : revenue.length > 0
+                ? `Daily gross revenue over the last ${Math.min(revenue.length, days)} days.`
+                : `No revenue recorded in the last ${days} days.`}
             </p>
             <div className="mt-4 text-sikapa-crimson">
               <RevenueTrendChart stats={revenue} window={days} />
             </div>
           </section>
 
-          {data && (
-            <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-              <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
-                Orders by status
-              </h2>
-              <p className="mt-1 text-[11px] text-sikapa-text-muted">
-                Share of orders by fulfilment state in the selected window.
-              </p>
+          <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+            <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+              Orders by status
+            </h2>
+            <p className="mt-1 text-[11px] text-sikapa-text-muted">
+              Share of orders by fulfilment state in the selected window.
+            </p>
+            {data ? (
               <OrderStatusDonut stats={data.order_stats} />
-            </section>
-          )}
+            ) : (
+              <p className="mt-4 text-small text-sikapa-text-muted">
+                {loading ? "Loading…" : "Order-status breakdown is unavailable for your role."}
+              </p>
+            )}
+          </section>
         </div>
       )}
 
