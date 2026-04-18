@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminDeleteReview,
@@ -10,6 +10,7 @@ import {
   adminFetchUsers,
   type AdminReview,
 } from "@/lib/api/admin";
+import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 
 export default function AdminReviewsPage() {
   const { accessToken } = useAuth();
@@ -17,6 +18,7 @@ export default function AdminReviewsPage() {
   const [users, setUsers] = useState<Record<number, string>>({});
   const [products, setProducts] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -42,13 +44,34 @@ export default function AdminReviewsPage() {
     void load();
   }, [load]);
 
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      const productName = products[r.product_id] ?? "";
+      const userName = users[r.user_id] ?? "";
+      const hay = `${r.title} ${r.content ?? ""} ${productName} ${userName} ${r.rating}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [rows, query, products, users]);
+
   return (
     <div className="w-full min-w-0 max-w-full">
-      <h1 className="font-serif text-page-title font-semibold">Reviews</h1>
-      <p className="text-small text-sikapa-text-secondary">Moderate customer feedback. Removing a review is permanent.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-serif text-page-title font-semibold">Reviews</h1>
+          <p className="text-small text-sikapa-text-secondary">Moderate customer feedback. Removing a review is permanent.</p>
+        </div>
+        <AdminSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search product, customer, or text…"
+          hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
+        />
+      </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       <ul className="mt-6 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-        {rows.map((r) => (
+        {visibleRows.map((r) => (
           <li key={r.id} className="px-4 py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
               <div className="min-w-0 flex-1">
@@ -90,8 +113,10 @@ export default function AdminReviewsPage() {
             </div>
           </li>
         ))}
-        {rows.length === 0 && !err && (
-          <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">No reviews.</li>
+        {visibleRows.length === 0 && !err && (
+          <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">
+            {query ? "No reviews match your search." : "No reviews."}
+          </li>
         )}
       </ul>
     </div>
