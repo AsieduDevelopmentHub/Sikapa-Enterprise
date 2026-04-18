@@ -25,15 +25,40 @@ import { formatGhs, type MockProduct } from "@/lib/mock-data";
 export type CartLine = {
   product: MockProduct;
   quantity: number;
+  /** Effective unit price in GHS. Includes variant price delta when picked. */
+  unitPrice: number;
+  /** Optional variant bound to this line. */
+  variantId?: number | null;
+  variantLabel?: string | null;
+  variantImage?: string | null;
+  /**
+   * Stable local key that distinguishes the same product with different
+   * variants, e.g. `"42|7"` = product 42 + variant 7, `"42|"` = base product.
+   */
+  lineKey: string;
   /** Set when this row is synced with `GET /cart` or `POST /cart/items`. */
   serverLineId?: number;
 };
 
+export type AddToCartOptions = {
+  variantId?: number | null;
+  variantLabel?: string | null;
+  variantImage?: string | null;
+  /** price = product.price + priceDelta. */
+  priceDelta?: number | null;
+};
+
+type PendingAdd = {
+  productId: string;
+  qty: number;
+  opts: AddToCartOptions;
+};
+
 type CartContextValue = {
   lines: CartLine[];
-  addProduct: (productId: string, qty?: number) => void;
-  setQuantity: (productId: string, quantity: number) => void;
-  removeLine: (productId: string) => void;
+  addProduct: (productId: string, qty?: number, opts?: AddToCartOptions) => void;
+  setQuantity: (lineKey: string, quantity: number) => void;
+  removeLine: (lineKey: string) => void;
   subtotal: number;
   shipping: number;
   total: number;
@@ -45,21 +70,38 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+function makeLineKey(productId: string, variantId?: number | null): string {
+  return `${productId}|${variantId ?? ""}`;
+}
+
 function mergePendingIntoLines(
   base: CartLine[],
-  pending: { productId: string; qty: number } | null,
+  pending: PendingAdd | null,
   getProduct: (id: string) => MockProduct | undefined
 ): CartLine[] {
   if (!pending) return base;
   const p = getProduct(pending.productId);
   if (!p) return base;
-  const i = base.findIndex((l) => l.product.id === pending.productId);
+  const key = makeLineKey(pending.productId, pending.opts.variantId ?? null);
+  const i = base.findIndex((l) => l.lineKey === key);
   if (i >= 0) {
     const next = [...base];
     next[i] = { ...next[i], quantity: next[i].quantity + pending.qty };
     return next;
   }
-  return [...base, { product: p, quantity: pending.qty }];
+  const unitPrice = p.price + (pending.opts.priceDelta ?? 0);
+  return [
+    ...base,
+    {
+      product: p,
+      quantity: pending.qty,
+      unitPrice,
+      variantId: pending.opts.variantId ?? null,
+      variantLabel: pending.opts.variantLabel ?? null,
+      variantImage: pending.opts.variantImage ?? null,
+      lineKey: key,
+    },
+  ];
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -70,7 +112,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cartSyncing, setCartSyncing] = useState(false);
   const [cartActionError, setCartActionError] = useState<string | null>(null);
   const [cartAuthOpen, setCartAuthOpen] = useState(false);
-  const pendingAddRef = useRef<{ productId: string; qty: number } | null>(null);
+  const pendingAddRef = useRef<PendingAdd | null>(null);
   const prevHadUserRef = useRef(false);
   const linesRef = useRef(lines);
   linesRef.current = lines;
@@ -79,20 +121,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const syncedUserIdRef = useRef<number | null>(null);
 
   const addProductInternal = useCallback(
-    (productId: string, qty = 1) => {
+    (productId: string, qty: number, opts: AddToCartOptions) => {
       const product = getProduct(productId);
       if (!product) return;
+      const key = makeLineKey(productId, opts.variantId ?? null);
       setLines((prev) => {
-        const i = prev.findIndex((l) => l.product.id === productId);
+        const i = prev.findIndex((l) => l.lineKey === key);
         if (i >= 0) {
           const next = [...prev];
-          next[i] = {
-            ...next[i],
-            quantity: next[i].quantity + qty,
-          };
+          next[i] = { ...next[i], quantity: next[i].quantity + qty };
           return next;
         }
-        return [...prev, { product, quantity: qty }];
+        const unitPrice = product.price + (opts.priceDelta ?? 0);
+        return [
+          ...prev,
+          {
+            product,
+            quantity: qty,
+            unitPrice,
+            variantId: opts.variantId ?? null,
+            variantLabel: opts.variantLabel ?? null,
+            variantImage: opts.variantImage ?? null,
+            lineKey: key,
+          },
+        ];
       });
     },
     [getProduct]
@@ -101,33 +153,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCartActionError = useCallback(() => setCartActionError(null), []);
 
   const addProduct = useCallback(
-    (productId: string, qty = 1) => {
+    (productId: string, qty = 1, opts: AddToCartOptions = {}) => {
       if (authLoading) return;
       if (!user) {
-        pendingAddRef.current = { productId, qty };
+        pendingAddRef.current = { productId, qty, opts };
         setCartAuthOpen(true);
         return;
       }
       if (!accessToken) return;
       setCartActionError(null);
       if (source === "mock") {
-        addProductInternal(productId, qty);
+        addProductInternal(productId, qty, opts);
         setCartActionError(
           "Live catalog is offline, so your bag is saved on this device only. Reconnect the shop to sync purchases."
         );
         return;
       }
       const snapshot = linesRef.current;
-      addProductInternal(productId, qty);
+      addProductInternal(productId, qty, opts);
+      const key = makeLineKey(productId, opts.variantId ?? null);
       void (async () => {
         try {
           const row = await cartAddItem(accessToken, {
             product_id: Number(productId),
             quantity: qty,
+            variant_id: opts.variantId ?? null,
           });
           setLines((prev) =>
             prev.map((l) =>
-              l.product.id === productId ? { ...l, serverLineId: row.id } : l
+              l.lineKey === key ? { ...l, serverLineId: row.id } : l
             )
           );
           showToast("Added to bag");
@@ -161,6 +215,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           await cartAddItem(accessToken, {
             product_id: Number(line.product.id),
             quantity: line.quantity,
+            variant_id: line.variantId ?? null,
           });
         }
         if (cancelled) return;
@@ -170,9 +225,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         for (const si of server) {
           const product = getProductRef.current(String(si.product_id));
           if (!product) continue;
+          const priceDelta = si.variant_price_delta ?? 0;
           mapped.push({
             product,
             quantity: si.quantity,
+            unitPrice: product.price + priceDelta,
+            variantId: si.variant_id ?? null,
+            variantLabel: si.variant_name ?? null,
+            variantImage: si.variant_image_url ?? null,
+            lineKey: makeLineKey(String(si.product_id), si.variant_id ?? null),
             serverLineId: si.id,
           });
         }
@@ -211,44 +272,46 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setQuantity = useCallback(
-    (productId: string, quantity: number) => {
-      const cur = linesRef.current.find((l) => l.product.id === productId);
+    (lineKey: string, quantity: number) => {
+      const cur = linesRef.current.find((l) => l.lineKey === lineKey);
+      if (!cur) return;
       if (quantity < 1) {
-        if (cur?.serverLineId && accessToken) {
+        if (cur.serverLineId && accessToken) {
           void cartDeleteItem(accessToken, cur.serverLineId).catch((e) =>
             console.warn("[Sikapa] cart delete line failed", e)
           );
         }
-        setLines((prev) => prev.filter((l) => l.product.id !== productId));
+        setLines((prev) => prev.filter((l) => l.lineKey !== lineKey));
         return;
       }
-      if (cur?.serverLineId && accessToken) {
+      if (cur.serverLineId && accessToken) {
         void cartUpdateItem(accessToken, cur.serverLineId, quantity).catch((e) =>
           console.warn("[Sikapa] cart update failed", e)
         );
       }
       setLines((prev) =>
-        prev.map((l) => (l.product.id === productId ? { ...l, quantity } : l))
+        prev.map((l) => (l.lineKey === lineKey ? { ...l, quantity } : l))
       );
     },
     [accessToken]
   );
 
   const removeLine = useCallback(
-    (productId: string) => {
-      const cur = linesRef.current.find((l) => l.product.id === productId);
-      if (cur?.serverLineId && accessToken) {
+    (lineKey: string) => {
+      const cur = linesRef.current.find((l) => l.lineKey === lineKey);
+      if (!cur) return;
+      if (cur.serverLineId && accessToken) {
         void cartDeleteItem(accessToken, cur.serverLineId).catch((e) =>
           console.warn("[Sikapa] cart delete line failed", e)
         );
       }
-      setLines((prev) => prev.filter((l) => l.product.id !== productId));
+      setLines((prev) => prev.filter((l) => l.lineKey !== lineKey));
     },
     [accessToken]
   );
 
   const subtotal = useMemo(
-    () => lines.reduce((s, l) => s + l.product.price * l.quantity, 0),
+    () => lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0),
     [lines]
   );
 

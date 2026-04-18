@@ -71,15 +71,8 @@ export function RevenueTrendChart({ stats, window = 30 }: Props) {
           .join(" L ")} L ${xFor(data.length - 1)},${yFor(0)} Z`
       : "";
 
-  if (data.length === 0) {
-    return (
-      <p className="text-small text-sikapa-text-muted">
-        No revenue in this range.
-      </p>
-    );
-  }
-
-  const hovered = hoverIdx != null ? data[hoverIdx] : null;
+  const hovered = hoverIdx != null && data[hoverIdx] ? data[hoverIdx] : null;
+  const isEmpty = data.length === 0;
 
   return (
     <div className="w-full">
@@ -126,26 +119,56 @@ export function RevenueTrendChart({ stats, window = 30 }: Props) {
             </g>
           ))}
 
-          <g className="text-sikapa-crimson">
-            <path d={areaPath} fill="url(#sk-rev-area)" />
-            <polyline
-              points={points}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            {data.map((s, i) => (
-              <circle
-                key={s.date}
-                cx={xFor(i)}
-                cy={yFor(s.revenue)}
-                r={hoverIdx === i ? 4 : 2.5}
-                fill="currentColor"
+          {!isEmpty && (
+            <g className="text-sikapa-crimson">
+              <path d={areaPath} fill="url(#sk-rev-area)" />
+              <polyline
+                points={points}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
               />
-            ))}
-          </g>
+              {data.map((s, i) => (
+                <circle
+                  key={s.date}
+                  cx={xFor(i)}
+                  cy={yFor(s.revenue)}
+                  r={hoverIdx === i ? 4 : 2.5}
+                  fill="currentColor"
+                />
+              ))}
+            </g>
+          )}
+
+          {isEmpty && (
+            <>
+              <line
+                x1={PADDING.left}
+                x2={WIDTH - PADDING.right}
+                y1={yFor(0)}
+                y2={yFor(0)}
+                className="text-sikapa-crimson"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeOpacity="0.35"
+                strokeDasharray="5 5"
+              />
+              <text
+                x={(PADDING.left + WIDTH - PADDING.right) / 2}
+                y={PADDING.top + innerH / 2}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="text-sikapa-text-muted"
+                fill="currentColor"
+                fillOpacity="0.75"
+                fontSize="13"
+              >
+                No revenue in this range yet
+              </text>
+            </>
+          )}
 
           {data.length > 1 && (
             <g className="text-sikapa-text-muted">
@@ -167,19 +190,20 @@ export function RevenueTrendChart({ stats, window = 30 }: Props) {
             </g>
           )}
 
-          {data.map((s, i) => (
-            <rect
-              key={`hit-${s.date}`}
-              x={xFor(i) - innerW / data.length / 2}
-              y={PADDING.top}
-              width={Math.max(innerW / data.length, 6)}
-              height={innerH}
-              fill="transparent"
-              onMouseEnter={() => setHoverIdx(i)}
-              onMouseMove={() => setHoverIdx(i)}
-              onClick={() => setHoverIdx(i)}
-            />
-          ))}
+          {!isEmpty &&
+            data.map((s, i) => (
+              <rect
+                key={`hit-${s.date}`}
+                x={xFor(i) - innerW / data.length / 2}
+                y={PADDING.top}
+                width={Math.max(innerW / data.length, 6)}
+                height={innerH}
+                fill="transparent"
+                onMouseEnter={() => setHoverIdx(i)}
+                onMouseMove={() => setHoverIdx(i)}
+                onClick={() => setHoverIdx(i)}
+              />
+            ))}
 
           {hoverIdx != null && (
             <line
@@ -213,7 +237,9 @@ export function RevenueTrendChart({ stats, window = 30 }: Props) {
           Daily revenue
         </span>
         <span>
-          Window: last {data.length} day{data.length === 1 ? "" : "s"}
+          {isEmpty
+            ? `Window: last ${window} days (no paid orders)`
+            : `Window: last ${data.length} day${data.length === 1 ? "" : "s"}`}
         </span>
       </div>
     </div>

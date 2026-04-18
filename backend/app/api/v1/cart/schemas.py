@@ -14,6 +14,11 @@ class CartItemSchema(BaseModel):
     user_id: int
     product_id: int
     variant_id: Optional[int] = None
+    # Embedded so the client can render "Blue / M · +GHS 20" without having
+    # to issue a second request per cart line.
+    variant_name: Optional[str] = None
+    variant_price_delta: Optional[float] = None
+    variant_image_url: Optional[str] = None
     quantity: int = Field(gt=0)
     created_at: datetime
     updated_at: datetime

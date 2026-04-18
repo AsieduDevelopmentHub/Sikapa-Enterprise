@@ -8,6 +8,10 @@ export type CartItemRow = {
   product_id: number;
   /** Optional variant SKU — null for products without options picked. */
   variant_id?: number | null;
+  /** Inlined variant details so cart/checkout UIs don't need a second hop. */
+  variant_name?: string | null;
+  variant_price_delta?: number | null;
+  variant_image_url?: string | null;
   quantity: number;
   created_at: string;
   updated_at: string;

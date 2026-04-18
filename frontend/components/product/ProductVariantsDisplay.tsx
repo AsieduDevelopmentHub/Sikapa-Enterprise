@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchProductVariants,
   type ProductVariantPublic,
@@ -10,116 +10,77 @@ import { formatGhs } from "@/lib/mock-data";
 type Props = {
   productId: number;
   basePrice: number;
+  /** Supplied by parent to avoid a duplicate network call. */
+  variants?: ProductVariantPublic[];
+  /** Controlled-mode selection; when omitted the component manages it. */
+  selectedId?: number | null;
+  onSelectedIdChange?: (id: number | null) => void;
   onVariantChange?: (variant: ProductVariantPublic | null) => void;
 };
 
-// Keys treated as "size" when mining variant attributes (case-insensitive).
-const SIZE_KEYS = ["size", "sizes", "sz"];
-// Keys treated as "color" when mining variant attributes (case-insensitive).
-const COLOR_KEYS = ["color", "colour", "colors", "colours"];
+type AttrMap = Record<string, string>;
 
-// Canonical ordering for common garment sizes so XS → XXL render the way
-// shoppers expect instead of alphabetical.
-const SIZE_SORT = [
-  "xxs",
-  "xs",
-  "s",
-  "small",
-  "m",
-  "medium",
-  "l",
-  "large",
-  "xl",
-  "x-large",
-  "xxl",
-  "2xl",
-  "xxxl",
-  "3xl",
-];
+function attrValue(v: ProductVariantPublic, key: string): string | null {
+  const a = v.attributes as Record<string, unknown> | null | undefined;
+  if (!a) return null;
+  const raw = a[key];
+  if (raw == null) return null;
+  const s = String(raw).trim();
+  return s.length > 0 ? s : null;
+}
 
-function attrsOf(v: ProductVariantPublic): Record<string, string> {
-  const a = v.attributes;
-  if (!a || typeof a !== "object") return {};
-  const out: Record<string, string> = {};
-  for (const [k, val] of Object.entries(a)) {
-    if (val == null) continue;
-    out[k.toLowerCase()] = String(val);
+function collectAttrKeys(variants: ProductVariantPublic[]): string[] {
+  const counts = new Map<string, number>();
+  for (const v of variants) {
+    const keys = Object.keys(v.attributes ?? {});
+    for (const k of keys) counts.set(k, (counts.get(k) ?? 0) + 1);
   }
-  return out;
+  // Only treat a key as a structured dimension when most variants carry it.
+  return [...counts.entries()]
+    .filter(([, n]) => n >= Math.max(1, Math.floor(variants.length / 2)))
+    .map(([k]) => k);
 }
 
-function pickAttr(attrs: Record<string, string>, keys: string[]): string | null {
-  for (const k of keys) {
-    if (attrs[k] != null && attrs[k] !== "") return attrs[k];
-  }
-  return null;
+function prettyKey(k: string): string {
+  return k
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function sortSizes(values: string[]): string[] {
-  return [...values].sort((a, b) => {
-    const ia = SIZE_SORT.indexOf(a.toLowerCase());
-    const ib = SIZE_SORT.indexOf(b.toLowerCase());
-    if (ia >= 0 && ib >= 0) return ia - ib;
-    if (ia >= 0) return -1;
-    if (ib >= 0) return 1;
-    return a.localeCompare(b);
-  });
-}
-
-// Best-effort mapping from a colour label → a CSS colour so the swatches show
-// a real tint. Falls back to a neutral grey with the label as the hover title.
-const COLOR_HEX: Record<string, string> = {
-  black: "#111827",
-  white: "#ffffff",
-  grey: "#9ca3af",
-  gray: "#9ca3af",
-  red: "#dc2626",
-  crimson: "#a6192e",
-  pink: "#ec4899",
-  rose: "#f43f5e",
-  orange: "#f97316",
-  yellow: "#eab308",
-  gold: "#d4a017",
-  green: "#16a34a",
-  olive: "#556b2f",
-  teal: "#0d9488",
-  blue: "#2563eb",
-  navy: "#1e3a8a",
-  indigo: "#4f46e5",
-  purple: "#9333ea",
-  brown: "#92400e",
-  beige: "#d6c7a1",
-  cream: "#f3eadb",
-};
-
-function resolveSwatchColor(label: string): string {
-  const lower = label.toLowerCase().trim();
-  if (COLOR_HEX[lower]) return COLOR_HEX[lower];
-  // Accept raw hex / rgb / css names as a pass-through.
-  if (/^#[0-9a-f]{3,8}$/i.test(label) || label.startsWith("rgb")) return label;
-  return "#d1d5db";
-}
-
-export function ProductVariantsDisplay({ productId, basePrice, onVariantChange }: Props) {
-  const [variants, setVariants] = useState<ProductVariantPublic[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  // Dimension picks (used only when variants expose size / colour attributes).
-  const [pickedSize, setPickedSize] = useState<string | null>(null);
-  const [pickedColor, setPickedColor] = useState<string | null>(null);
+export function ProductVariantsDisplay({
+  productId,
+  basePrice,
+  variants: variantsProp,
+  selectedId: controlledSelectedId,
+  onSelectedIdChange,
+  onVariantChange,
+}: Props) {
+  const isControlled = controlledSelectedId !== undefined;
+  const [internalVariants, setInternalVariants] = useState<ProductVariantPublic[]>([]);
+  const [loading, setLoading] = useState(!variantsProp);
+  const [internalSelectedId, setInternalSelectedId] = useState<number | null>(null);
+  const selectedId = isControlled ? controlledSelectedId : internalSelectedId;
+  const setSelectedId = (id: number | null) => {
+    if (isControlled) onSelectedIdChange?.(id);
+    else setInternalSelectedId(id);
+  };
 
   useEffect(() => {
+    if (variantsProp) {
+      setInternalVariants(variantsProp);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     fetchProductVariants(productId)
       .then((data) => {
         if (cancelled) return;
-        setVariants(data);
+        setInternalVariants(data);
       })
       .catch(() => {
         if (cancelled) return;
-        setVariants([]);
+        setInternalVariants([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -127,224 +88,78 @@ export function ProductVariantsDisplay({ productId, basePrice, onVariantChange }
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [productId, variantsProp]);
 
-  // Build available sizes / colours from variant attributes.
-  const { sizes, colors, hasDimensions } = useMemo(() => {
-    const sizeSet = new Set<string>();
-    const colorSet = new Set<string>();
-    for (const v of variants) {
-      const a = attrsOf(v);
-      const s = pickAttr(a, SIZE_KEYS);
-      const c = pickAttr(a, COLOR_KEYS);
-      if (s) sizeSet.add(s);
-      if (c) colorSet.add(c);
-    }
-    const sArr = sortSizes([...sizeSet]);
-    const cArr = [...colorSet].sort((a, b) => a.localeCompare(b));
-    return {
-      sizes: sArr,
-      colors: cArr,
-      hasDimensions: sArr.length > 0 || cArr.length > 0,
-    };
-  }, [variants]);
+  const variants = variantsProp ?? internalVariants;
 
-  // Find the variant that matches the current dimension picks (if any).
-  const dimensionMatch = useMemo(() => {
-    if (!hasDimensions) return null;
-    if (pickedSize == null && pickedColor == null) return null;
-    const candidates = variants.filter((v) => {
-      const a = attrsOf(v);
-      const s = pickAttr(a, SIZE_KEYS);
-      const c = pickAttr(a, COLOR_KEYS);
-      if (pickedSize != null && s !== pickedSize) return false;
-      if (pickedColor != null && c !== pickedColor) return false;
-      return true;
-    });
-    // If only one dimension is picked and several variants match, prefer the
-    // in-stock one so the price/stock readout reflects something buyable.
-    const inStock = candidates.find((v) => v.in_stock > 0);
-    return inStock ?? candidates[0] ?? null;
-  }, [variants, hasDimensions, pickedSize, pickedColor]);
+  const selected = useMemo(
+    () => variants.find((v) => v.id === selectedId) ?? null,
+    [variants, selectedId]
+  );
 
-  // Which sizes/colours are actually buyable given the OTHER axis pick — used
-  // to visually disable combos that don't exist (AliExpress-style).
-  const sizeAvailable = useMemo(() => {
-    const out: Record<string, { exists: boolean; inStock: boolean }> = {};
-    for (const s of sizes) {
-      const matches = variants.filter((v) => {
-        const a = attrsOf(v);
-        const vs = pickAttr(a, SIZE_KEYS);
-        const vc = pickAttr(a, COLOR_KEYS);
-        if (vs !== s) return false;
-        if (pickedColor != null && vc !== pickedColor) return false;
-        return true;
-      });
-      out[s] = {
-        exists: matches.length > 0,
-        inStock: matches.some((v) => v.in_stock > 0),
-      };
-    }
-    return out;
-  }, [variants, sizes, pickedColor]);
-
-  const colorAvailable = useMemo(() => {
-    const out: Record<string, { exists: boolean; inStock: boolean }> = {};
-    for (const c of colors) {
-      const matches = variants.filter((v) => {
-        const a = attrsOf(v);
-        const vc = pickAttr(a, COLOR_KEYS);
-        const vs = pickAttr(a, SIZE_KEYS);
-        if (vc !== c) return false;
-        if (pickedSize != null && vs !== pickedSize) return false;
-        return true;
-      });
-      out[c] = {
-        exists: matches.length > 0,
-        inStock: matches.some((v) => v.in_stock > 0),
-      };
-    }
-    return out;
-  }, [variants, colors, pickedSize]);
-
-  const selected = useMemo(() => {
-    if (hasDimensions) return dimensionMatch;
-    return variants.find((v) => v.id === selectedId) ?? null;
-  }, [variants, selectedId, hasDimensions, dimensionMatch]);
-
-  // Propagate every selection change upstream so the PDP can swap price,
-  // stock, description, image AND carry the variant into the cart action.
+  // Avoid re-firing onVariantChange when the *same* variant stays selected
+  // across unrelated re-renders; this was causing the hero image to snap back
+  // to the base picture when the parent re-rendered for other reasons.
+  const lastFiredId = useRef<number | "unset">("unset");
   useEffect(() => {
+    const id = selected ? selected.id : null;
+    if (lastFiredId.current === id) return;
+    lastFiredId.current = id as number | "unset";
     onVariantChange?.(selected);
   }, [selected, onVariantChange]);
+
+  const attrKeys = useMemo(() => collectAttrKeys(variants), [variants]);
+
+  // Current attribute selection mirrors `selected` when one is picked, so
+  // clicking a variant pill or a thumbnail (parent-driven) also highlights
+  // the right chips in the attribute rows.
+  const currentAttrs: AttrMap = useMemo(() => {
+    const m: AttrMap = {};
+    if (!selected) return m;
+    for (const k of attrKeys) {
+      const v = attrValue(selected, k);
+      if (v) m[k] = v;
+    }
+    return m;
+  }, [selected, attrKeys]);
+
+  // Resolve a variant from a partial attribute map — useful when the shopper
+  // has picked e.g. size but not colour yet. Returns null until all present
+  // attribute keys are covered.
+  const resolveVariant = (attrs: AttrMap): ProductVariantPublic | null => {
+    const full = attrKeys.every((k) => attrs[k]);
+    if (!full) return null;
+    return (
+      variants.find((v) =>
+        attrKeys.every((k) => attrValue(v, k) === attrs[k])
+      ) ?? null
+    );
+  };
+
+  const pickAttr = (key: string, value: string) => {
+    const next: AttrMap = { ...currentAttrs };
+    if (next[key] === value) delete next[key];
+    else next[key] = value;
+    const v = resolveVariant(next);
+    setSelectedId(v ? v.id : null);
+  };
+
+  // Helper — is this attribute value sold out given current selection?
+  const isValueSoldOut = (key: string, value: string): boolean => {
+    const probe: AttrMap = { ...currentAttrs, [key]: value };
+    const matching = variants.filter((v) =>
+      Object.entries(probe).every(([k, val]) => attrValue(v, k) === val)
+    );
+    if (matching.length === 0) return true;
+    return matching.every((v) => v.in_stock <= 0);
+  };
 
   if (loading || variants.length === 0) {
     return null;
   }
 
-  // Dimensioned UI: size row + color row + live readout.
-  if (hasDimensions) {
-    return (
-      <section className="mt-5 space-y-4 rounded-[10px] bg-white p-4 ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
-        {sizes.length > 0 && (
-          <div>
-            <div className="flex items-baseline justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
-                Size
-              </p>
-              {pickedSize && (
-                <button
-                  type="button"
-                  onClick={() => setPickedSize(null)}
-                  className="text-[11px] font-semibold text-sikapa-gold hover:underline"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {sizes.map((s) => {
-                const avail = sizeAvailable[s] ?? { exists: true, inStock: true };
-                const isSelected = pickedSize === s;
-                const disabled = !avail.exists;
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => setPickedSize(isSelected ? null : s)}
-                    aria-pressed={isSelected}
-                    className={`min-w-[44px] rounded-md border px-3 py-1.5 text-[12px] font-semibold uppercase transition ${
-                      isSelected
-                        ? "border-sikapa-gold bg-sikapa-gold/10 text-sikapa-text-primary dark:text-zinc-100"
-                        : "border-sikapa-gray-soft bg-white text-sikapa-text-primary hover:bg-sikapa-cream dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
-                    } ${disabled ? "cursor-not-allowed opacity-40 line-through" : ""} ${
-                      !disabled && !avail.inStock ? "opacity-60" : ""
-                    }`}
-                    title={!avail.inStock ? `${s} — out of stock` : s}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+  const hasAttributes = attrKeys.length > 0;
 
-        {colors.length > 0 && (
-          <div>
-            <div className="flex items-baseline justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
-                Colour{pickedColor ? `: ${pickedColor}` : ""}
-              </p>
-              {pickedColor && (
-                <button
-                  type="button"
-                  onClick={() => setPickedColor(null)}
-                  className="text-[11px] font-semibold text-sikapa-gold hover:underline"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {colors.map((c) => {
-                const avail = colorAvailable[c] ?? { exists: true, inStock: true };
-                const isSelected = pickedColor === c;
-                const disabled = !avail.exists;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => setPickedColor(isSelected ? null : c)}
-                    aria-pressed={isSelected}
-                    aria-label={`Colour ${c}`}
-                    title={!avail.inStock ? `${c} — out of stock` : c}
-                    className={`relative h-8 w-8 rounded-full border transition ${
-                      isSelected
-                        ? "border-sikapa-gold ring-2 ring-sikapa-gold"
-                        : "border-sikapa-gray-soft hover:border-black/30 dark:border-white/20"
-                    } ${disabled ? "cursor-not-allowed opacity-40" : ""} ${
-                      !disabled && !avail.inStock ? "opacity-60" : ""
-                    }`}
-                    style={{ backgroundColor: resolveSwatchColor(c) }}
-                  >
-                    {!disabled && !avail.inStock && (
-                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white mix-blend-difference">
-                        ✕
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {selected ? (
-          <p className="text-small text-sikapa-text-secondary dark:text-zinc-400">
-            <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              {formatGhs(basePrice + (selected.price_delta ?? 0))}
-            </span>
-            {" · "}
-            {selected.in_stock > 0
-              ? `${selected.in_stock} in stock`
-              : "Out of stock"}
-          </p>
-        ) : (
-          <p className="text-[11px] text-sikapa-text-muted">
-            Select a{sizes.length > 0 ? " size" : ""}
-            {sizes.length > 0 && colors.length > 0 ? " and " : ""}
-            {colors.length > 0 ? "colour" : ""} to see stock and price.
-          </p>
-        )}
-      </section>
-    );
-  }
-
-  // Fallback: flat chip list (original behaviour) when variants don't expose
-  // structured size/colour attributes.
   return (
     <section className="mt-5 rounded-[10px] bg-white p-4 ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
       <div className="flex items-baseline justify-between">
@@ -357,41 +172,97 @@ export function ProductVariantsDisplay({ productId, basePrice, onVariantChange }
           </p>
         )}
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {variants.map((v) => {
-          const isSelected = v.id === selectedId;
-          const outOfStock = v.in_stock <= 0;
-          return (
-            <button
-              key={v.id}
-              type="button"
-              disabled={outOfStock}
-              onClick={() => setSelectedId(isSelected ? null : v.id)}
-              className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
-                isSelected
-                  ? "border-sikapa-gold bg-sikapa-gold/10 text-sikapa-text-primary dark:text-zinc-100"
-                  : "border-sikapa-gray-soft bg-white text-sikapa-text-primary hover:bg-sikapa-cream dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
-              } ${outOfStock ? "opacity-50 line-through" : ""}`}
-              aria-pressed={isSelected}
-              title={v.name}
-            >
-              {v.name}
-              {v.price_delta !== 0 && (
-                <span className="ml-1 text-sikapa-gold">
-                  {v.price_delta > 0 ? "+" : ""}
-                  {formatGhs(Math.abs(v.price_delta))}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+
+      {hasAttributes ? (
+        <div className="mt-3 space-y-3">
+          {attrKeys.map((key) => {
+            const values = Array.from(
+              new Set(
+                variants
+                  .map((v) => attrValue(v, key))
+                  .filter((x): x is string => !!x)
+              )
+            );
+            if (values.length === 0) return null;
+            return (
+              <div key={key}>
+                <p className="text-[11px] font-semibold text-sikapa-text-secondary dark:text-zinc-400">
+                  {prettyKey(key)}
+                  {currentAttrs[key] && (
+                    <span className="ml-1 text-sikapa-text-muted dark:text-zinc-500">
+                      · <span className="text-sikapa-text-primary dark:text-zinc-100">{currentAttrs[key]}</span>
+                    </span>
+                  )}
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {values.map((val) => {
+                    const isSelected = currentAttrs[key] === val;
+                    const soldOut = isValueSoldOut(key, val);
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        disabled={soldOut}
+                        onClick={() => pickAttr(key, val)}
+                        className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                          isSelected
+                            ? "border-sikapa-gold bg-sikapa-gold/10 text-sikapa-text-primary dark:text-zinc-100"
+                            : "border-sikapa-gray-soft bg-white text-sikapa-text-primary hover:bg-sikapa-cream dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+                        } ${soldOut ? "opacity-50 line-through" : ""}`}
+                        aria-pressed={isSelected}
+                      >
+                        {val}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {variants.map((v) => {
+            const isSelected = v.id === selectedId;
+            const outOfStock = v.in_stock <= 0;
+            return (
+              <button
+                key={v.id}
+                type="button"
+                disabled={outOfStock}
+                onClick={() => setSelectedId(isSelected ? null : v.id)}
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                  isSelected
+                    ? "border-sikapa-gold bg-sikapa-gold/10 text-sikapa-text-primary dark:text-zinc-100"
+                    : "border-sikapa-gray-soft bg-white text-sikapa-text-primary hover:bg-sikapa-cream dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+                } ${outOfStock ? "opacity-50 line-through" : ""}`}
+                aria-pressed={isSelected}
+              >
+                {v.name}
+                {v.price_delta !== 0 && (
+                  <span className="ml-1 text-sikapa-gold">
+                    {v.price_delta > 0 ? "+" : ""}
+                    {formatGhs(Math.abs(v.price_delta))}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {selected && (
         <p className="mt-3 text-small text-sikapa-text-secondary dark:text-zinc-400">
           {selected.name} ·{" "}
           <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">
             {formatGhs(basePrice + (selected.price_delta ?? 0))}
           </span>
+          {selected.price_delta !== 0 && (
+            <span className="ml-1 text-[11px] text-sikapa-text-muted">
+              (base {formatGhs(basePrice)} {selected.price_delta > 0 ? "+" : "-"}{" "}
+              {formatGhs(Math.abs(selected.price_delta))})
+            </span>
+          )}
         </p>
       )}
     </section>
