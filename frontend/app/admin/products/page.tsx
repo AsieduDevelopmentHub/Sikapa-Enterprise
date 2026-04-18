@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminDeleteProduct, adminFetchProducts, type AdminProduct } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
+import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 
 export default function AdminProductsPage() {
   const { accessToken } = useAuth();
@@ -14,6 +15,7 @@ export default function AdminProductsPage() {
   const [rows, setRows] = useState<AdminProduct[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -34,6 +36,15 @@ export default function AdminProductsPage() {
   }, [load]);
 
   const origin = typeof window !== "undefined" ? getBackendOrigin() : "";
+
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((p) => {
+      const hay = `${p.name} ${p.slug ?? ""} ${p.sku ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [rows, query]);
 
   return (
     <div>
@@ -64,10 +75,19 @@ export default function AdminProductsPage() {
         </div>
       </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
+      <div className="mt-6">
+        <AdminSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search product name, slug, or SKU…"
+          hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
+          maxWidthClassName="sm:max-w-md"
+        />
+      </div>
       {loading ? (
         <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+        <div className="mt-4 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
           <table className="w-full min-w-[640px] text-left text-small">
             <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
               <tr>
@@ -79,7 +99,7 @@ export default function AdminProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-sikapa-gray-soft">
-              {rows.map((p) => {
+              {visibleRows.map((p) => {
                 const img = p.image_url
                   ? p.image_url.startsWith("http")
                     ? p.image_url
@@ -141,8 +161,10 @@ export default function AdminProductsPage() {
               })}
             </tbody>
           </table>
-          {rows.length === 0 && (
-            <p className="px-4 py-8 text-center text-small text-sikapa-text-muted">No products yet.</p>
+          {visibleRows.length === 0 && (
+            <p className="px-4 py-8 text-center text-small text-sikapa-text-muted">
+              {query ? "No products match your search." : "No products yet."}
+            </p>
           )}
         </div>
       )}

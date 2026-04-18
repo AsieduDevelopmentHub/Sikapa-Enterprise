@@ -15,34 +15,14 @@ import {
   type RevenueStat,
 } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
+import { RevenueTrendChart } from "@/components/admin/charts/RevenueTrendChart";
+import { OrderStatusDonut } from "@/components/admin/charts/OrderStatusDonut";
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-text-muted">{label}</p>
       <p className="mt-1 font-serif text-[1.15rem] font-semibold text-sikapa-text-primary">{value}</p>
-    </div>
-  );
-}
-
-function RevenueBars({ stats }: { stats: RevenueStat[] }) {
-  if (!stats.length) return <p className="text-small text-sikapa-text-muted">No revenue in this range.</p>;
-  const max = Math.max(...stats.map((s) => s.revenue), 1);
-  const last = stats.slice(-14);
-  return (
-    <div className="flex h-40 items-end gap-1">
-      {last.map((s) => {
-        const h = Math.round((s.revenue / max) * 100);
-        return (
-          <div key={s.date} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-            <div
-              className="w-full max-w-[14px] rounded-t bg-sikapa-crimson/85"
-              style={{ height: `${Math.max(h, 4)}%` }}
-              title={`${s.date}: ${formatGhs(s.revenue)}`}
-            />
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -137,9 +117,11 @@ export function AdminDashboardContent() {
               <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
                 Revenue trend
               </h2>
-              <p className="mt-1 text-[11px] text-sikapa-text-muted">Last {Math.min(revenue.length, 14)} days shown</p>
-              <div className="mt-4">
-                <RevenueBars stats={revenue} />
+              <p className="mt-1 text-[11px] text-sikapa-text-muted">
+                Daily gross revenue over the last {Math.min(revenue.length, days)} days.
+              </p>
+              <div className="mt-4 text-sikapa-crimson">
+                <RevenueTrendChart stats={revenue} window={days} />
               </div>
             </section>
 
@@ -147,18 +129,10 @@ export function AdminDashboardContent() {
               <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
                 Orders by status
               </h2>
-              {Object.keys(data.order_stats).length === 0 ? (
-                <p className="mt-3 text-small text-sikapa-text-muted">No orders in range.</p>
-              ) : (
-                <ul className="mt-3 space-y-2">
-                  {Object.entries(data.order_stats).map(([k, v]) => (
-                    <li key={k} className="flex justify-between text-small">
-                      <span className="capitalize text-sikapa-text-secondary">{k}</span>
-                      <span className="font-semibold">{v}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <p className="mt-1 text-[11px] text-sikapa-text-muted">
+                Share of orders by fulfilment state in the selected window.
+              </p>
+              <OrderStatusDonut stats={data.order_stats} />
             </section>
           </div>
 

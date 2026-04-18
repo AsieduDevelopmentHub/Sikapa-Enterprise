@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   adminCreateCoupon,
   adminDeleteCoupon,
@@ -10,11 +10,13 @@ import {
 } from "@/lib/api/admin";
 import { useAuth } from "@/context/AuthContext";
 import { formatGhs } from "@/lib/mock-data";
+import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 
 export default function AdminCouponsPage() {
   const { accessToken } = useAuth();
   const [rows, setRows] = useState<CouponRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState({
     code: "",
     discount_type: "percent" as "percent" | "fixed",
@@ -37,6 +39,14 @@ export default function AdminCouponsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((c) =>
+      `${c.code} ${c.discount_type}`.toLowerCase().includes(q)
+    );
+  }, [rows, query]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +132,15 @@ export default function AdminCouponsPage() {
           Create coupon
         </button>
       </form>
-      <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+      <div className="mt-6">
+        <AdminSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search coupon code or type…"
+          hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
+        />
+      </div>
+      <div className="mt-4 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
         <table className="w-full min-w-[740px] text-left text-small">
           <thead className="border-b border-black/[0.06] text-[11px] uppercase tracking-wider text-sikapa-text-muted">
             <tr>
@@ -135,7 +153,7 @@ export default function AdminCouponsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-sikapa-gray-soft">
-            {rows.map((c) => (
+            {visibleRows.map((c) => (
               <tr key={c.id}>
                 <td className="px-4 py-3 font-mono font-semibold">{c.code}</td>
                 <td className="px-4 py-3">
@@ -181,10 +199,10 @@ export default function AdminCouponsPage() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {visibleRows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-small text-sikapa-text-muted">
-                  No coupons yet.
+                  {query ? "No coupons match your search." : "No coupons yet."}
                 </td>
               </tr>
             )}
