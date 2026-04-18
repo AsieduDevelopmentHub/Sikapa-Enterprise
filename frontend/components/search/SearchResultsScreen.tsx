@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SearchAutocomplete } from "@/components/search/SearchAutocomplete";
 import { ProductCardGrid } from "@/components/product/ProductCardGrid";
 import { useCatalog } from "@/context/CatalogContext";
+import { pingProductSearchAnalytics } from "@/lib/api/products";
 import {
   TRENDING_SEARCHES,
   addRecentSearch,
@@ -39,6 +40,11 @@ export function SearchResultsScreen() {
   useEffect(() => {
     setRecent(readRecentSearches());
     if (q) addRecentSearch(q);
+  }, [q]);
+
+  useEffect(() => {
+    if (!q) return;
+    pingProductSearchAnalytics(q);
   }, [q]);
 
   const priceCeiling = useMemo(() => {

@@ -1,6 +1,9 @@
 import type { MockProduct } from "@/lib/mock-data";
 import { CATEGORIES, MOCK_PRODUCTS } from "@/lib/mock-data";
-import { apiFetchJson, getBackendOrigin } from "@/lib/api/client";
+import { apiFetchJson, getApiV1Base, getBackendOrigin } from "@/lib/api/client";
+import { V1 } from "@/lib/api/v1-paths";
+
+const STORAGE_ACCESS = "sikapa_access_token";
 
 export type ApiCategoryRow = {
   id: number;
@@ -170,4 +173,30 @@ export async function fetchProductById(id: number): Promise<ApiProductRow> {
     throw new Error("Invalid product response");
   }
   return row;
+}
+
+/**
+ * Hits `GET /products/search` so the backend can record SearchQueryLog for admin analytics.
+ * The storefront search UI filters locally; this call does not replace those results.
+ */
+export function pingProductSearchAnalytics(query: string): void {
+  if (typeof window === "undefined") return;
+  const q = query.trim();
+  if (!q || q.length > 100) return;
+  const params = new URLSearchParams({ q, skip: "0", limit: "1" });
+  const url = `${getApiV1Base()}${V1.products.search}?${params.toString()}`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  try {
+    const tok = localStorage.getItem(STORAGE_ACCESS)?.trim();
+    if (tok) headers.Authorization = `Bearer ${tok}`;
+  } catch {
+    /* ignore */
+  }
+  void fetch(url, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+    mode: "cors",
+    keepalive: true,
+  }).catch(() => {});
 }
