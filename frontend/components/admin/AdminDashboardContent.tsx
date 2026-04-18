@@ -175,8 +175,36 @@ export function AdminDashboardContent() {
               {recent.length === 0 ? (
                 <p className="mt-3 text-small text-sikapa-text-muted">No orders yet.</p>
               ) : (
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full min-w-[460px] text-left text-small">
+                <div className="mt-3">
+                  <ul className="space-y-2 sm:hidden">
+                    {recent.map((o) => (
+                      <li
+                        key={o.id}
+                        className="rounded-lg border border-sikapa-gray-soft bg-sikapa-cream/40 p-3"
+                      >
+                        <button
+                          type="button"
+                          className="w-full text-left"
+                          onClick={() => router.push(`/system/orders/${o.id}`)}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-semibold text-sikapa-crimson">#{o.id}</p>
+                            <span className="text-[11px] capitalize text-sikapa-text-muted">
+                              {o.status}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-small font-medium text-sikapa-text-primary">
+                            {formatGhs(o.total_price)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-sikapa-text-muted">
+                            Payment: {o.payment_status}
+                          </p>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="hidden overflow-x-auto sm:block">
+                    <table className="w-full min-w-[460px] text-left text-small">
                     <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
                       <tr>
                         <th className="py-2 pr-2">Order</th>
@@ -199,7 +227,8 @@ export function AdminDashboardContent() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                    </table>
+                  </div>
                 </div>
               )}
             </section>
@@ -218,11 +247,17 @@ export function AdminDashboardContent() {
                   <li className="py-3 text-small text-sikapa-text-muted">No low-stock alerts.</li>
                 ) : (
                   lowStock.map((p) => (
-                    <li key={p.id} className="flex justify-between py-3 text-small">
-                      <Link href={`/system/products/${p.id}`} className="font-medium text-sikapa-text-primary hover:underline">
+                    <li key={p.id} className="flex flex-col gap-1 py-3 text-small sm:flex-row sm:items-center sm:justify-between">
+                      <Link
+                        href={`/system/products/${p.id}`}
+                        className="truncate font-medium text-sikapa-text-primary hover:underline sm:max-w-[75%]"
+                        title={p.name}
+                      >
                         {p.name}
                       </Link>
-                      <span className="text-sikapa-crimson font-semibold">{p.in_stock} left</span>
+                      <span className="w-fit rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-sikapa-crimson">
+                        {p.in_stock} left
+                      </span>
                     </li>
                   ))
                 )}
