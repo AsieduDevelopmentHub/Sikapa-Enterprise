@@ -1,11 +1,12 @@
 """
 Cart business logic
 """
-from fastapi import HTTPException, status
-from sqlmodel import Session, select
 from datetime import datetime
 
-from app.models import CartItem, Product
+from fastapi import HTTPException, status
+from sqlmodel import Session, select
+
+from app.models import CartItem, Product, ProductVariant
 from app.api.v1.cart.schemas import CartItemCreateSchema, CartItemUpdateSchema
 from app.api.v1.wishlist.services import list_wishlist
 
@@ -25,37 +26,81 @@ async def get_cart_with_wishlist(session: Session, user_id: int):
     return {"cart": cart, "wishlist": wishlist}
 
 
-async def add_to_cart(session: Session, user_id: int, item: CartItemCreateSchema) -> CartItem:
-    """Add or update item in cart."""
-    product = session.exec(select(Product).where(Product.id == item.product_id)).first()
+async def add_to_cart(
+    session: Session, user_id: int, item: CartItemCreateSchema
+) -> CartItem:
+    """Add or update an item in the cart.
+
+    Two rows for the same product but different variants are kept separate so
+    shoppers can stash e.g. "Red / S" and "Blue / M" side by side. Stock is
+    validated against the variant when one is supplied, otherwise against the
+    parent product.
+    """
+    product = session.exec(
+        select(Product).where(Product.id == item.product_id)
+    ).first()
     if not product or not product.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="This product is not available.",
         )
 
-    existing = session.exec(
-        select(CartItem).where(
-            CartItem.user_id == user_id,
-            CartItem.product_id == item.product_id
+    variant: ProductVariant | None = None
+    if item.variant_id is not None:
+        variant = session.get(ProductVariant, item.variant_id)
+        if (
+            not variant
+            or variant.product_id != product.id
+            or not variant.is_active
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Selected option is not available.",
+            )
+
+    stock_left = variant.in_stock if variant else product.in_stock
+    if item.quantity > stock_left:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Only {stock_left} units available"
+            + (f" for {variant.name}" if variant else ""),
         )
-    ).first()
+
+    stmt = select(CartItem).where(
+        CartItem.user_id == user_id,
+        CartItem.product_id == item.product_id,
+    )
+    if item.variant_id is None:
+        stmt = stmt.where(CartItem.variant_id.is_(None))  # type: ignore[attr-defined]
+    else:
+        stmt = stmt.where(CartItem.variant_id == item.variant_id)
+    existing = session.exec(stmt).first()
 
     if existing:
-        existing.quantity += item.quantity
+        new_qty = existing.quantity + item.quantity
+        if new_qty > stock_left:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Only {stock_left} units available"
+                + (f" for {variant.name}" if variant else ""),
+            )
+        existing.quantity = new_qty
         existing.updated_at = datetime.utcnow()
         session.add(existing)
-    else:
-        cart_item = CartItem(
-            user_id=user_id,
-            product_id=item.product_id,
-            quantity=item.quantity
-        )
-        session.add(cart_item)
+        session.commit()
+        session.refresh(existing)
+        return existing
 
+    cart_item = CartItem(
+        user_id=user_id,
+        product_id=item.product_id,
+        variant_id=item.variant_id,
+        quantity=item.quantity,
+    )
+    session.add(cart_item)
     session.commit()
-    session.refresh(existing or cart_item)
-    return existing or cart_item
+    session.refresh(cart_item)
+    return cart_item
 
 
 async def update_cart_item(

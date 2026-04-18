@@ -2,7 +2,7 @@
 Cart schemas
 """
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +13,7 @@ class CartItemSchema(BaseModel):
     id: int
     user_id: int
     product_id: int
+    variant_id: Optional[int] = None
     quantity: int = Field(gt=0)
     created_at: datetime
     updated_at: datetime
@@ -23,6 +24,7 @@ class CartItemSchema(BaseModel):
 
 class CartItemCreateSchema(BaseModel):
     product_id: int
+    variant_id: Optional[int] = None
     quantity: int = Field(gt=0, default=1)
 
 

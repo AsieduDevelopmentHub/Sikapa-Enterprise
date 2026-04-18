@@ -6,6 +6,8 @@ export type CartItemRow = {
   id: number;
   user_id: number;
   product_id: number;
+  /** Optional variant SKU — null for products without options picked. */
+  variant_id?: number | null;
   quantity: number;
   created_at: string;
   updated_at: string;
@@ -17,7 +19,7 @@ export async function cartList(accessToken: string): Promise<CartItemRow[]> {
 
 export async function cartAddItem(
   accessToken: string,
-  body: { product_id: number; quantity: number }
+  body: { product_id: number; quantity: number; variant_id?: number | null }
 ): Promise<CartItemRow> {
   return apiFetchJsonAuth<CartItemRow>(accessToken, V1.cart.addItem, {
     method: "POST",
