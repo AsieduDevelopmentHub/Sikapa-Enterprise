@@ -2,18 +2,43 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProductForm } from "@/components/admin/ProductForm";
+import { ProductImagesManager } from "@/components/admin/ProductImagesManager";
 import { ProductVariantsManager } from "@/components/admin/ProductVariantsManager";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchCategories, adminFetchProduct, type AdminCategory, type AdminProduct } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
 
+/** Staff/sub-admin roles should not see internal identifiers (slug/SKU). */
+function isInternalViewer(role: string | undefined | null): boolean {
+  const r = (role ?? "").trim().toLowerCase();
+  return r === "super_admin" || r === "admin";
+}
+
+/** Resolve the possibly-numeric `category` string to a friendly category name. */
+function resolveCategoryName(
+  raw: string | null | undefined,
+  cats: AdminCategory[]
+): string {
+  const s = (raw ?? "").trim();
+  if (!s) return "";
+  if (/^\d+$/.test(s)) {
+    const asId = Number(s);
+    const hit = cats.find((c) => c.id === asId);
+    if (hit) return hit.name;
+  }
+  const bySlug = cats.find((c) => c.slug?.toLowerCase() === s.toLowerCase());
+  if (bySlug) return bySlug.name;
+  return s;
+}
+
 export default function AdminProductEditPage() {
   const params = useParams();
   const id = Number(params.id);
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const canSeeInternal = isInternalViewer(user?.admin_role);
   const [product, setProduct] = useState<AdminProduct | null>(null);
   const [cats, setCats] = useState<AdminCategory[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -37,6 +62,11 @@ export default function AdminProductEditPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const categoryName = useMemo(
+    () => (product ? resolveCategoryName(product.category, cats) : ""),
+    [product, cats]
+  );
 
   if (!accessToken) return null;
 
@@ -73,11 +103,15 @@ export default function AdminProductEditPage() {
                 <p>Status</p>
                 <p className="text-right font-semibold">{product.is_active ? "Live" : "Hidden"}</p>
                 <p>Category</p>
-                <p className="text-right font-semibold">{product.category || "—"}</p>
-                <p>SKU</p>
-                <p className="text-right font-semibold">{product.sku || "—"}</p>
-                <p>Slug</p>
-                <p className="text-right font-mono text-[11px]">{product.slug}</p>
+                <p className="text-right font-semibold">{categoryName || "—"}</p>
+                {canSeeInternal && (
+                  <>
+                    <p>SKU</p>
+                    <p className="text-right font-semibold">{product.sku || "—"}</p>
+                    <p>Slug</p>
+                    <p className="text-right font-mono text-[11px]">{product.slug}</p>
+                  </>
+                )}
               </div>
             </div>
           </section>
@@ -94,8 +128,19 @@ export default function AdminProductEditPage() {
               productId={id}
               initial={product}
               categoryHints={cats}
+              canSeeInternal={canSeeInternal}
+              initialCategoryName={categoryName}
             />
           </section>
+        </div>
+      )}
+      {product && (
+        <div className="mt-6">
+          <ProductImagesManager
+            accessToken={accessToken}
+            productId={id}
+            onPrimaryChange={() => void load()}
+          />
         </div>
       )}
       {product && (

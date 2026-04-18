@@ -472,6 +472,11 @@ class ProductVariant(SQLModel, table=True):
     in_stock: int = Field(default=0, ge=0)
     is_active: bool = True
     sort_order: int = Field(default=0)
+    # Optional per-variant media/copy: when a shopper picks this variant, the PDP
+    # swaps in these overrides so the same product can showcase distinct colours,
+    # package shots, and short descriptions without duplicating the whole record.
+    image_url: Optional[str] = Field(default=None, max_length=1024)
+    description: Optional[str] = Field(default=None, max_length=4000)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
