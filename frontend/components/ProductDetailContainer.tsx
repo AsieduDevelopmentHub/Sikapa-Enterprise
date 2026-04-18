@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useCatalog } from "@/context/CatalogContext";
 import { getProductById, type MockProduct } from "@/lib/mock-data";
 import { ProductDetailScreen } from "@/components/ProductDetailScreen";
+import { ProductDetailSkeleton } from "@/components/StorefrontSkeletons";
 
 export function ProductDetailContainer({ id }: { id: string }) {
   const { loading, getProduct, refreshProduct } = useCatalog();
@@ -25,9 +26,10 @@ export function ProductDetailContainer({ id }: { id: string }) {
   }, [id, loading, resolved, refreshProduct]);
 
   if (!resolved) {
+    if (loading) return <ProductDetailSkeleton />;
     return (
       <div className="bg-sikapa-cream px-4 py-10 text-center text-small text-sikapa-text-secondary dark:bg-zinc-950 dark:text-zinc-400">
-        {loading ? "Loading product…" : "Product not found."}
+        Product not found.
       </div>
     );
   }

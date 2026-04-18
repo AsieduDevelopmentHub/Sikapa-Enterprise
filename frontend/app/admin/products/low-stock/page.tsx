@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { adminFetchLowStock, type AdminProduct } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminTableSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminLowStockPage() {
   const { accessToken } = useAuth();
@@ -93,7 +94,9 @@ export default function AdminLowStockPage() {
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
 
       {loading ? (
-        <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
+        <div className="mt-6">
+          <AdminTableSkeleton minWidthClass="min-w-[560px]" columns={4} />
+        </div>
       ) : visibleRows.length === 0 ? (
         <div className="mt-6 rounded-xl bg-white p-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
           {query

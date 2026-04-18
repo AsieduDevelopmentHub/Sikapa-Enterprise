@@ -17,6 +17,14 @@ import {
 import { formatGhs } from "@/lib/mock-data";
 import { RevenueTrendChart } from "@/components/admin/charts/RevenueTrendChart";
 import { OrderStatusDonut } from "@/components/admin/charts/OrderStatusDonut";
+import {
+  Skeleton,
+  SkeletonChart,
+  SkeletonDonut,
+  SkeletonList,
+  SkeletonStatCard,
+  SkeletonTableRow,
+} from "@/components/admin/Skeleton";
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -37,16 +45,13 @@ export function AdminDashboardContent() {
   const [lowStock, setLowStock] = useState<AdminProduct[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
     setErr(null);
     try {
-      // Use allSettled so a single permission-scoped endpoint (e.g. the
-      // product list returning 403 for staff without `manage_products`) does
-      // NOT blank out the entire dashboard — the revenue chart and other
-      // widgets keep rendering even when a sibling call fails.
       const [dRes, revRes, ordersRes, productsRes] = await Promise.allSettled([
         adminFetchDashboard(accessToken, days),
         adminFetchRevenue(accessToken, days),
@@ -73,8 +78,8 @@ export function AdminDashboardContent() {
         const msg = first instanceof Error ? first.message : String(first);
         setErr(
           msg.includes("403")
-            ? "Some panels are hidden because your role does not have access to them."
-            : `Some panels failed to load: ${msg}`
+            ? "Some sections are hidden for your account."
+            : "Some sections couldn't load. Try again."
         );
       }
     } catch (e) {
@@ -83,6 +88,7 @@ export function AdminDashboardContent() {
       setData(null);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, [accessToken, days]);
 
@@ -120,14 +126,15 @@ export function AdminDashboardContent() {
       {err && (
         <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-small text-red-800 ring-1 ring-red-100">{err}</p>
       )}
-      {loading && !data && revenue.length === 0 && (
-        <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
-      )}
 
-      {data && (
-        <>
-          <p className="mt-4 text-small text-sikapa-text-muted">Metrics over the last {data.period_days} days.</p>
-          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <p className="mt-4 text-small text-sikapa-text-muted">
+        {data
+          ? `Metrics over the last ${data.period_days} days.`
+          : `Metrics over the last ${days} days.`}
+      </p>
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {data ? (
+          <>
             <StatCard label="Revenue" value={formatGhs(data.total_revenue)} />
             <StatCard label="Orders" value={String(data.total_orders)} />
             <StatCard label="New customers" value={String(data.new_users)} />
@@ -136,14 +143,23 @@ export function AdminDashboardContent() {
             <StatCard label="Active users" value={String(data.active_users)} />
             <StatCard label="Active carts" value={String(data.active_carts)} />
             <StatCard label="Users (total)" value={String(data.total_users)} />
-          </div>
-        </>
-      )}
+          </>
+        ) : loading && !loaded ? (
+          Array.from({ length: 8 }).map((_, i) => <SkeletonStatCard key={i} />)
+        ) : (
+          <>
+            <StatCard label="Revenue" value="—" />
+            <StatCard label="Orders" value="—" />
+            <StatCard label="New customers" value="—" />
+            <StatCard label="Avg. order" value="—" />
+            <StatCard label="Products live" value="—" />
+            <StatCard label="Active users" value="—" />
+            <StatCard label="Active carts" value="—" />
+            <StatCard label="Users (total)" value="—" />
+          </>
+        )}
+      </div>
 
-      {/* Render charts unconditionally (once auth is ready) so admins always
-          see either the graph or the "no revenue in this range" empty state —
-          previously the whole section was hidden when both `data` and `revenue`
-          were empty, which looked like "analytics not showing". */}
       {accessToken && (
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
@@ -158,7 +174,11 @@ export function AdminDashboardContent() {
                 : `No revenue recorded in the last ${days} days.`}
             </p>
             <div className="mt-4 text-sikapa-crimson">
-              <RevenueTrendChart stats={revenue} window={days} />
+              {loading && !loaded && revenue.length === 0 ? (
+                <SkeletonChart />
+              ) : (
+                <RevenueTrendChart stats={revenue} window={days} />
+              )}
             </div>
           </section>
 
@@ -171,30 +191,65 @@ export function AdminDashboardContent() {
             </p>
             {data ? (
               <OrderStatusDonut stats={data.order_stats} />
+            ) : loading && !loaded ? (
+              <SkeletonDonut />
             ) : (
               <p className="mt-4 text-small text-sikapa-text-muted">
-                {loading ? "Loading…" : "Order-status breakdown is unavailable for your role."}
+                Status breakdown isn&apos;t available right now.
               </p>
             )}
           </section>
         </div>
       )}
 
-      {data && (
-        <>
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-              <div className="flex items-center justify-between">
-                <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
-                  Recent orders
-                </h2>
-                <Link href="/system/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
-                  View all
-                </Link>
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+              Recent orders
+            </h2>
+            <Link href="/system/orders" className="text-small font-semibold text-sikapa-gold hover:underline">
+              View all
+            </Link>
+          </div>
+          {loading && !loaded && recent.length === 0 ? (
+            <div className="mt-3">
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full min-w-[460px] text-left text-small">
+                  <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
+                    <tr>
+                      <th className="py-2 pr-2">Order</th>
+                      <th className="py-2 pr-2">Status</th>
+                      <th className="py-2 pr-2">Total</th>
+                      <th className="py-2">Payment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <SkeletonTableRow key={i} cols={4} />
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              {recent.length === 0 ? (
-                <p className="mt-3 text-small text-sikapa-text-muted">No orders yet.</p>
-              ) : (
+              <ul className="space-y-2 sm:hidden">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <li
+                    key={i}
+                    className="rounded-lg border border-sikapa-gray-soft bg-sikapa-cream/40 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <Skeleton className="h-3 w-14" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="mt-2 h-3 w-20" />
+                    <Skeleton className="mt-1 h-2 w-24" />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : recent.length === 0 ? (
+            <p className="mt-3 text-small text-sikapa-text-muted">No orders yet.</p>
+          ) : (
                 <div className="mt-3">
                   <ul className="space-y-2 sm:hidden">
                     {recent.map((o) => (
@@ -253,63 +308,65 @@ export function AdminDashboardContent() {
               )}
             </section>
 
-            <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-              <div className="flex items-center justify-between">
-                <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
-                  Low stock
-                </h2>
-                <Link href="/system/inventory" className="text-small font-semibold text-sikapa-gold hover:underline">
-                  Inventory
-                </Link>
-              </div>
-              <ul className="mt-3 divide-y divide-sikapa-gray-soft">
-                {lowStock.length === 0 ? (
-                  <li className="py-3 text-small text-sikapa-text-muted">No low-stock alerts.</li>
-                ) : (
-                  lowStock.map((p) => (
-                    <li key={p.id} className="flex flex-col gap-1 py-3 text-small sm:flex-row sm:items-center sm:justify-between">
-                      <Link
-                        href={`/system/products/${p.id}`}
-                        className="truncate font-medium text-sikapa-text-primary hover:underline sm:max-w-[75%]"
-                        title={p.name}
-                      >
-                        {p.name}
-                      </Link>
-                      <span className="w-fit rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-sikapa-crimson">
-                        {p.in_stock} left
-                      </span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </section>
+        <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+              Low stock
+            </h2>
+            <Link href="/system/inventory" className="text-small font-semibold text-sikapa-gold hover:underline">
+              Inventory
+            </Link>
           </div>
-
-          {data.top_products.length > 0 && (
-            <section className="mt-8 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
-              <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
-                Top products
-              </h2>
-              <ul className="mt-3 divide-y divide-sikapa-gray-soft">
-                {data.top_products.map((row) => (
-                  <li key={row.product_id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <Link
-                        href={`/system/products/${row.product_id}`}
-                        className="font-semibold text-sikapa-gold hover:underline"
-                      >
-                        {row.name}
-                      </Link>
-                      <p className="text-[11px] text-sikapa-text-muted">
-                        Sold {row.quantity_sold} · {row.review_count} reviews · {formatGhs(row.price)}
-                      </p>
-                    </div>
+          {loading && !loaded && lowStock.length === 0 ? (
+            <SkeletonList rows={5} />
+          ) : (
+            <ul className="mt-3 divide-y divide-sikapa-gray-soft">
+              {lowStock.length === 0 ? (
+                <li className="py-3 text-small text-sikapa-text-muted">No low-stock alerts.</li>
+              ) : (
+                lowStock.map((p) => (
+                  <li key={p.id} className="flex flex-col gap-1 py-3 text-small sm:flex-row sm:items-center sm:justify-between">
+                    <Link
+                      href={`/system/products/${p.id}`}
+                      className="truncate font-medium text-sikapa-text-primary hover:underline sm:max-w-[75%]"
+                      title={p.name}
+                    >
+                      {p.name}
+                    </Link>
+                    <span className="w-fit rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-sikapa-crimson">
+                      {p.in_stock} left
+                    </span>
                   </li>
-                ))}
-              </ul>
-            </section>
+                ))
+              )}
+            </ul>
           )}
-        </>
+        </section>
+      </div>
+
+      {data && data.top_products.length > 0 && (
+        <section className="mt-8 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+            Top products
+          </h2>
+          <ul className="mt-3 divide-y divide-sikapa-gray-soft">
+            {data.top_products.map((row) => (
+              <li key={row.product_id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <Link
+                    href={`/system/products/${row.product_id}`}
+                    className="font-semibold text-sikapa-gold hover:underline"
+                  >
+                    {row.name}
+                  </Link>
+                  <p className="text-[11px] text-sikapa-text-muted">
+                    Sold {row.quantity_sold} · {row.review_count} reviews · {formatGhs(row.price)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

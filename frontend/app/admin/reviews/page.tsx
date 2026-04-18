@@ -11,6 +11,7 @@ import {
   type AdminReview,
 } from "@/lib/api/admin";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminReviewsListSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminReviewsPage() {
   const { accessToken } = useAuth();
@@ -19,6 +20,7 @@ export default function AdminReviewsPage() {
   const [products, setProducts] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -37,6 +39,8 @@ export default function AdminReviewsPage() {
       );
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setReady(true);
     }
   }, [accessToken]);
 
@@ -70,6 +74,9 @@ export default function AdminReviewsPage() {
         />
       </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
+      {!ready && !err ? (
+        <AdminReviewsListSkeleton />
+      ) : (
       <ul className="mt-6 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
         {visibleRows.map((r) => (
           <li key={r.id} className="px-4 py-4">
@@ -113,12 +120,13 @@ export default function AdminReviewsPage() {
             </div>
           </li>
         ))}
-        {visibleRows.length === 0 && !err && (
+        {visibleRows.length === 0 && !err && ready && (
           <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">
             {query ? "No reviews match your search." : "No reviews."}
           </li>
         )}
       </ul>
+      )}
     </div>
   );
 }

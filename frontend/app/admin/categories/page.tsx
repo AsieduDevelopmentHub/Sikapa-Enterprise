@@ -10,6 +10,7 @@ import {
   type AdminCategory,
 } from "@/lib/api/admin";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminCategoryListSkeleton } from "@/components/admin/Skeleton";
 
 function slugify(name: string): string {
   return name
@@ -116,7 +117,7 @@ export default function AdminCategoriesPage() {
         />
       </div>
       {loading ? (
-        <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
+        <AdminCategoryListSkeleton />
       ) : (
         <ul className="mt-4 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
           {visibleRows.map((c) => (

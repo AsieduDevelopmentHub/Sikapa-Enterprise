@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { adminFetchOrders, adminFetchUsers, type AdminOrderListItem } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminOrdersPageSkeleton } from "@/components/admin/Skeleton";
 
 const FILTERS = ["all", "pending", "processing", "shipped", "delivered", "cancelled"] as const;
 
@@ -95,7 +96,7 @@ export default function AdminOrdersPage() {
       </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       {loading ? (
-        <p className="mt-6 text-small text-sikapa-text-muted">Loading…</p>
+        <AdminOrdersPageSkeleton />
       ) : visibleRows.length === 0 ? (
         <div className="mt-6 rounded-xl bg-white px-4 py-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
           {query ? "No orders match your search." : "No orders in this view."}

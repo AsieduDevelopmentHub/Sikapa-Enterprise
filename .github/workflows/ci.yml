@@ -110,6 +110,8 @@ jobs:
   auto-pr-merge-frontend-to-main:
     name: Auto PR + Auto-merge (frontend -> main)
     runs-on: ubuntu-latest
+    # Never fail the overall CI workflow if gh/auto-merge isn’t available (missing PAT, permissions, etc.).
+    continue-on-error: true
     needs: [backend, frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/frontend'
     steps:

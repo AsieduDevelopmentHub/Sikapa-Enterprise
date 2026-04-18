@@ -28,7 +28,7 @@ export function SearchResultsScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const q = (searchParams.get("q") ?? "").trim();
-  const { products, categories, source, loading: catalogLoading } = useCatalog();
+  const { products, categories, loading: catalogLoading } = useCatalog();
 
   const [sort, setSort] = useState<SortKey>("relevance");
   const [minRating, setMinRating] = useState<number>(0);
@@ -212,7 +212,7 @@ export function SearchResultsScreen() {
                   onChange={(e) => setInStockOnly(e.target.checked)}
                   className="h-4 w-4 accent-sikapa-gold"
                 />
-                In stock only {source === "mock" && <span className="text-[10px] text-sikapa-text-muted">(requires live catalog)</span>}
+                In stock only
               </label>
             </div>
 

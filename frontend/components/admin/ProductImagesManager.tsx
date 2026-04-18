@@ -12,6 +12,7 @@ import {
   type AdminVariant,
 } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
+import { AdminImageGridSkeleton } from "@/components/admin/Skeleton";
 
 type Props = {
   accessToken: string;
@@ -179,7 +180,7 @@ export function ProductImagesManager({ accessToken, productId, onPrimaryChange }
       {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
 
       {loading ? (
-        <p className="mt-3 text-small text-sikapa-text-muted">Loading…</p>
+        <AdminImageGridSkeleton count={6} />
       ) : items.length === 0 ? (
         <p className="mt-3 text-small text-sikapa-text-muted">
           No images yet. Upload one or more files above — the first will become the primary.

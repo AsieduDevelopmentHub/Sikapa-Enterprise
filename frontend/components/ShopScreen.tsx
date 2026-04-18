@@ -11,6 +11,11 @@ import { FaBag } from "@/components/FaIcons";
 import { ProductWishlistButton } from "@/components/product/ProductWishlistButton";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
 import { StarRating } from "@/components/StarRating";
+import {
+  ProductGridSkeleton,
+  ProductListSkeleton,
+  SkeletonBlock,
+} from "@/components/StorefrontSkeletons";
 
 const SHOP_VIEW_STORAGE_KEY = "sikapa-shop-view-mode";
 
@@ -151,8 +156,18 @@ export function ShopScreen() {
 
   if (catalogLoading && products.length === 0) {
     return (
-      <div className="bg-sikapa-cream px-4 py-12 text-center text-small text-sikapa-text-secondary dark:bg-zinc-950 dark:text-zinc-400">
-        Loading catalog…
+      <div className="bg-sikapa-cream px-4 pb-6 pt-3 dark:bg-zinc-950" aria-hidden>
+        <div className="flex gap-2">
+          <SkeletonBlock className="h-12 flex-1 rounded-[10px]" />
+          <SkeletonBlock className="h-12 w-24 rounded-[10px]" />
+          <SkeletonBlock className="h-12 w-20 rounded-[10px]" />
+        </div>
+        <div className="mt-4 flex gap-2 overflow-hidden">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonBlock key={i} className="h-10 w-24 shrink-0 rounded-full" />
+          ))}
+        </div>
+        {effectiveView === "list" ? <ProductListSkeleton /> : <ProductGridSkeleton count={8} />}
       </div>
     );
   }
