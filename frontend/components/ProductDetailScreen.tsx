@@ -57,10 +57,15 @@ export function ProductDetailScreen({ product: p }: Props) {
   const numericId = Number.parseInt(p.id, 10);
   const hasNumericId = Number.isFinite(numericId);
 
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariantPublic | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   const [gallery, setGallery] = useState<ProductImagePublic[]>([]);
   const [variants, setVariants] = useState<ProductVariantPublic[]>([]);
   const [activeImage, setActiveImage] = useState<string>(p.image);
+
+  const selectedVariant = useMemo(
+    () => variants.find((v) => v.id === selectedVariantId) ?? null,
+    [variants, selectedVariantId]
+  );
 
   useEffect(() => {
     trackProductView(p.id);
@@ -69,8 +74,21 @@ export function ProductDetailScreen({ product: p }: Props) {
   // Keep the hero image in sync when the route changes to a different product.
   useEffect(() => {
     setActiveImage(p.image);
-    setSelectedVariant(null);
+    setSelectedVariantId(null);
   }, [p.id, p.image]);
+
+  // Whenever the selected variant changes, swap in its image if one exists,
+  // otherwise snap back to the base product photo. Tracked as an effect (not
+  // inside the state setters) so clearing the variant from ANY source —
+  // thumbnail click, variant-picker toggle, route change — always restores
+  // the default hero.
+  useEffect(() => {
+    if (selectedVariant?.image_url) {
+      setActiveImage(resolveImageSrc(selectedVariant.image_url));
+    } else {
+      setActiveImage(p.image);
+    }
+  }, [selectedVariant, p.image]);
 
   useEffect(() => {
     if (!hasNumericId) return;
@@ -98,17 +116,11 @@ export function ProductDetailScreen({ product: p }: Props) {
     };
   }, [hasNumericId, numericId]);
 
-  const onVariantChange = useCallback(
-    (v: ProductVariantPublic | null) => {
-      setSelectedVariant(v);
-      if (v?.image_url) {
-        setActiveImage(resolveImageSrc(v.image_url));
-      } else {
-        setActiveImage(p.image);
-      }
-    },
-    [p.image]
-  );
+  // Stable handler for the variant picker so toggling a size/colour chip only
+  // flows through `selectedVariantId`; the effect above handles the image.
+  const onSelectedIdChange = useCallback((id: number | null) => {
+    setSelectedVariantId(id);
+  }, []);
 
   const effectivePrice = p.price + (selectedVariant?.price_delta ?? 0);
   const effectiveDescription =
@@ -134,6 +146,17 @@ export function ProductDetailScreen({ product: p }: Props) {
   const isOutOfStock = hasStockInfo && (effectiveStock ?? 0) <= 0;
   const isLowStock =
     hasStockInfo && !isOutOfStock && (effectiveStock ?? 0) <= 5;
+
+  // When a product ships with variants (size / colour / etc.) we refuse to
+  // add the "default" product to cart — the shopper has to pick an option
+  // first, otherwise the order would be ambiguous.
+  const requiresVariantPick = variants.length > 0 && !selectedVariant;
+  const addDisabled = isOutOfStock || requiresVariantPick;
+  const addLabel = isOutOfStock
+    ? "Out of stock"
+    : requiresVariantPick
+    ? "Choose an option"
+    : "Add to cart";
 
   const thumbnails = useMemo(() => {
     const list: {
@@ -174,15 +197,33 @@ export function ProductDetailScreen({ product: p }: Props) {
   //     to the default photo).
   const onThumbnailPick = useCallback(
     (t: (typeof thumbnails)[number]) => {
-      setActiveImage(t.src);
       if (t.variantId != null) {
-        const v = variants.find((x) => x.id === t.variantId) ?? null;
-        setSelectedVariant(v);
+        setSelectedVariantId(t.variantId);
       } else {
-        setSelectedVariant(null);
+        setSelectedVariantId(null);
+        setActiveImage(t.src);
       }
     },
-    [variants]
+    []
+  );
+
+  // The "add to cart" action must carry the variant context so the server
+  // books the right SKU and the cart page shows "Colour / Size · +GHS X".
+  const handleAddToCart = useCallback(
+    (qty = 1) => {
+      if (addDisabled) return;
+      if (selectedVariant) {
+        addProduct(p.id, qty, {
+          variantId: selectedVariant.id,
+          variantLabel: selectedVariant.name,
+          variantImage: selectedVariant.image_url ?? null,
+          priceDelta: selectedVariant.price_delta ?? 0,
+        });
+      } else {
+        addProduct(p.id, qty);
+      }
+    },
+    [addProduct, addDisabled, p.id, selectedVariant]
   );
 
   return (
@@ -202,10 +243,11 @@ export function ProductDetailScreen({ product: p }: Props) {
           <ProductWishlistButton productId={p.id} size="md" className="absolute right-3 top-3 z-[1]" />
           <button
             type="button"
-            className="sikapa-tap-bounce absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center rounded-full bg-sikapa-gold text-white shadow-lg ring-2 ring-white/90 dark:ring-zinc-900"
+            className="sikapa-tap-bounce absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center rounded-full bg-sikapa-gold text-white shadow-lg ring-2 ring-white/90 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-900"
             aria-label={`Add ${p.name} to cart`}
-            onClick={() => addProduct(p.id)}
-            disabled={isOutOfStock}
+            onClick={() => handleAddToCart()}
+            disabled={addDisabled}
+            title={requiresVariantPick ? "Choose an option first" : undefined}
           >
             <FaCart className="!h-5 !w-5" />
           </button>
@@ -291,7 +333,9 @@ export function ProductDetailScreen({ product: p }: Props) {
           <ProductVariantsDisplay
             productId={numericId}
             basePrice={p.price}
-            onVariantChange={onVariantChange}
+            variants={variants}
+            selectedId={selectedVariantId}
+            onSelectedIdChange={onSelectedIdChange}
           />
         )}
 
@@ -308,11 +352,11 @@ export function ProductDetailScreen({ product: p }: Props) {
           <button
             type="button"
             className="sikapa-btn-gold sikapa-tap-bounce flex flex-1 items-center justify-center gap-2 rounded-[10px] py-3 text-small font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => addProduct(p.id)}
-            disabled={isOutOfStock}
+            onClick={() => handleAddToCart()}
+            disabled={addDisabled}
           >
             <FaCart className="!h-4 !w-4 shrink-0" />
-            {isOutOfStock ? "Out of stock" : "Add to cart"}
+            {addLabel}
           </button>
           <Link
             href="/shop"
@@ -424,10 +468,10 @@ export function ProductDetailScreen({ product: p }: Props) {
           <button
             type="button"
             className="sikapa-btn-gold sikapa-tap-bounce shrink-0 rounded-full px-5 py-2.5 text-small font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => addProduct(p.id)}
-            disabled={isOutOfStock}
+            onClick={() => handleAddToCart()}
+            disabled={addDisabled}
           >
-            {isOutOfStock ? "Out of stock" : "Add to cart"}
+            {addLabel}
           </button>
         </div>
       </div>
