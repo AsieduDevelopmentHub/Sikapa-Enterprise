@@ -8,11 +8,15 @@ export type SubscriptionResponse = {
   subscribed_at?: string;
 };
 
-export async function newsletterSubscribe(email: string): Promise<SubscriptionResponse> {
+export async function newsletterSubscribe(
+  email: string,
+  options?: { marketingOptIn: boolean }
+): Promise<SubscriptionResponse> {
+  const marketing_opt_in = options?.marketingOptIn ?? false;
   return apiFetchJson<SubscriptionResponse>(V1.subscriptions.subscribe, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, marketing_opt_in }),
   });
 }
 

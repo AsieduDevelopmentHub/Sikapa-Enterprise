@@ -5,7 +5,7 @@ import csv
 import io
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Query, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -22,6 +22,7 @@ from app.api.v1.admin.services import (
     get_entity_or_404,
 )
 from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text, sanitize_slug
+from app.core.newsletter_tasks import run_product_newsletter_job
 
 router = APIRouter()
 
@@ -146,6 +147,7 @@ async def list_products_admin(
 
 @router.post("/", response_model=ProductManagementRead, status_code=status.HTTP_201_CREATED)
 async def create_product(
+    background_tasks: BackgroundTasks,
     name: str = Form(...),
     slug: str = Form(...),
     description: str = Form(None),
@@ -178,7 +180,14 @@ async def create_product(
         "is_active": True,
     }
     
-    return await create_product_admin(session, product_data)
+    created = await create_product_admin(session, product_data)
+    background_tasks.add_task(
+        run_product_newsletter_job,
+        created.id,
+        "new_product",
+        None,
+    )
+    return created
 
 
 @router.get("/{product_id}", response_model=ProductManagementRead)
@@ -194,6 +203,7 @@ async def get_product_admin(
 
 @router.put("/{product_id}", response_model=ProductManagementRead)
 async def update_product(
+    background_tasks: BackgroundTasks,
     product_id: int,
     name: str = Form(None),
     slug: str = Form(None),
@@ -207,6 +217,9 @@ async def update_product(
     current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     """Update a product."""
+    existing = await get_entity_or_404(session, Product, product_id)
+    prev_price = float(existing.price)
+
     image_url = None
     if image:
         image_url = await upload_product_image(image, session)
@@ -229,7 +242,15 @@ async def update_product(
     if is_active is not None:
         product_data["is_active"] = is_active
     
-    return await update_product_admin(session, product_id, product_data)
+    updated = await update_product_admin(session, product_id, product_data)
+    if price is not None and float(updated.price) < prev_price:
+        background_tasks.add_task(
+            run_product_newsletter_job,
+            product_id,
+            "price_drop",
+            prev_price,
+        )
+    return updated
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -269,6 +290,7 @@ async def list_low_stock_products(
     status_code=status.HTTP_200_OK,
 )
 async def bulk_import_products(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="CSV file with product rows"),
     commit: bool = Form(False, description="If false, run a dry-run and report changes without persisting"),
     update_existing: bool = Form(True, description="If true, update products that match by slug; otherwise skip them"),
@@ -351,7 +373,15 @@ async def bulk_import_products(
 
             if commit:
                 try:
-                    await update_product_admin(session, existing.id, payload)
+                    prev_price = float(existing.price)
+                    updated_product = await update_product_admin(session, existing.id, payload)
+                    if float(updated_product.price) < prev_price:
+                        background_tasks.add_task(
+                            run_product_newsletter_job,
+                            existing.id,
+                            "price_drop",
+                            prev_price,
+                        )
                     updated += 1
                     results.append(
                         BulkImportRowResult(
@@ -387,6 +417,12 @@ async def bulk_import_products(
             if commit:
                 try:
                     created_product = await create_product_admin(session, payload)
+                    background_tasks.add_task(
+                        run_product_newsletter_job,
+                        created_product.id,
+                        "new_product",
+                        None,
+                    )
                     created += 1
                     results.append(
                         BulkImportRowResult(

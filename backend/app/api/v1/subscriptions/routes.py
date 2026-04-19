@@ -19,6 +19,7 @@ router = APIRouter()
 
 class EmailSubscribeRequest(BaseModel):
     email: EmailStr
+    marketing_opt_in: bool = False
 
 
 class UnsubscribeRequest(BaseModel):
@@ -31,7 +32,11 @@ async def subscribe(
     session: Session = Depends(get_session),
 ):
     """Subscribe email to newsletter."""
-    return await subscribe_email(session, request.email)
+    return await subscribe_email(
+        session,
+        request.email,
+        marketing_opt_in=request.marketing_opt_in,
+    )
 
 
 @router.post("/unsubscribe", status_code=status.HTTP_204_NO_CONTENT)

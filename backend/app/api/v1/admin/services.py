@@ -22,7 +22,6 @@ from app.models import (
     BusinessSetting,
 )
 from app.core.email_service import EmailService
-from app.api.v1.subscriptions.services import newsletter_recipients
 from app.api.v1.admin.crud_helpers import (
     get_entity_or_404,
     create_entity_with_slug,
@@ -34,7 +33,6 @@ from app.api.v1.admin.crud_helpers import (
 
 
 email_service = EmailService()
-NEWSLETTER_MAX_RECIPIENTS = int(os.getenv("NEWSLETTER_MAX_RECIPIENTS", "1000"))
 
 
 # ============ ANALYTICS SERVICES ============
@@ -232,38 +230,9 @@ async def revoke_admin_role(session: Session, user_id: int) -> User:
 
 # ============ PRODUCT MANAGEMENT SERVICES ============
 
-def _notify_newsletter_product_event(
-    session: Session,
-    *,
-    product: Product,
-    update_type: str,
-    previous_price: float | None = None,
-) -> None:
-    """Best-effort marketing email fanout for catalog updates."""
-    try:
-        recipients = newsletter_recipients(session)
-        if not recipients:
-            return
-        for sub in recipients[:NEWSLETTER_MAX_RECIPIENTS]:
-            email_service.send_newsletter_product_update(
-                sub.email,
-                product_name=product.name,
-                product_slug=product.slug,
-                current_price=float(product.price),
-                category=product.category,
-                update_type=update_type,
-                previous_price=previous_price,
-                unsubscribe_token=sub.verification_token,
-            )
-    except Exception as e:
-        print(f"Failed to send newsletter product event: {e}")
-
-
 async def create_product_admin(session: Session, product_data: dict) -> Product:
     """Create a product."""
-    created = await create_entity_with_slug(session, Product, product_data)
-    _notify_newsletter_product_event(session, product=created, update_type="new_product")
-    return created
+    return await create_entity_with_slug(session, Product, product_data)
 
 
 async def update_product_admin(
@@ -289,13 +258,6 @@ async def update_product_admin(
         )
         session.add(log)
         session.commit()
-    if "price" in product_data and float(updated.price) < prev_price:
-        _notify_newsletter_product_event(
-            session,
-            product=updated,
-            update_type="price_drop",
-            previous_price=prev_price,
-        )
     return updated
 
 
@@ -376,13 +338,20 @@ async def upload_product_image(
     session: Session,
     folder: str = "products"
 ) -> str:
-    """Upload product image to Supabase Storage or local fallback."""
+    """Upload product image to Supabase Storage or optional local fallback."""
     import uuid
     import logging
     from pathlib import Path
     from app.core.supabase import upload_file
 
     logger = logging.getLogger(__name__)
+
+    max_bytes = int(os.getenv("IMAGE_UPLOAD_MAX_BYTES", str(5 * 1024 * 1024)))
+    allow_local = os.getenv("UPLOAD_ALLOW_LOCAL_FALLBACK", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
 
     valid_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
     if file.content_type not in valid_types:
@@ -397,16 +366,27 @@ async def upload_product_image(
     storage_path = f"{folder}/{filename}"
 
     file_bytes = await file.read()
+    if len(file_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Image too large. Maximum size is {max_bytes // (1024 * 1024)} MB.",
+        )
 
     # Try Supabase upload first
     public_url = upload_file(storage_path, file_bytes)
-    
+
     if public_url:
-        logger.info(f"Successfully uploaded product image to Supabase: {storage_path}")
+        logger.info("Successfully uploaded image to Supabase: %s", storage_path)
         return public_url
 
-    # Fallback to local storage
-    logger.warning(f"Supabase upload failed for {storage_path}, falling back to local storage")
+    if not allow_local:
+        logger.error("Supabase upload failed and local fallback is disabled (%s)", storage_path)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Image storage unavailable. Configure Supabase storage or enable UPLOAD_ALLOW_LOCAL_FALLBACK.",
+        )
+
+    logger.warning("Supabase upload failed for %s, falling back to local storage", storage_path)
     upload_dir = os.path.join("uploads", folder)
     os.makedirs(upload_dir, exist_ok=True)
     upload_path = os.path.join(upload_dir, filename)
@@ -414,7 +394,7 @@ async def upload_product_image(
     with open(upload_path, "wb") as f:
         f.write(file_bytes)
 
-    logger.info(f"Uploaded product image to local storage: {upload_path}")
+    logger.info("Uploaded image to local storage: %s", upload_path)
     return f"/uploads/{folder}/{filename}"
 
 

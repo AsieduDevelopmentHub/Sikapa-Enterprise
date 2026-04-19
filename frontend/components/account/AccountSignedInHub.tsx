@@ -108,6 +108,7 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
 
   const [newsEmail, setNewsEmail] = useState("");
   const [newsBusy, setNewsBusy] = useState(false);
+  const [newsMarketing, setNewsMarketing] = useState(false);
 
   const [delPw, setDelPw] = useState("");
   const [delBusy, setDelBusy] = useState(false);
@@ -891,9 +892,18 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
                 setNewsBusy(false);
                 return;
               }
+              if (!newsMarketing) {
+                setBanner({
+                  type: "err",
+                  text: "Please confirm you agree to receive marketing emails (checkbox below).",
+                });
+                setNewsBusy(false);
+                return;
+              }
               try {
-                await newsletterSubscribe(em);
+                await newsletterSubscribe(em, { marketingOptIn: true });
                 setBanner({ type: "ok", text: "Subscribed. Check your inbox if confirmation is required." });
+                setNewsMarketing(false);
               } catch (err) {
                 setBanner({ type: "err", text: err instanceof Error ? err.message : "Subscribe failed" });
               } finally {
@@ -915,6 +925,21 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
               {newsBusy ? "Processing..." : "Join"}
             </button>
           </form>
+          <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12px] leading-snug text-sikapa-text-secondary dark:text-zinc-400">
+            <input
+              type="checkbox"
+              checked={newsMarketing}
+              onChange={(e) => setNewsMarketing(e.target.checked)}
+              className="mt-0.5 shrink-0 rounded border-sikapa-gray-soft dark:border-white/20"
+            />
+            <span>
+              I agree to receive marketing emails about products, offers, launches, and price drops. See{" "}
+              <Link href="/privacy" className="font-semibold text-sikapa-gold hover:underline">
+                Privacy policy
+              </Link>
+              .
+            </span>
+          </label>
           <button
             type="button"
             disabled={newsBusy}
