@@ -47,6 +47,8 @@ class UserBase(SQLModel):
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     hashed_password: str
+    # Google OAuth "sub" claim; unique when set (one Google account ↔ one Sikapa user).
+    google_sub: Optional[str] = Field(default=None, max_length=255, index=True, unique=True)
     email_verified: bool = False
     email_is_placeholder: bool = Field(default=False)
     phone: Optional[str] = None

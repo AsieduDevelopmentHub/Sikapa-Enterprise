@@ -124,6 +124,18 @@ export async function authLoginWith2FA(
   });
 }
 
+/** Finish Google OAuth when the account has TOTP 2FA enabled (after redirect to /auth/google/2fa). */
+export async function authGoogleOAuthVerify2FA(
+  pendingToken: string,
+  code: string
+): Promise<TokenResponse> {
+  return apiFetchJson<TokenResponse>(V1.auth.googleVerify2fa, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ pending_token: pendingToken, code }),
+  });
+}
+
 export async function authRefresh(refreshToken: string): Promise<TokenResponse> {
   return apiFetchJson<TokenResponse>(V1.auth.refresh, {
     method: "POST",
