@@ -55,6 +55,10 @@ npm run dev
 - **401** with **“Refresh token expired — sign in again”** means the user must log in again.
 - On **refresh**, the API returns **new access and refresh tokens** (rotation). Clients should **persist both**—especially the new `refresh_token`.
 
+### Next.js storefront: local vs session storage
+
+The web app stores JWTs in **`localStorage`** when the user checks **Keep me signed in** (default), and in **`sessionStorage`** when unchecked so the session ends with the browser/tab session. Refresh-token retries must read from the same store (see [AUTH_SESSION_AND_ADMIN.md](./AUTH_SESSION_AND_ADMIN.md)).
+
 ## Login payload format
 
 - `POST /api/v1/auth/login` expects:

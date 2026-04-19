@@ -9,6 +9,7 @@ Start here. Everything below lives in this repo; use it for onboarding, deployme
 | **Environment variables (backend + frontend)** | [ENVIRONMENT.md](./ENVIRONMENT.md) |
 | **Running services, deploys, JWT, CORS, health** | [OPERATIONS.md](./OPERATIONS.md) |
 | **Auth endpoints, tokens, 2FA** | [../backend/docs/AUTHENTICATION.md](../backend/docs/AUTHENTICATION.md) |
+| **Browser “Remember me”, JWT refresh, admin RBAC** | [AUTH_SESSION_AND_ADMIN.md](./AUTH_SESSION_AND_ADMIN.md) |
 | **API examples & integration** | [../backend/docs/API_REFERENCE.md](../backend/docs/API_REFERENCE.md) |
 | **Backend README (setup, tests, migrations)** | [../backend/README.md](../backend/README.md) |
 | **Backend → Render** | [../backend/docs/hosting/render.md](../backend/docs/hosting/render.md) |

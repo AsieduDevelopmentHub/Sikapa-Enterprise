@@ -1,8 +1,6 @@
 import { parseApiErrorBody } from "@/lib/api/error-message";
 import { V1 } from "@/lib/api/v1-paths";
-
-const STORAGE_ACCESS = "sikapa_access_token";
-const STORAGE_REFRESH = "sikapa_refresh_token";
+import { getActiveBucket, readTokens, writeTokens } from "@/lib/auth-storage";
 
 export function getApiV1Base(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000/api/v1";
@@ -37,7 +35,7 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     try {
-      const rt = localStorage.getItem(STORAGE_REFRESH);
+      const { refresh: rt } = readTokens();
       if (!rt) return null;
       const res = await fetch(`${getApiV1Base()}${V1.auth.refresh}`, {
         method: "POST",
@@ -49,11 +47,8 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
         access_token: string;
         refresh_token?: string | null;
       };
-      localStorage.setItem(STORAGE_ACCESS, tokens.access_token);
-      if (tokens.refresh_token) {
-        localStorage.setItem(STORAGE_REFRESH, tokens.refresh_token);
-      }
-      /* If the API omits refresh_token, keep the previous refresh (older servers). */
+      const bucket = getActiveBucket();
+      writeTokens(tokens.access_token, tokens.refresh_token ?? rt, bucket);
       window.dispatchEvent(new CustomEvent("sikapa-auth-refreshed", { detail: tokens.access_token }));
       return tokens.access_token;
     } catch {
