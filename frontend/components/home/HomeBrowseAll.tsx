@@ -47,6 +47,7 @@ export function HomeBrowseAll() {
             Shop all
           </Link>
         </div>
+
         <ul className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {rows.map((cat) => {
             const countLabel = cat.count === 1 ? "1 product" : `${cat.count} products`;

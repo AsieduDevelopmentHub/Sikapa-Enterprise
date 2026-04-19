@@ -43,6 +43,23 @@ class LoginWithTwoFARequest(BaseModel):
     code: str = Field(..., min_length=6, max_length=6)
 
 
+class GoogleOAuth2FAVerifyRequest(BaseModel):
+    """Complete sign-in after Google OAuth when TOTP 2FA is enabled on the account."""
+
+    pending_token: str = Field(..., min_length=20, max_length=4096)
+    code: str = Field(..., min_length=6, max_length=6)
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def _six_digit_code(cls, v):
+        if v is None:
+            raise ValueError("Authentication code is required")
+        s = "".join(ch for ch in str(v) if ch.isdigit())[:6]
+        if len(s) != 6:
+            raise ValueError("Enter the 6-digit authenticator code")
+        return s
+
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: Optional[str] = None

@@ -17,6 +17,9 @@ export const V1 = {
     twoFaDisable: "/auth/2fa/disable",
     twoFaBackupCodes: "/auth/2fa/backup-codes",
     accountDelete: "/auth/account/delete",
+    googleStart: "/auth/google/start",
+    googleCallback: "/auth/google/callback",
+    googleVerify2fa: "/auth/google/verify-2fa",
   },
   products: {
     list: "/products/",
