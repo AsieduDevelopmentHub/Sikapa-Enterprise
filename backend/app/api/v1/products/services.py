@@ -3,6 +3,7 @@ Products business logic
 """
 from typing import Optional
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlmodel import Session, select, and_, or_
 
 from app.models import Product, Category
@@ -22,33 +23,22 @@ async def get_products_with_filters(
 ) -> ProductSearchResponse:
     """Get products with advanced filtering and sorting."""
 
-    query = select(Product)
-
+    filters = [Product.is_active == True]
     if category_id is not None:
-        query = query.where(Product.category == str(category_id))
-
-    query = query.where(Product.is_active == True)
-
+        filters.append(Product.category == str(category_id))
     if min_price is not None:
-        query = query.where(Product.price >= min_price)
-
+        filters.append(Product.price >= min_price)
     if max_price is not None:
-        query = query.where(Product.price <= max_price)
-
+        filters.append(Product.price <= max_price)
     if min_rating is not None:
-        query = query.where(Product.avg_rating >= min_rating)
+        filters.append(Product.avg_rating >= min_rating)
 
-    filtered_query = select(Product).where(Product.is_active == True)
-    if category_id is not None:
-        filtered_query = filtered_query.where(Product.category == str(category_id))
-    if min_price is not None:
-        filtered_query = filtered_query.where(Product.price >= min_price)
-    if max_price is not None:
-        filtered_query = filtered_query.where(Product.price <= max_price)
-    if min_rating is not None:
-        filtered_query = filtered_query.where(Product.avg_rating >= min_rating)
+    where_clause = and_(*filters)
+    total = session.exec(
+        select(func.count(Product.id)).where(where_clause)
+    ).one()
 
-    total = len(session.exec(filtered_query).all())
+    query = select(Product).where(where_clause)
 
     if sort_by == "price":
         sort_col = Product.price
@@ -93,15 +83,16 @@ async def search_products(
         Product.description.ilike(search_term),
         and_(Product.sku.isnot(None), Product.sku.ilike(search_term)),
     )
-    query = select(Product).where(and_(Product.is_active == True, match_any))
+    where_clause = and_(Product.is_active == True, match_any)
+    total = session.exec(select(func.count(Product.id)).where(where_clause)).one()
 
-    filtered_query = select(Product).where(
-        and_(Product.is_active == True, match_any)
+    query = (
+        select(Product)
+        .where(where_clause)
+        .order_by(Product.created_at.desc())
+        .offset(skip)
+        .limit(limit)
     )
-
-    total = len(session.exec(filtered_query).all())
-
-    query = query.order_by(Product.created_at.desc()).offset(skip).limit(limit)
 
     products = session.exec(query).all()
 

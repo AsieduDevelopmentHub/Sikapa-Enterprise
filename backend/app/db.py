@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import Request
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # Load environment variables from .env file
@@ -31,6 +31,19 @@ engine = create_engine(
     connect_args=connect_args,
     **engine_kwargs,
 )
+
+
+if DATABASE_URL.startswith("sqlite"):
+
+    @event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_connection, _connection_record) -> None:
+        if os.getenv("SQLITE_WAL", "true").lower() != "true":
+            return
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 def apply_postgres_session_user(session: Session, user_id: int | None) -> None:

@@ -40,12 +40,12 @@ const EU_EEA_CODES = new Set([
  * Whether to show the cookie preferences bar (EU/EEA visitors on Vercel/Cloudflare,
  * or when NEXT_PUBLIC_FORCE_COOKIE_BANNER=true).
  */
-export function cookieBannerNeeded(): boolean {
+export async function cookieBannerNeeded(): Promise<boolean> {
   if (process.env.NEXT_PUBLIC_FORCE_COOKIE_BANNER === "true") {
     return true;
   }
   try {
-    const h = headers();
+    const h = await headers();
     const country =
       h.get("x-vercel-ip-country") || h.get("cf-ipcountry") || h.get("X-App-Country");
     if (country && EU_EEA_CODES.has(country.trim().toUpperCase())) {
