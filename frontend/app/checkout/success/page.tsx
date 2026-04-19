@@ -1,10 +1,11 @@
 import { Suspense } from "react";
+import { pageMetadata } from "@/lib/seo";
 import { CheckoutSuccessClient } from "./CheckoutSuccessClient";
 
-export const metadata = {
-  title: "Order confirmed · Sikapa Enterprise",
-  description: "Your Sikapa order has been placed. See what happens next.",
-};
+export const metadata = pageMetadata("Order confirmed", {
+  description: "Your Sikapa order was placed successfully — confirmation, email, and what happens next.",
+  path: "/checkout/success",
+});
 
 export default function CheckoutSuccessPage() {
   return (

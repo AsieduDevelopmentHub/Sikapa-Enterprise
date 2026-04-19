@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Help center · Sikapa Enterprise",
-  description: "Answers about shipping, returns, payment, and contacting Sikapa support.",
-};
+export const metadata = pageMetadata("Help center", {
+  description:
+    "Shipping, returns, payments, orders, account help, and how to contact Sikapa Enterprise support.",
+  path: "/help",
+});
 
 const TOPICS = [
   {

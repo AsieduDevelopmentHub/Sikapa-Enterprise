@@ -1,6 +1,11 @@
 import { HelpArticle } from "@/components/help/HelpArticle";
 
-export const metadata = { title: "Account & privacy · Sikapa Help" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Account & privacy", {
+  description: "Manage your Sikapa account, email, password, and data — help topics and security tips.",
+  path: "/help/account",
+});
 
 export default function HelpAccountPage() {
   return (

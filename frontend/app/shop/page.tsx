@@ -1,6 +1,13 @@
 import { Suspense } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { ShopScreen } from "@/components/ShopScreen";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Shop all products", {
+  description:
+    "Browse Sikapa’s full catalog — cosmetics, wigs, skincare, perfumes, and accessories with filters and secure checkout.",
+  path: "/shop",
+});
 
 function ShopFallback() {
   return (

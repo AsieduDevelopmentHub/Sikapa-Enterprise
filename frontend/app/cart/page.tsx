@@ -1,5 +1,11 @@
 import { Suspense } from "react";
+import { pageMetadata } from "@/lib/seo";
 import { CartPageClient } from "./CartPageClient";
+
+export const metadata = pageMetadata("Shopping cart", {
+  description: "Review your bag, update quantities, and proceed to secure checkout with Paystack.",
+  path: "/cart",
+});
 
 export default function CartPage() {
   return (

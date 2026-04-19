@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { pageMetadata } from "@/lib/seo";
 import { SIKAPA_LOCATION_LINE } from "@/lib/site";
+
+export const metadata = pageMetadata("Privacy Policy", {
+  description:
+    "How Sikapa Enterprise collects, uses, and protects your personal information when you shop with us.",
+  path: "/privacy",
+});
 
 const UPDATED = "April 2026";
 

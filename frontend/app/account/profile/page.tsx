@@ -1,7 +1,12 @@
 import { AccountScreen } from "@/components/account/AccountScreen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 
-export const metadata = { title: "Profile · Sikapa Enterprise" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Profile", {
+  description: "Update your name, username, email, and contact details for Sikapa Enterprise.",
+  path: "/account/profile",
+});
 
 export default function AccountProfilePage() {
   return (

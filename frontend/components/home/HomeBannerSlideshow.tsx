@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+/** First four promotional banners (`banner5.png` and beyond are omitted). */
 const SLIDES: { src: string; alt: string; href: string }[] = [
   {
     src: "/assets/banners/banner1.png",
@@ -18,6 +19,11 @@ const SLIDES: { src: string; alt: string; href: string }[] = [
   {
     src: "/assets/banners/banner3.png",
     alt: "Luxury beauty for every style",
+    href: "/shop",
+  },
+  {
+    src: "/assets/banners/banner4.png",
+    alt: "Seasonal picks and bundles",
     href: "/shop",
   },
 ];
@@ -69,7 +75,7 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
               <Link
                 key={slide.src}
                 href={slide.href}
-                className={`absolute inset-0 block transition-opacity duration-700 ease-out ${
+                className={`absolute inset-0 block ${
                   i === index ? "z-[1] cursor-pointer opacity-100" : "pointer-events-none z-0 opacity-0"
                 }`}
                 aria-hidden={i !== index}
@@ -95,7 +101,7 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
 
           <button
             type="button"
-            className="sikapa-tap absolute left-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-sikapa-text-primary shadow-md backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-100"
+            className="sikapa-tap-static absolute left-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-sikapa-text-primary shadow-md backdrop-blur-sm hover:bg-white dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-800"
             aria-label="Previous banner"
             onClick={() => {
               setPaused(true);
@@ -106,7 +112,7 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
           </button>
           <button
             type="button"
-            className="sikapa-tap absolute right-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-sikapa-text-primary shadow-md backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-100"
+            className="sikapa-tap-static absolute right-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-sikapa-text-primary shadow-md backdrop-blur-sm hover:bg-white dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-800"
             aria-label="Next banner"
             onClick={() => {
               setPaused(true);
@@ -124,7 +130,7 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
               type="button"
               role="tab"
               aria-selected={i === index}
-              className={`sikapa-tap h-2 rounded-full transition-all duration-300 ${
+              className={`sikapa-tap-static h-2 rounded-full ${
                 i === index ? "w-6 bg-sikapa-gold" : "w-2 bg-sikapa-gray-soft dark:bg-zinc-600"
               }`}
               aria-label={`Go to slide ${i + 1}`}

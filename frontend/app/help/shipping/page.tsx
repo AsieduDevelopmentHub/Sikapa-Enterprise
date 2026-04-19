@@ -1,6 +1,11 @@
 import { HelpArticle } from "@/components/help/HelpArticle";
 
-export const metadata = { title: "Shipping & delivery · Sikapa Help" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Shipping & delivery", {
+  description: "Delivery regions, fees, dispatch times, and how shipping works on Sikapa Enterprise.",
+  path: "/help/shipping",
+});
 
 export default function HelpShippingPage() {
   return (

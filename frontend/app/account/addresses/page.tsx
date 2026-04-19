@@ -1,7 +1,12 @@
 import { AccountScreen } from "@/components/account/AccountScreen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 
-export const metadata = { title: "Addresses · Sikapa Enterprise" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Addresses", {
+  description: "Manage shipping addresses and delivery details for Sikapa Enterprise orders.",
+  path: "/account/addresses",
+});
 
 export default function AccountAddressesPage() {
   return (

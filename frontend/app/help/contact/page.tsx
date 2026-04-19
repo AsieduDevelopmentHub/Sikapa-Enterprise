@@ -1,7 +1,12 @@
 import { HelpArticle } from "@/components/help/HelpArticle";
 import { getWhatsAppChatUrl } from "@/lib/contact";
 
-export const metadata = { title: "Contact support · Sikapa Help" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Contact support", {
+  description: "Reach Sikapa Enterprise customer support — WhatsApp, email paths, and response expectations.",
+  path: "/help/contact",
+});
 
 const SUPPORT_EMAIL = "support@sikapa.com";
 

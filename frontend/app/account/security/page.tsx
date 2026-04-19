@@ -1,7 +1,11 @@
 import { AccountScreen } from "@/components/account/AccountScreen";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Security · Sikapa Enterprise" };
+export const metadata = pageMetadata("Security", {
+  description: "Two-factor authentication, password changes, and account protection on Sikapa Enterprise.",
+  path: "/account/security",
+});
 
 export default function AccountSecurityPage() {
   return (
