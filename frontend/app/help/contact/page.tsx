@@ -35,8 +35,12 @@ export default function HelpContactPage() {
         </li>
       </ul>
       <h2>Hours</h2>
-      <p>Monday–Saturday, 9am – 6pm GMT. We respond within 24 hours on business days.</p>
-      <h2>Store location</h2>
+      <p>Monday–Friday, 8am – 6pm GMT. <br />
+        Sunday, 11am – 5pm GMT. <br />
+        We respond within 24 hours on business days.</p>
+      <h2 id="store-map" className="scroll-mt-24">
+        Store location
+      </h2>
       <StoreLocationMap />
       <h2>Before you write in</h2>
       <p>

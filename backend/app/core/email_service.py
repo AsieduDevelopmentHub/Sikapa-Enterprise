@@ -295,5 +295,49 @@ class EmailService:
         )
         return EmailService.send_email(email, subject, html_content) is not None
 
+    @staticmethod
+    def send_newsletter_product_update(
+        email: str,
+        *,
+        product_name: str,
+        product_slug: str,
+        current_price: float,
+        category: str | None = None,
+        update_type: str = "product_update",
+        previous_price: float | None = None,
+        unsubscribe_token: str | None = None,
+    ) -> bool:
+        base = (frontend_url or "").rstrip("/")
+        product_url = f"{base}/product/{quote(str(product_slug), safe='')}"
+        if update_type == "new_product":
+            subject = f"Just dropped: {product_name} — Sikapa"
+            lead = "A new item is now live in our catalog."
+        elif previous_price is not None and current_price < previous_price:
+            subject = f"Price drop: {product_name} — Sikapa"
+            lead = f"Good news: this item is now lower than before (was GHS {previous_price:,.2f})."
+        else:
+            subject = f"Catalog update: {product_name} — Sikapa"
+            lead = "One of our products has been updated."
+
+        inner = (
+            T.paragraph(lead)
+            + T.paragraph(f"Product: {product_name}")
+            + T.muted_paragraph(f"Current price: GHS {current_price:,.2f}")
+        )
+        if category:
+            inner += T.muted_paragraph(f"Category: {category}")
+        inner += T.primary_button(product_url, "View product") + T.link_fallback(product_url)
+        if unsubscribe_token:
+            unsub_url = f"{base}/api/v1/subscriptions/unsubscribe/{quote(unsubscribe_token, safe='')}"
+            inner += T.muted_paragraph("You can unsubscribe anytime:")
+            inner += T.link_fallback(unsub_url)
+
+        html_content = T.wrap_email(
+            title="Sikapa newsletter",
+            preheader=subject,
+            inner_html=inner,
+        )
+        return EmailService.send_email(email, subject, html_content) is not None
+
 
 email_service = EmailService()

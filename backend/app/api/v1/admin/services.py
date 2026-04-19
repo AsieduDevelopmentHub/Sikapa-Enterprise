@@ -22,6 +22,7 @@ from app.models import (
     BusinessSetting,
 )
 from app.core.email_service import EmailService
+from app.api.v1.subscriptions.services import newsletter_recipients
 from app.api.v1.admin.crud_helpers import (
     get_entity_or_404,
     create_entity_with_slug,
@@ -33,6 +34,7 @@ from app.api.v1.admin.crud_helpers import (
 
 
 email_service = EmailService()
+NEWSLETTER_MAX_RECIPIENTS = int(os.getenv("NEWSLETTER_MAX_RECIPIENTS", "1000"))
 
 
 # ============ ANALYTICS SERVICES ============
@@ -230,9 +232,38 @@ async def revoke_admin_role(session: Session, user_id: int) -> User:
 
 # ============ PRODUCT MANAGEMENT SERVICES ============
 
+def _notify_newsletter_product_event(
+    session: Session,
+    *,
+    product: Product,
+    update_type: str,
+    previous_price: float | None = None,
+) -> None:
+    """Best-effort marketing email fanout for catalog updates."""
+    try:
+        recipients = newsletter_recipients(session)
+        if not recipients:
+            return
+        for sub in recipients[:NEWSLETTER_MAX_RECIPIENTS]:
+            email_service.send_newsletter_product_update(
+                sub.email,
+                product_name=product.name,
+                product_slug=product.slug,
+                current_price=float(product.price),
+                category=product.category,
+                update_type=update_type,
+                previous_price=previous_price,
+                unsubscribe_token=sub.verification_token,
+            )
+    except Exception as e:
+        print(f"Failed to send newsletter product event: {e}")
+
+
 async def create_product_admin(session: Session, product_data: dict) -> Product:
     """Create a product."""
-    return await create_entity_with_slug(session, Product, product_data)
+    created = await create_entity_with_slug(session, Product, product_data)
+    _notify_newsletter_product_event(session, product=created, update_type="new_product")
+    return created
 
 
 async def update_product_admin(
@@ -242,6 +273,7 @@ async def update_product_admin(
 ) -> Product:
     """Update a product."""
     before = await get_entity_or_404(session, Product, product_id)
+    prev_price = float(before.price)
     prev_stock = int(before.in_stock)
     updated = await update_entity_generic(
         session, Product, product_id, product_data, has_slug=True
@@ -257,6 +289,13 @@ async def update_product_admin(
         )
         session.add(log)
         session.commit()
+    if "price" in product_data and float(updated.price) < prev_price:
+        _notify_newsletter_product_event(
+            session,
+            product=updated,
+            update_type="price_drop",
+            previous_price=prev_price,
+        )
     return updated
 
 

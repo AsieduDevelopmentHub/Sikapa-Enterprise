@@ -93,6 +93,7 @@ export const V1 = {
     product: (id: number) => `/admin/products/${id}`,
     categories: "/admin/categories",
     category: (id: number) => `/admin/categories/${id}`,
+    categoryImage: (id: number) => `/admin/categories/${id}/image`,
     orders: "/admin/orders",
     order: (id: number) => `/admin/orders/${id}`,
     orderInvoicePdf: (id: number) => `/admin/orders/${id}/invoice/pdf`,
