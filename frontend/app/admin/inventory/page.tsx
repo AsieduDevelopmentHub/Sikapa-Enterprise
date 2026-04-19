@@ -21,6 +21,7 @@ export default function AdminInventoryPage() {
   const [delta, setDelta] = useState("");
   const [reason, setReason] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [adjusting, setAdjusting] = useState(false);
   const [stockQuery, setStockQuery] = useState("");
   const [logQuery, setLogQuery] = useState("");
   const [ready, setReady] = useState(false);
@@ -83,7 +84,9 @@ export default function AdminInventoryPage() {
 
   const adjust = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accessToken) return;
+    if (!accessToken || adjusting) return;
+    setErr(null);
+    setAdjusting(true);
     try {
       await adminCreateInventoryAdjustment(accessToken, {
         product_id: Number(productId),
@@ -95,6 +98,8 @@ export default function AdminInventoryPage() {
       await load();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Adjustment failed");
+    } finally {
+      setAdjusting(false);
     }
   };
 
@@ -104,7 +109,6 @@ export default function AdminInventoryPage() {
       <p className="text-small text-sikapa-text-secondary">
         Stock levels across the catalog. Every stock change is recorded in an audit log.
       </p>
-      {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       {!ready && !err ? (
         <AdminInventoryPageSkeleton />
       ) : (
@@ -140,9 +144,18 @@ export default function AdminInventoryPage() {
           onChange={(e) => setReason(e.target.value)}
           className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
         />
-        <button type="submit" className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white">
-          Save adjustment
+        <button
+          type="submit"
+          disabled={adjusting}
+          className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60"
+        >
+          {adjusting ? "Saving…" : "Save adjustment"}
         </button>
+        {err ? (
+          <p className="sm:col-span-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800" role="alert">
+            {err}
+          </p>
+        ) : null}
       </form>
 
       <section className="mt-6">

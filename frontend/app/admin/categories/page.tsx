@@ -30,6 +30,7 @@ export default function AdminCategoriesPage() {
   const [err, setErr] = useState<string | null>(null);
   const derivedSlug = useMemo(() => slugify(name.trim()), [name]);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
 
   const visibleRows = useMemo(() => {
@@ -56,8 +57,9 @@ export default function AdminCategoriesPage() {
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accessToken) return;
+    if (!accessToken || creating) return;
     setErr(null);
+    setCreating(true);
     try {
       await adminCreateCategory(accessToken, {
         name: name.trim(),
@@ -69,6 +71,8 @@ export default function AdminCategoriesPage() {
       await load();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Create failed");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -76,11 +80,10 @@ export default function AdminCategoriesPage() {
     <div className="w-full min-w-0 max-w-full">
       <h1 className="font-serif text-page-title font-semibold">Categories</h1>
       <p className="text-small text-sikapa-text-secondary">Organize the catalog; slugs power SEO URLs.</p>
-      {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
 
       <form
         onSubmit={(e) => void create(e)}
-        className="mt-6 flex w-full max-w-xl flex-col gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:flex-row sm:flex-wrap sm:items-end sm:p-5"
+        className="mt-6 flex w-full max-w-xl flex-col flex-wrap gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:flex-row sm:items-end sm:p-5"
       >
         <label className="block min-w-0 flex-1 text-small font-medium text-sikapa-text-secondary sm:min-w-[140px]">
           Name
@@ -104,10 +107,16 @@ export default function AdminCategoriesPage() {
         </div>
         <button
           type="submit"
-          className="w-full shrink-0 rounded-full bg-sikapa-crimson px-5 py-2.5 text-small font-semibold text-white sm:w-auto"
+          disabled={creating}
+          className="w-full shrink-0 rounded-full bg-sikapa-crimson px-5 py-2.5 text-small font-semibold text-white disabled:opacity-60 sm:w-auto"
         >
-          Add
+          {creating ? "Adding…" : "Add"}
         </button>
+        {err ? (
+          <p className="mt-1 w-full basis-full rounded-lg bg-red-50 px-3 py-2 text-small text-red-800" role="alert">
+            {err}
+          </p>
+        ) : null}
       </form>
 
       <div className="mt-6">

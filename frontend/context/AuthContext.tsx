@@ -27,7 +27,6 @@ type AuthContextValue = {
   loading: boolean;
   authError: string | null;
   clearAuthError: () => void;
-  /** When `remember` is true (default), tokens persist in localStorage; otherwise sessionStorage only. */
   login: (identifier: string, password: string, remember?: boolean) => Promise<void>;
   loginWithTotp: (identifier: string, password: string, code: string, remember?: boolean) => Promise<void>;
   register: (

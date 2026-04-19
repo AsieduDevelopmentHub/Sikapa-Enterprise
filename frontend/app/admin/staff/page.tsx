@@ -69,10 +69,8 @@ export default function AdminStaffPage() {
   const [ready, setReady] = useState(false);
   const [catalog, setCatalog] = useState<AdminPermissionDef[]>(STATIC_ADMIN_PERMISSION_CATALOG);
 
-  /** Draft permission keys per staff member (admin/staff only). */
   const [permDrafts, setPermDrafts] = useState<Record<number, string[]>>({});
 
-  /** Create-account form */
   const [createUsername, setCreateUsername] = useState("");
   const [createName, setCreateName] = useState("");
   const [createEmail, setCreateEmail] = useState("");
@@ -80,6 +78,8 @@ export default function AdminStaffPage() {
   const [createRole, setCreateRole] = useState<"super_admin" | "admin" | "staff">("staff");
   const [createPerms, setCreatePerms] = useState<string[]>(ADMIN_PERMISSION_PRESETS.staff);
   const [createBusy, setCreateBusy] = useState(false);
+  const [promoteBusy, setPromoteBusy] = useState(false);
+  const [savingPermFor, setSavingPermFor] = useState<number | null>(null);
 
   const isSuperViewer = (me?.admin_role ?? "").toLowerCase() === "super_admin";
 
@@ -172,9 +172,7 @@ export default function AdminStaffPage() {
 
       <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5">
         <p className="text-small font-semibold text-sikapa-text-primary">Create staff / admin account</p>
-        <p className="mt-1 text-[11px] text-sikapa-text-muted">
-          Creates a login with immediate admin access. Share the password securely with the teammate.
-        </p>
+        <p className="mt-1 text-[11px] text-sikapa-text-muted">Share the initial password securely.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="block text-[11px] font-semibold text-sikapa-text-primary">
             Username
@@ -329,12 +327,14 @@ export default function AdminStaffPage() {
             </select>
             <button
               type="button"
-              className="w-full rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white sm:w-auto sm:shrink-0"
+              disabled={promoteBusy || !accessToken}
+              className="w-full rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60 sm:w-auto sm:shrink-0"
               onClick={() => {
-                if (!accessToken || !candidateId) return;
+                if (!accessToken || !candidateId || promoteBusy) return;
                 const pick = candidates.find((u) => u.id === candidateId);
                 if (!pick) return;
                 void (async () => {
+                  setPromoteBusy(true);
                   try {
                     await adminPromoteUser(accessToken, pick.id);
                     await adminSetStaffRole(accessToken, pick.id, {
@@ -345,17 +345,18 @@ export default function AdminStaffPage() {
                     await load();
                   } catch (e) {
                     void alertDialog(e instanceof Error ? e.message : "Failed", { variant: "error" });
+                  } finally {
+                    setPromoteBusy(false);
                   }
                 })();
               }}
             >
-              Add to staff
+              {promoteBusy ? "Adding…" : "Add to staff"}
             </button>
           </div>
         </div>
       </div>
 
-      {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
           Current staff & admins
@@ -367,6 +368,11 @@ export default function AdminStaffPage() {
           hint={staffQuery ? `${visibleStaff.length} of ${rows.length} shown` : undefined}
         />
       </div>
+      {err ? (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800" role="alert">
+          {err}
+        </p>
+      ) : null}
       {!ready && !err ? (
         <AdminStaffListSkeleton />
       ) : (
@@ -480,10 +486,12 @@ export default function AdminStaffPage() {
                       {u.id !== me?.id ? (
                         <button
                           type="button"
-                          className="mt-3 rounded-full border border-sikapa-gold/50 bg-sikapa-cream/60 px-4 py-1.5 text-[11px] font-semibold text-sikapa-text-primary dark:bg-zinc-800"
+                          disabled={savingPermFor === u.id || !accessToken}
+                          className="mt-3 rounded-full border border-sikapa-gold/50 bg-sikapa-cream/60 px-4 py-1.5 text-[11px] font-semibold text-sikapa-text-primary disabled:opacity-60 dark:bg-zinc-800"
                           onClick={() => {
                             if (!accessToken) return;
                             void (async () => {
+                              setSavingPermFor(u.id);
                               try {
                                 await adminSetStaffRole(accessToken, u.id, {
                                   role,
@@ -494,11 +502,13 @@ export default function AdminStaffPage() {
                                 await alertDialog(er instanceof Error ? er.message : "Failed", {
                                   variant: "error",
                                 });
+                              } finally {
+                                setSavingPermFor(null);
                               }
                             })();
                           }}
                         >
-                          Save permissions
+                          {savingPermFor === u.id ? "Saving…" : "Save permissions"}
                         </button>
                       ) : null}
                     </>
