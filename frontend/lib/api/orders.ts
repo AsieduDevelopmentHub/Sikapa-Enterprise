@@ -1,4 +1,4 @@
-import { apiFetchBlobAuth, apiFetchJsonAuth } from "@/lib/api/client";
+import { apiFetchBlobAuth, apiFetchJson, apiFetchJsonAuth } from "@/lib/api/client";
 import { V1 } from "@/lib/api/v1-paths";
 
 export type OrderRow = {
@@ -69,6 +69,19 @@ export type OrderCreateBody = {
   shipping_contact_phone?: string | null;
 };
 
+export type ShippingCityOption = { name: string; fee: number };
+export type ShippingRegionOption = {
+  slug: string;
+  label: string;
+  base_fee: number;
+  cities: ShippingCityOption[];
+};
+export type ShippingCourierOption = { name: string; fee_delta: number };
+export type ShippingOptions = {
+  regions: ShippingRegionOption[];
+  couriers: ShippingCourierOption[];
+};
+
 export async function ordersList(accessToken: string): Promise<OrderRow[]> {
   return apiFetchJsonAuth<OrderRow[]>(accessToken, V1.orders.list);
 }
@@ -79,6 +92,10 @@ export async function ordersCreate(accessToken: string, body: OrderCreateBody): 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export async function ordersShippingOptions(): Promise<ShippingOptions> {
+  return apiFetchJson<ShippingOptions>(V1.orders.shippingOptions);
 }
 
 export async function ordersDetail(accessToken: string, orderId: number): Promise<OrderDetail> {

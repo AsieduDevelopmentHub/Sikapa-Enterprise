@@ -40,6 +40,7 @@ export const V1 = {
   orders: {
     list: "/orders/",
     create: "/orders/",
+    shippingOptions: "/orders/shipping-options",
     detail: (id: number) => `/orders/${id}`,
     invoicePdf: (id: number) => `/orders/${id}/invoice/pdf`,
   },
