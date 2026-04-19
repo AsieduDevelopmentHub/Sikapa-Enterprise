@@ -122,10 +122,8 @@ body {
 .sikapa-tap:active {
   transform: scale(0.97);
 }
-/* Use on password visibility, carousel arrows, etc. — avoids layout shift while pressing */
-.sikapa-tap-static:active {
-  transform: none;
-}
+/* `sikapa-tap-static` has no :active rule — do not add `transform: none`; it removes
+   Tailwind `-translate-y-1/2` while pressed and makes password / carousel controls jump. */
 .sikapa-tap-bounce:active {
   animation: tap-bounce 0.35s ease;
 }

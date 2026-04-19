@@ -24,6 +24,8 @@ export default function GoogleOAuthCallbackPage() {
       } catch {
         /* ignore */
       }
+      // Strip fragment from the bar immediately after reading (tokens are not sent to the server in `#`).
+      window.history.replaceState(null, "", "/auth/google/callback");
       router.replace("/account");
       return;
     }
