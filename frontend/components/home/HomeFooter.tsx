@@ -7,6 +7,7 @@ const primary = [
   { href: "/cart", label: "Cart" },
   { href: "/orders", label: "Orders" },
   { href: "/account", label: "Account" },
+  { href: "/help", label: "Help center" },
 ] as const;
 
 const onPage = [
@@ -58,6 +59,16 @@ export function HomeFooter() {
             Legal & help
           </p>
           <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+            <li>
+              <Link href="/help" className="text-small text-white/70 hover:text-sikapa-gold">
+                Help center
+              </Link>
+            </li>
+            <li>
+              <Link href="/help/contact" className="text-small text-white/70 hover:text-sikapa-gold">
+                Contact support
+              </Link>
+            </li>
             <li>
               <Link href={faqUrl()} className="text-small text-white/70 hover:text-sikapa-gold">
                 FAQs

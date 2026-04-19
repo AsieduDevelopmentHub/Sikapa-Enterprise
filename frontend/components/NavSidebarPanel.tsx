@@ -14,6 +14,7 @@ const MAIN_LINKS: { href: string; label: string; description: string }[] = [
   { href: "/cart", label: "Cart", description: "Review items and proceed when you are ready." },
   { href: "/orders", label: "Orders", description: "Track purchases and delivery status." },
   { href: "/account", label: "Account", description: "Sign in, profile, and preferences." },
+  { href: "/help", label: "Help center", description: "Shipping, returns, payments, and support contacts." },
 ];
 
 const DISCOVER_LINKS: { href: string; label: string; description: string }[] = [
@@ -25,6 +26,8 @@ const DISCOVER_LINKS: { href: string; label: string; description: string }[] = [
 ];
 
 const HELP_LEGAL_LINKS: { href: string; label: string; description: string }[] = [
+  { href: "/help", label: "Help center", description: "Browse support guides by topic." },
+  { href: "/help/contact", label: "Contact support", description: "Email, WhatsApp, and store location map." },
   { href: faqUrl(), label: "FAQs", description: "Common questions about ordering and delivery." },
   { href: termsUrl(), label: "Terms of service", description: "How you may use Sikapa Enterprise." },
   { href: privacyUrl(), label: "Privacy policy", description: "How we handle your data." },

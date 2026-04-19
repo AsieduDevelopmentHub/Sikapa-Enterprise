@@ -14,6 +14,7 @@ __pycache__
 /backend/.venv
 /backend/.env
 /backend/.env.production
+/frontend/.env.local
 .env
 *.sqlite
 

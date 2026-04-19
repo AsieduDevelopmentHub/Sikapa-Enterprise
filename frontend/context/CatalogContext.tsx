@@ -71,9 +71,19 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setLoading(false);
       }
     }
-    load();
+    const runLoad = () => {
+      void load();
+    };
+    runLoad();
+    const onRefresh = () => runLoad();
+    if (typeof window !== "undefined") {
+      window.addEventListener("sikapa-catalog-refresh", onRefresh);
+    }
     return () => {
       cancelled = true;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sikapa-catalog-refresh", onRefresh);
+      }
     };
   }, []);
 

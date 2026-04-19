@@ -1,7 +1,7 @@
 """
 Email subscriptions routes - newsletter management
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
 from pydantic import BaseModel, EmailStr
 
@@ -9,6 +9,7 @@ from app.db import get_session
 from app.api.v1.subscriptions.schemas import SubscriptionResponse
 from app.api.v1.subscriptions.services import (
     subscribe_email,
+    unsubscribe_by_token,
     unsubscribe_email,
     verify_subscription,
 )
@@ -40,6 +41,15 @@ async def unsubscribe(
 ):
     """Unsubscribe email from newsletter."""
     await unsubscribe_email(session, request.email)
+
+
+@router.get("/unsubscribe/{token}", status_code=status.HTTP_204_NO_CONTENT)
+async def unsubscribe_via_token(
+    token: str,
+    session: Session = Depends(get_session),
+):
+    """One-click unsubscribe endpoint for email footer links."""
+    await unsubscribe_by_token(session, token)
 
 
 @router.get("/verify/{token}", status_code=status.HTTP_200_OK)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { newsletterSubscribe } from "@/lib/api/subscriptions";
 import { validateEmail } from "@/lib/validation/input";
 
@@ -14,6 +15,13 @@ export function NewsletterFooterForm() {
       <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-gold/90">Newsletter</p>
       <p className="mt-1 text-[11px] leading-relaxed text-white/55">
         Occasional drops, restocks, and beauty tips. Unsubscribe anytime.
+      </p>
+      <p className="mt-1 text-[11px] text-white/60">
+        Already subscribed?{" "}
+        <Link href="/newsletter/unsubscribe" className="font-semibold text-sikapa-gold hover:underline">
+          Unsubscribe here
+        </Link>
+        .
       </p>
       <form
         className="mt-3 flex flex-col gap-2 sm:flex-row"

@@ -12,7 +12,7 @@ import {
   authUpdateProfile,
   authVerifyEmail,
 } from "@/lib/api/auth";
-import { newsletterSubscribe } from "@/lib/api/subscriptions";
+import { newsletterSubscribe, newsletterUnsubscribe } from "@/lib/api/subscriptions";
 import {
   GHANA_CITY_OTHER,
   GHANA_REGIONS,
@@ -388,6 +388,18 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
               <NavRow label="Verify email" hint="Enter the code we sent you" onClick={() => setPanel("verify")} />
             )}
             <NavRow label="Newsletter" hint="Offers and updates" onClick={() => setPanel("newsletter")} />
+            <Link
+              href="/help"
+              className="sikapa-tap block rounded-[12px] bg-white px-4 py-3.5 text-small font-semibold text-sikapa-text-primary shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:text-zinc-100 dark:ring-white/10"
+            >
+              Help center
+            </Link>
+            <Link
+              href="/help/contact"
+              className="sikapa-tap block rounded-[12px] bg-white px-4 py-3.5 text-small font-semibold text-sikapa-text-primary shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:text-zinc-100 dark:ring-white/10"
+            >
+              Contact support
+            </Link>
             <NavRow label="Close account" hint="Permanent" onClick={() => setPanel("danger")} />
           </div>
 
@@ -863,6 +875,9 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
           <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
             Newsletter
           </h2>
+          <p className="mt-1 text-small text-sikapa-text-secondary dark:text-zinc-400">
+            Get launches and price drops. You can unsubscribe anytime.
+          </p>
           <form
             className="mt-4 flex gap-2"
             onSubmit={async (e) => {
@@ -897,9 +912,35 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
               disabled={newsBusy}
               className="shrink-0 rounded-[10px] bg-sikapa-gold px-4 py-2.5 text-small font-semibold text-white disabled:opacity-50"
             >
-              {newsBusy ? "…" : "Join"}
+              {newsBusy ? "Processing..." : "Join"}
             </button>
           </form>
+          <button
+            type="button"
+            disabled={newsBusy}
+            onClick={async () => {
+              setNewsBusy(true);
+              setBanner(null);
+              const em = newsEmail.trim() || u.email || "";
+              const err = validateEmail(em);
+              if (err) {
+                setBanner({ type: "err", text: err });
+                setNewsBusy(false);
+                return;
+              }
+              try {
+                await newsletterUnsubscribe(em);
+                setBanner({ type: "ok", text: "You have been unsubscribed from newsletter emails." });
+              } catch (e) {
+                setBanner({ type: "err", text: e instanceof Error ? e.message : "Unsubscribe failed" });
+              } finally {
+                setNewsBusy(false);
+              }
+            }}
+            className="mt-2 w-full rounded-[10px] border border-sikapa-gray-soft py-2.5 text-small font-semibold text-sikapa-text-primary disabled:opacity-50 dark:border-white/10 dark:text-zinc-100"
+          >
+            {newsBusy ? "Processing..." : "Unsubscribe"}
+          </button>
         </section>
       )}
 
