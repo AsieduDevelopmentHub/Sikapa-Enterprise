@@ -23,7 +23,7 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = buildRootMetadata();
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const showCookieConsent = cookieBannerNeeded();
+  const showCookieConsent = await cookieBannerNeeded();
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
       <body>

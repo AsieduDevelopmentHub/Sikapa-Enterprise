@@ -1,5 +1,9 @@
 const isDev = process.env.NODE_ENV !== "production";
 
+/** When true (default in dev), skip next/image optimization so the browser loads Supabase/CDN URLs directly — avoids 504 when the optimizer cannot reach upstream. Set NEXT_PUBLIC_IMAGE_DEV_UNOPTIMIZED=0 to force optimization in dev. */
+const devImageUnoptimized =
+  isDev && process.env.NEXT_PUBLIC_IMAGE_DEV_UNOPTIMIZED !== "0";
+
 /**
  * Additional image hosts can be added at deploy time without editing this file via
  * `NEXT_PUBLIC_IMAGE_CDN_HOSTS` (comma-separated, no protocol). Example:
@@ -24,6 +28,7 @@ const nextConfig = {
           dangerouslyAllowLocalIP: true,
           /* Re-optimize local `public/` logos quickly when you overwrite PNGs (avoids stale `/_next/image` cache in dev). */
           minimumCacheTTL: 0,
+          ...(devImageUnoptimized ? { unoptimized: true } : {}),
         }
       : {}),
     remotePatterns: [
