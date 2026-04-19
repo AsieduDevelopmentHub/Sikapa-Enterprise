@@ -16,6 +16,7 @@ import {
   readRecentSearches,
   type SortKey,
 } from "@/lib/search-helpers";
+import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "relevance", label: "Best match" },
@@ -71,7 +72,7 @@ export function SearchResultsScreen() {
 
   return (
     <div className="bg-sikapa-cream pb-8 dark:bg-zinc-950">
-      <div className="mx-auto max-w-mobile px-4 pt-3">
+      <div className="sikapa-storefront-max mx-auto px-4 pt-3">
         <SearchAutocomplete autoFocus={!q} />
 
         {!q ? (
@@ -117,7 +118,7 @@ export function SearchResultsScreen() {
                 <h2 className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
                   Browse categories
                 </h2>
-                <ul className="mt-2 grid grid-cols-2 gap-2">
+                <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                   {categories.map((c) => (
                     <li key={c.slug}>
                       <Link
@@ -167,7 +168,7 @@ export function SearchResultsScreen() {
             )}
 
             <div className="mt-4 space-y-3 rounded-[12px] bg-white p-3 ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <label className="text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
                   Sort
                   <select
@@ -234,7 +235,7 @@ export function SearchResultsScreen() {
                   </Link>
                 </div>
               ) : (
-                <ul className="grid grid-cols-2 gap-3" aria-label="Search results">
+                <ul className={PRODUCT_GRID_CLASS} aria-label="Search results">
                   {filtered.map((p) => (
                     <li key={p.id}>
                       <ProductCardGrid product={p} />

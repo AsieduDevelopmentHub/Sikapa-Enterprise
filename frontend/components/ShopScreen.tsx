@@ -16,6 +16,8 @@ import {
   ProductListSkeleton,
   SkeletonBlock,
 } from "@/components/StorefrontSkeletons";
+import { ProductCardGrid } from "@/components/product/ProductCardGrid";
+import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
 
 const SHOP_VIEW_STORAGE_KEY = "sikapa-shop-view-mode";
 
@@ -173,7 +175,8 @@ export function ShopScreen() {
   }
 
   return (
-    <div className="bg-sikapa-cream px-4 pb-6 pt-3 dark:bg-zinc-950">
+    <div className="bg-sikapa-cream pb-6 pt-3 dark:bg-zinc-950">
+      <div className="sikapa-storefront-max mx-auto px-4">
       <div className="flex gap-2">
         <div className="relative flex-1">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sikapa-text-muted">
@@ -312,43 +315,15 @@ export function ShopScreen() {
           ))}
         </ul>
       ) : (
-        <ul className="mt-5 grid grid-cols-2 gap-3" aria-label="Products">
+        <ul className={`mt-5 ${PRODUCT_GRID_CLASS}`} aria-label="Products">
           {filtered.map((p) => (
-            <li
-              key={p.id}
-              className="relative overflow-hidden rounded-[10px] bg-white shadow-[0_2px_12px_rgba(59,42,37,0.06)] ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10"
-            >
-              <Link href={`/product/${p.id}`} className="sikapa-tap block">
-                <div className="relative aspect-square w-full">
-                  <Image
-                    src={p.image}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="(max-width:430px) 46vw, 200px"
-                  />
-                </div>
-                <div className="space-y-1.5 p-2.5 pb-11">
-                  <p className="line-clamp-2 text-[0.8125rem] font-semibold leading-snug text-sikapa-text-primary dark:text-zinc-100">
-                    {p.name}
-                  </p>
-                  <ProductPriceLabel product={p} size="sm" />
-                  <StarRating value={p.rating} className="text-[11px]" />
-                </div>
-              </Link>
-              <ProductWishlistButton productId={p.id} className="absolute right-2 top-2" />
-              <button
-                type="button"
-                className="sikapa-tap-bounce absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-sikapa-crimson text-white shadow-md"
-                aria-label={`Add ${p.name} to cart`}
-                onClick={(e) => addToCartClick(e, p.id)}
-              >
-                <FaBag className="!h-[1.125rem] !w-[1.125rem] text-white" />
-              </button>
+            <li key={p.id}>
+              <ProductCardGrid product={p} />
             </li>
           ))}
         </ul>
       )}
+      </div>
     </div>
   );
 }

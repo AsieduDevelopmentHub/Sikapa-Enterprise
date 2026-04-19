@@ -6,6 +6,7 @@ import { ProductCardGrid } from "@/components/product/ProductCardGrid";
 import { useAuth } from "@/context/AuthContext";
 import { useCatalog } from "@/context/CatalogContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
 
 export function WishlistScreen() {
   const { loading: authLoading, user } = useAuth();
@@ -18,7 +19,7 @@ export function WishlistScreen() {
   );
 
   return (
-    <div className="mx-auto max-w-mobile bg-sikapa-cream px-4 pb-8 pt-4 dark:bg-zinc-950">
+    <div className="sikapa-storefront-max mx-auto bg-sikapa-cream px-4 pb-8 pt-4 dark:bg-zinc-950">
       {wishErr && (
         <button
           type="button"
@@ -66,7 +67,7 @@ export function WishlistScreen() {
           </div>
         </div>
       ) : (
-        <ul className="grid grid-cols-2 gap-3" aria-label="Saved products">
+        <ul className={PRODUCT_GRID_CLASS} aria-label="Saved products">
           {saved.map((p) => (
             <li key={p.id}>
               <ProductCardGrid product={p} />
