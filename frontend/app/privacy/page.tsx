@@ -91,7 +91,20 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              4. Legal bases (summary)
+              4. Newsletter, price alerts, and product updates
+            </h2>
+            <p className="mt-3">
+              If you opt in to marketing emails (for example via the footer form or your account), we may send you
+              messages about new products, restocks, and price drops. These are sent only to addresses that have
+              completed the double opt-in flow where we use it, and you can unsubscribe at any time from the link
+              in each email, the account newsletter screen, or the dedicated unsubscribe page. This is separate from
+              essential messages about your orders, security, and account.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
+              5. Legal bases (summary)
             </h2>
             <p className="mt-3">
               Where the law requires a “legal basis,” we rely on: performing our contract with you (orders and accounts);
@@ -103,7 +116,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              5. Sharing and processors
+              6. Sharing and processors
             </h2>
             <p className="mt-3">
               We do not sell your personal data. We share it only as needed to run the business:
@@ -122,7 +135,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              6. Retention
+              7. Retention
             </h2>
             <p className="mt-3">
               We keep data only as long as needed for the purposes above: for example order and tax records for periods
@@ -134,7 +147,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              7. Security
+              8. Security
             </h2>
             <p className="mt-3">
               We use technical and organisational measures appropriate to the risk, including encryption in transit where
@@ -145,7 +158,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              8. Your rights
+              9. Your rights
             </h2>
             <p className="mt-3">
               Depending on where you live, you may have rights to access, correct, delete, or restrict processing of your
@@ -158,7 +171,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              9. Cookies and similar technologies
+              10. Cookies and similar technologies
             </h2>
             <p className="mt-3">
               We use cookies or local storage where necessary for login, preferences, cart, and security. Where we use
@@ -169,7 +182,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              10. Children
+              11. Children
             </h2>
             <p className="mt-3">
               Our service is directed at adults. If you believe a child has provided personal data without parental
@@ -179,7 +192,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              11. Changes to this policy
+              12. Changes to this policy
             </h2>
             <p className="mt-3">
               We may update this policy from time to time. We will post the new version here and adjust the “Last
@@ -190,7 +203,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              12. Terms of Service
+              13. Terms of Service
             </h2>
             <p className="mt-3">
               Use of the service is also governed by our{" "}

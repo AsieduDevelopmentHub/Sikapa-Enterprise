@@ -120,8 +120,49 @@ CI jobs no longer target a GitHub **Environment** named `CI` (that was a common 
 
 ## Deployment pointers
 
-- **Render (API):** [../backend/docs/hosting/render.md](../backend/docs/hosting/render.md) — set `HTTPS_ENABLED=false`, provide `DATABASE_URL`, `SECRET_KEY`, `CORS_ORIGINS`.
-- **Vercel (frontend):** [../frontend/docs/hosting/vercel.md](../frontend/docs/hosting/vercel.md) — set `NEXT_PUBLIC_API_URL`.
+- **Render (API):** [../backend/docs/hosting/render.md](../backend/docs/hosting/render.md) — set `DATABASE_URL`, strong `SECRET_KEY`, `CORS_ORIGINS`, `FRONTEND_URL`, Paystack keys, optional `HTTPS_ENABLED=false` behind the platform TLS terminator.
+- **Vercel (frontend):** [../frontend/docs/hosting/vercel.md](../frontend/docs/hosting/vercel.md) — set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, and image CDN hosts via `NEXT_PUBLIC_IMAGE_CDN_HOSTS` when needed.
+
+---
+
+## Production checklist (backend)
+
+| Variable | Purpose |
+|---------|---------|
+| `ENVIRONMENT=production` **or** `PRODUCTION=true` | Enables stricter startup checks (`SECRET_KEY` cannot be short/default). |
+| `SECRET_KEY` | Long random string (≥32 chars). Required when production mode is enabled. |
+| `DATABASE_URL` | PostgreSQL (or SQLite only for tiny trials). Run `alembic upgrade head` before traffic. |
+| `CORS_ORIGINS` | Comma-separated storefront origins (no stray spaces). |
+| `HTTPS_ENABLED` | Set `true` when the app terminates TLS itself; often `false` behind Render/nginx where TLS is upstream. |
+| `FRONTEND_URL` | Public Next.js URL (emails, OAuth redirects). |
+| `EMAIL_ENABLED` + `RESEND_API_KEY` | Outbound mail. |
+| Paystack live keys | `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`. |
+| `PAYSTACK_WEBHOOK_IP_ALLOWLIST` | Optional Paystack webhook source IPs; leave empty locally. |
+| `DISABLE_OPENAPI=true` | Extra lock if OpenAPI UI should be off (otherwise disabled automatically when `ENVIRONMENT=production`). |
+| `UPLOAD_ALLOW_LOCAL_FALLBACK=false` | Prefer Supabase-only uploads; failures return 503 instead of writing disk. |
+| `UPLOAD_SERVE_LOCAL=false` | Do not mount `/uploads` when all media is on CDN/Supabase. |
+| `IMAGE_UPLOAD_MAX_BYTES` | Defaults to 5 MiB; raise only if needed. |
+| `NEWSLETTER_PRODUCT_ALERTS_ENABLED` | `false` to disable product-change marketing blasts (still requires `EMAIL_ENABLED=true`). |
+
+---
+
+## Alembic migrations
+
+From `backend/` with your virtualenv activated:
+
+```bash
+alembic upgrade head
+```
+
+Apply **before** switching traffic to a new release. Downgrades are intentionally rare — prefer forward fixes.
+
+---
+
+## Database backups (PostgreSQL)
+
+Scheduled backups are **host-specific** (Render Postgres, RDS, Neon, etc.): enable automated snapshots in your provider dashboard.
+
+Optional manual dump when you have `DATABASE_URL` and `pg_dump` locally — see [`../scripts/backup-postgres.sh`](../scripts/backup-postgres.sh). Run via cron only on a secured machine with secrets injected from your vault.
 
 ---
 

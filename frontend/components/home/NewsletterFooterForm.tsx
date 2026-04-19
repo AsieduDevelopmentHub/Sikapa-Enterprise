@@ -7,6 +7,7 @@ import { validateEmail } from "@/lib/validation/input";
 
 export function NewsletterFooterForm() {
   const [email, setEmail] = useState("");
+  const [marketingOk, setMarketingOk] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -14,7 +15,7 @@ export function NewsletterFooterForm() {
     <div className="mt-8 border-t border-white/10 pt-6">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-gold/90">Newsletter</p>
       <p className="mt-1 text-[11px] leading-relaxed text-white/55">
-        Occasional drops, restocks, and beauty tips. Unsubscribe anytime.
+        Occasional drops, restocks, product launches, and price-drop alerts. Unsubscribe anytime.
       </p>
       <p className="mt-1 text-[11px] text-white/60">
         Already subscribed?{" "}
@@ -24,7 +25,7 @@ export function NewsletterFooterForm() {
         .
       </p>
       <form
-        className="mt-3 flex flex-col gap-2 sm:flex-row"
+        className="mt-3 flex flex-col gap-3"
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
@@ -35,10 +36,16 @@ export function NewsletterFooterForm() {
             setBusy(false);
             return;
           }
+          if (!marketingOk) {
+            setMsg("Please confirm you agree to receive marketing emails.");
+            setBusy(false);
+            return;
+          }
           try {
-            await newsletterSubscribe(email.trim());
+            await newsletterSubscribe(email.trim(), { marketingOptIn: true });
             setMsg("Thanks — you are on the list.");
             setEmail("");
+            setMarketingOk(false);
           } catch (ex) {
             setMsg(ex instanceof Error ? ex.message : "Could not subscribe.");
           } finally {
@@ -46,21 +53,38 @@ export function NewsletterFooterForm() {
           }
         }}
       >
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Your email"
-          className="min-w-0 flex-1 rounded-[10px] border-0 bg-white/10 py-2.5 px-3 text-small text-white placeholder:text-white/40 ring-1 ring-white/15 focus:ring-2 focus:ring-sikapa-gold/50"
-        />
-        <button
-          type="submit"
-          disabled={busy}
-          className="shrink-0 rounded-[10px] bg-sikapa-gold px-4 py-2.5 text-small font-semibold text-white disabled:opacity-50"
-        >
-          {busy ? "…" : "Subscribe"}
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your email"
+            className="min-w-0 flex-1 rounded-[10px] border-0 bg-white/10 py-2.5 px-3 text-small text-white placeholder:text-white/40 ring-1 ring-white/15 focus:ring-2 focus:ring-sikapa-gold/50"
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="shrink-0 rounded-[10px] bg-sikapa-gold px-4 py-2.5 text-small font-semibold text-white disabled:opacity-50"
+          >
+            {busy ? "…" : "Subscribe"}
+          </button>
+        </div>
+        <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-white/70">
+          <input
+            type="checkbox"
+            checked={marketingOk}
+            onChange={(e) => setMarketingOk(e.target.checked)}
+            className="mt-0.5 shrink-0 rounded border-white/30"
+          />
+          <span>
+            I agree to receive marketing emails about products, offers, and updates. See our{" "}
+            <Link href="/privacy" className="font-semibold text-sikapa-gold hover:underline">
+              Privacy policy
+            </Link>
+            .
+          </span>
+        </label>
       </form>
       {msg ? <p className="mt-2 text-[11px] text-white/70">{msg}</p> : null}
     </div>
