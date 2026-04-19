@@ -10,6 +10,7 @@ import {
   sortProducts,
   type SortKey,
 } from "@/lib/search-helpers";
+import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
 
 type Props = { slug: string };
 
@@ -46,7 +47,7 @@ export function CategoryScreen({ slug }: Props) {
 
   return (
     <div className="bg-sikapa-cream pb-8 dark:bg-zinc-950">
-      <div className="mx-auto max-w-mobile px-4 pt-3">
+      <div className="sikapa-storefront-max mx-auto px-4 pt-3">
         <nav aria-label="Breadcrumb" className="text-[11px] text-sikapa-text-muted dark:text-zinc-500">
           <ol className="flex items-center gap-1">
             <li>
@@ -76,7 +77,7 @@ export function CategoryScreen({ slug }: Props) {
           </p>
         </header>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 rounded-[12px] bg-white p-3 ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-[12px] bg-white p-3 ring-1 ring-black/[0.06] dark:bg-zinc-900 md:grid-cols-4 dark:ring-white/10">
           <label className="text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
             Sort
             <select
@@ -102,7 +103,7 @@ export function CategoryScreen({ slug }: Props) {
               In stock only
             </span>
           </label>
-          <label className="col-span-2 text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
+          <label className="col-span-2 text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200 md:col-span-4">
             Max price GHS {priceMax ?? priceCeiling}
             <input
               type="range"
@@ -132,7 +133,7 @@ export function CategoryScreen({ slug }: Props) {
               </Link>
             </div>
           ) : (
-            <ul className="grid grid-cols-2 gap-3">
+            <ul className={PRODUCT_GRID_CLASS}>
               {filtered.map((p) => (
                 <li key={p.id}>
                   <ProductCardGrid product={p} />

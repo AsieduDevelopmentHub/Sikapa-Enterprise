@@ -1,5 +1,7 @@
 "use client";
 
+import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
+
 export function SkeletonBlock({ className = "" }: { className?: string }) {
   return <div aria-hidden className={`sikapa-skeleton ${className}`} />;
 }
@@ -19,7 +21,7 @@ export function ProductCardSkeleton() {
 
 export function ProductGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <ul className="mt-5 grid grid-cols-2 gap-3" aria-hidden>
+    <ul className={`mt-5 ${PRODUCT_GRID_CLASS}`} aria-hidden>
       {Array.from({ length: count }).map((_, i) => (
         <li key={i}>
           <ProductCardSkeleton />

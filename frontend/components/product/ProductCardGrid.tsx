@@ -19,10 +19,13 @@ type Props = {
  * The canonical 2-up grid product tile used by shop/search/category/wishlist
  * pages. Keeps visual + interaction behaviour identical across surfaces.
  */
-export function ProductCardGrid({ product: p, sizesHint = "(max-width:430px) 46vw, 200px" }: Props) {
+export function ProductCardGrid({
+  product: p,
+  sizesHint = "(max-width:640px) 46vw, (max-width:1024px) 24vw, (max-width:1536px) 18vw, 240px",
+}: Props) {
   const { addProduct } = useCart();
   return (
-    <article className="relative overflow-hidden rounded-[10px] bg-white shadow-[0_2px_12px_rgba(59,42,37,0.06)] ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10">
+    <article className="relative overflow-hidden rounded-[10px] border border-black/[0.04] bg-white shadow-[0_1px_8px_rgba(59,42,37,0.05)] ring-1 ring-black/[0.04] transition-shadow hover:shadow-[0_4px_18px_rgba(59,42,37,0.08)] dark:border-white/10 dark:bg-zinc-900 dark:ring-white/10">
       <Link href={`/product/${p.id}`} className="sikapa-tap block">
         <div className="relative aspect-square w-full">
           <Image src={p.image} alt="" fill className="object-cover" sizes={sizesHint} />
