@@ -1,6 +1,11 @@
 import { HelpArticle } from "@/components/help/HelpArticle";
 
-export const metadata = { title: "Returns & refunds · Sikapa Help" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Returns & refunds", {
+  description: "Return windows, eligible items, refunds, and how to start a return on Sikapa Enterprise.",
+  path: "/help/returns",
+});
 
 export default function HelpReturnsPage() {
   return (

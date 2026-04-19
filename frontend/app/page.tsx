@@ -7,6 +7,12 @@ import { HomeHelpCta } from "@/components/home/HomeHelpCta";
 import { HomeHowItWorks } from "@/components/home/HomeHowItWorks";
 import { HomeTrustAndLogistics } from "@/components/home/HomeTrustAndLogistics";
 import { HomeHero } from "@/components/HomeHero";
+import { pageMetadata, SITE_DEFAULT_DESCRIPTION } from "@/lib/seo";
+
+export const metadata = pageMetadata("Luxury Beauty & Lifestyle", {
+  description: SITE_DEFAULT_DESCRIPTION,
+  path: "/",
+});
 
 export default function HomePage() {
   return (

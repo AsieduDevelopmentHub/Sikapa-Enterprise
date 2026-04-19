@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "Wishlist · Sikapa Enterprise" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Saved items", {
+  description: "Your wishlist and saved products on Sikapa Enterprise.",
+  path: "/account/wishlist",
+});
 
 export default function AccountWishlistPage() {
   redirect("/shop");

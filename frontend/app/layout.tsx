@@ -3,6 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import { Providers } from "@/components/Providers";
+import { buildRootMetadata } from "@/lib/seo";
 
 /** Luxury editorial serif — closer to mockup than generic Playfair. */
 const cormorant = Cormorant_Garamond({
@@ -18,10 +19,7 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Sikapa Enterprise",
-  description: "Luxury beauty for all — cosmetics, wigs, and skincare.",
-};
+export const metadata: Metadata = buildRootMetadata();
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

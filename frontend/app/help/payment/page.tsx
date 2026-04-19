@@ -1,6 +1,11 @@
 import { HelpArticle } from "@/components/help/HelpArticle";
 
-export const metadata = { title: "Payment & security · Sikapa Help" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Payment & security", {
+  description: "Paystack checkout, cards, mobile money, receipts, and how we keep payments safe on Sikapa.",
+  path: "/help/payment",
+});
 
 export default function HelpPaymentPage() {
   return (

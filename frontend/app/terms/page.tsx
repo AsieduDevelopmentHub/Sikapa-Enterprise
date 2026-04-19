@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { pageMetadata } from "@/lib/seo";
 import { SIKAPA_LOCATION_LINE } from "@/lib/site";
+
+export const metadata = pageMetadata("Terms of Service", {
+  description:
+    "Terms and conditions for using Sikapa Enterprise — orders, payments, shipping, returns, and acceptable use.",
+  path: "/terms",
+});
 
 const UPDATED = "April 2026";
 
