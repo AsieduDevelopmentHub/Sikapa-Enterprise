@@ -19,7 +19,6 @@ type Props = {
   onSignInSuccess?: () => void;
   onRegisterSuccess?: () => void;
   onClearMessages?: () => void;
-  /** Shown on sign-in; opens password recovery UI in the parent. */
   onForgotPassword?: () => void;
 };
 
@@ -151,7 +150,6 @@ export function AccountAuthForm({
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
-  /** Persist tokens in localStorage until explicit sign-out; unchecked = session-only (cleared when the browser session ends). */
   const [rememberMe, setRememberMe] = useState(true);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -319,12 +317,6 @@ export function AccountAuthForm({
         </>
       )}
 
-      {(localError || authError) && (
-        <p className="mb-4 rounded-[10px] bg-red-50 px-3 py-2 text-small text-red-800 ring-1 ring-red-100 dark:bg-red-950/40 dark:text-red-100">
-          {localError ?? authError}
-        </p>
-      )}
-
       <form onSubmit={onSubmit} className="space-y-4">
         {mode === "register" && (
           <>
@@ -455,10 +447,7 @@ export function AccountAuthForm({
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="mt-1 h-4 w-4 shrink-0 accent-sikapa-gold"
                 />
-                <span className="leading-relaxed">
-                  Keep me signed in on this device. Uncheck to sign out when you close the browser (uses session
-                  storage only).
-                </span>
+                <span className="leading-relaxed">Keep me signed in on this device.</span>
               </label>
             )}
           </>
@@ -500,13 +489,25 @@ export function AccountAuthForm({
           className="sikapa-btn-gold sikapa-tap w-full rounded-[10px] py-3 text-small font-semibold text-white disabled:opacity-60"
         >
           {busy
-            ? "Please wait…"
+            ? mode === "register"
+              ? "Creating account…"
+              : signinStep === "totp"
+                ? "Verifying…"
+                : "Signing in…"
             : mode === "register"
               ? "Create account"
               : signinStep === "totp"
                 ? "Verify and sign in"
                 : "Sign in"}
         </button>
+        {(localError || authError) && (
+          <p
+            className="rounded-[10px] bg-red-50 px-3 py-2 text-small text-red-800 ring-1 ring-red-100 dark:bg-red-950/40 dark:text-red-100"
+            role="alert"
+          >
+            {localError ?? authError}
+          </p>
+        )}
       </form>
     </>
   );

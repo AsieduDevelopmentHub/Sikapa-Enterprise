@@ -89,29 +89,31 @@ export default function AdminAnalyticsPage() {
             Revenue and order velocity.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {[7, 30, 90].map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDays(d)}
-              className={`rounded-full px-4 py-1.5 text-small font-semibold transition-colors ${
-                days === d
-                  ? "bg-sikapa-crimson text-white"
-                  : "bg-white text-sikapa-text-secondary ring-1 ring-black/[0.08] hover:bg-sikapa-gray-soft"
-              }`}
-            >
-              {d}d
-            </button>
-          ))}
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex flex-wrap gap-2">
+            {[7, 30, 90].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDays(d)}
+                disabled={loading}
+                className={`rounded-full px-4 py-1.5 text-small font-semibold transition-colors disabled:opacity-60 ${
+                  days === d
+                    ? "bg-sikapa-crimson text-white"
+                    : "bg-white text-sikapa-text-secondary ring-1 ring-black/[0.08] hover:bg-sikapa-gray-soft"
+                }`}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+          {err ? (
+            <p className="max-w-md rounded-lg bg-red-50 px-3 py-2 text-small text-red-800 ring-1 ring-red-100" role="alert">
+              {err}
+            </p>
+          ) : null}
         </div>
       </div>
-
-      {err && (
-        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-small text-red-800 ring-1 ring-red-100">
-          {err}
-        </p>
-      )}
 
       {showSkeleton ? (
         <SkeletonStatGrid count={4} />
