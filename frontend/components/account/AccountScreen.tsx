@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AccountAuthForm } from "@/components/auth/AccountAuthForm";
 import { AccountSignedInHub, type AccountPanel } from "@/components/account/AccountSignedInHub";
 import { useAuth } from "@/context/AuthContext";
 import { authPasswordResetRequest } from "@/lib/api/auth";
+import { formatOAuthErrorParam } from "@/lib/oauth";
 import { validateEmail } from "@/lib/validation/input";
 
 export function AccountScreen({ initialPanel }: { initialPanel?: AccountPanel } = {}) {
@@ -14,6 +15,17 @@ export function AccountScreen({ initialPanel }: { initialPanel?: AccountPanel } 
 
   const [resetEmail, setResetEmail] = useState("");
   const [resetBusy, setResetBusy] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const msg = formatOAuthErrorParam(params.get("oauth_error"));
+    if (!msg) return;
+    setBanner({ type: "err", text: msg });
+    const u = new URL(window.location.href);
+    u.searchParams.delete("oauth_error");
+    window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
+  }, []);
 
   if (loading && !user) {
     return (

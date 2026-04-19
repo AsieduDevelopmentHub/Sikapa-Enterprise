@@ -1,8 +1,19 @@
 """
 Authentication API routes - all endpoints for user auth flows.
 """
+import os
+from urllib.parse import quote, urlencode
+
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
+from fastapi.responses import RedirectResponse
 from sqlmodel import Session
+
+from app.api.v1.auth.google_oauth import (
+    build_google_authorize_url,
+    create_google_oauth_state,
+    google_oauth_configured,
+    resolve_google_oauth_user,
+)
 
 from app.api.v1.auth.schemas import (
     RegisterRequest,
@@ -20,6 +31,7 @@ from app.api.v1.auth.schemas import (
     LoginWithTwoFARequest,
     DeleteAccountRequest,
     RefreshTokenRequest,
+    GoogleOAuth2FAVerifyRequest,
 )
 from app.api.v1.auth.services import (
     register_user,
@@ -47,6 +59,7 @@ from app.api.v1.auth.dependencies import (
 )
 from app.db import get_session
 from app.models import User, UserRead
+from app.core.security import create_oauth_2fa_pending_token
 from app.core.rate_limit import (
     auth_limiter,
     login_limiter,
@@ -122,6 +135,92 @@ def login_with_2fa_endpoint(
 
     tokens = create_user_tokens(user)
     return tokens
+
+
+@router.get("/google/start")
+@login_limiter
+def google_oauth_start(request: Request):
+    """Redirect browser to Google's consent screen (must match GOOGLE_OAUTH_* env)."""
+    frontend = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    if not google_oauth_configured():
+        return RedirectResponse(f"{frontend}/account?oauth_error=config", status_code=302)
+    state = create_google_oauth_state()
+    url = build_google_authorize_url(state)
+    return RedirectResponse(url, status_code=302)
+
+
+@router.get("/google/callback")
+@login_limiter
+def google_oauth_callback(
+    request: Request,
+    session: Session = Depends(get_session),
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+):
+    """OAuth redirect target — exchanges code, issues Sikapa JWTs, redirects to the SPA."""
+    frontend = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    if error:
+        return RedirectResponse(f"{frontend}/account?oauth_error={quote(error)}", status_code=302)
+    try:
+        user = resolve_google_oauth_user(session, code, state)
+    except HTTPException as he:
+        detail = he.detail
+        if isinstance(detail, list) and detail:
+            detail = detail[0]
+        msg = detail if isinstance(detail, str) else "oauth_failed"
+        return RedirectResponse(f"{frontend}/account?oauth_error={quote(msg)}", status_code=302)
+
+    if user.two_fa_enabled:
+        pending = create_oauth_2fa_pending_token(user.id)
+        frag = urlencode({"pending_2fa_token": pending})
+        return RedirectResponse(f"{frontend}/auth/google/2fa#{frag}", status_code=302)
+
+    tokens = create_user_tokens(user)
+    frag = urlencode({
+        "access_token": tokens["access_token"],
+        "refresh_token": tokens["refresh_token"],
+        "token_type": tokens["token_type"],
+        "expires_in": str(tokens["expires_in"]),
+    })
+    return RedirectResponse(f"{frontend}/auth/google/callback#{frag}", status_code=302)
+
+
+@router.post("/google/verify-2fa", response_model=TokenResponse)
+@login_limiter
+def google_oauth_verify_2fa(
+    request: Request,
+    payload: GoogleOAuth2FAVerifyRequest,
+    session: Session = Depends(get_session),
+):
+    """Issue JWTs after Google OAuth when TOTP 2FA is enabled (pending token from /google/callback)."""
+    from jose import JWTError
+
+    from app.core.security import decode_oauth_2fa_pending_token
+
+    try:
+        data = decode_oauth_2fa_pending_token(payload.pending_token)
+        uid = int(data.get("sub", 0))
+    except (JWTError, ValueError, TypeError):
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Invalid or expired sign-in session. Please try Google sign-in again.",
+        )
+
+    user = session.get(User, uid)
+    if not user or not user.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
+
+    if not user.two_fa_enabled:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Two-factor verification is not required for this account",
+        )
+
+    if not verify_two_fa_code(session, user.id, payload.code):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication code")
+
+    return create_user_tokens(user)
 
 
 @router.post("/logout")
