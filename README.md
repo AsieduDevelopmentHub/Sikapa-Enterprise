@@ -77,7 +77,8 @@ It wraps the hosted storefront in a WebView for deployment to Android devices.
 
 ## Documentation
 
-**Start here:** [docs/README.md](docs/README.md) — index of all guides (environment, operations, auth, API, hosting).
+**Start here:** [docs/README.md](docs/README.md) — index of all guides (environment, operations, auth, API, hosting).  
+**Auth + “Remember me” + admin roles:** [docs/AUTH_SESSION_AND_ADMIN.md](docs/AUTH_SESSION_AND_ADMIN.md).
 
 | Area | Location |
 |------|----------|

@@ -151,6 +151,8 @@ export function AccountAuthForm({
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  /** Persist tokens in localStorage until explicit sign-out; unchecked = session-only (cleared when the browser session ends). */
+  const [rememberMe, setRememberMe] = useState(true);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -214,13 +216,13 @@ export function AccountAuthForm({
     try {
       if (mode === "signin") {
         if (signinStep === "totp") {
-          await loginWithTotp(idVal, password, sanitizeDigits(totpCode, 6));
+          await loginWithTotp(idVal, password, sanitizeDigits(totpCode, 6), rememberMe);
           setSigninStep("password");
           setTotpCode("");
           onSignInSuccess?.();
         } else {
           try {
-            await login(idVal, password);
+            await login(idVal, password, rememberMe);
             onSignInSuccess?.();
           } catch (err) {
             if (err instanceof TwoFactorRequiredError) {
@@ -236,7 +238,8 @@ export function AccountAuthForm({
           sanitizePlainText(username, 50)?.toLowerCase() || "",
           sanitizePlainText(name, 120) || "",
           password,
-          email.trim() || undefined
+          email.trim() || undefined,
+          rememberMe
         );
         onRegisterSuccess?.();
       }
@@ -441,6 +444,20 @@ export function AccountAuthForm({
                   <LegalInlineLink href={termsUrl()}>Terms of Service</LegalInlineLink>
                   {" "}and{" "}
                   <LegalInlineLink href={privacyUrl()}>Privacy Policy</LegalInlineLink>.
+                </span>
+              </label>
+            )}
+            {(mode === "signin" || mode === "register") && !(mode === "signin" && signinStep === "totp") && (
+              <label className="flex cursor-pointer items-start gap-3 text-small text-sikapa-text-primary dark:text-zinc-200">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="mt-1 h-4 w-4 shrink-0 accent-sikapa-gold"
+                />
+                <span className="leading-relaxed">
+                  Keep me signed in on this device. Uncheck to sign out when you close the browser (uses session
+                  storage only).
                 </span>
               </label>
             )}

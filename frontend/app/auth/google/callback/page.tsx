@@ -2,9 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-
-const STORAGE_ACCESS = "sikapa_access_token";
-const STORAGE_REFRESH = "sikapa_refresh_token";
+import { writeTokens } from "@/lib/auth-storage";
 
 /**
  * Backend redirects here with JWTs in the URL fragment after Google OAuth.
@@ -19,8 +17,9 @@ export default function GoogleOAuthCallbackPage() {
     const refresh = params.get("refresh_token");
     if (access) {
       try {
-        localStorage.setItem(STORAGE_ACCESS, access);
-        if (refresh) localStorage.setItem(STORAGE_REFRESH, refresh);
+        /* Google sign-in is always persistent in the browser (same as "Keep me signed in"). */
+        writeTokens(access, refresh, "local");
+        window.dispatchEvent(new Event("sikapa-auth-storage-updated"));
       } catch {
         /* ignore */
       }

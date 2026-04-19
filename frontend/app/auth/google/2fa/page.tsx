@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { authGoogleOAuthVerify2FA } from "@/lib/api/auth";
+import { writeTokens } from "@/lib/auth-storage";
 import { sanitizeDigits, validateOtpCode } from "@/lib/validation/input";
-
-const STORAGE_ACCESS = "sikapa_access_token";
-const STORAGE_REFRESH = "sikapa_refresh_token";
 
 export default function GoogleOAuth2FAPage() {
   const router = useRouter();
@@ -41,8 +39,8 @@ export default function GoogleOAuth2FAPage() {
     try {
       const tokens = await authGoogleOAuthVerify2FA(pendingToken, digits);
       try {
-        localStorage.setItem(STORAGE_ACCESS, tokens.access_token);
-        if (tokens.refresh_token) localStorage.setItem(STORAGE_REFRESH, tokens.refresh_token);
+        writeTokens(tokens.access_token, tokens.refresh_token ?? null, "local");
+        window.dispatchEvent(new Event("sikapa-auth-storage-updated"));
       } catch {
         /* ignore */
       }

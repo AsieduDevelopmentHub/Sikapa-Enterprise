@@ -1,9 +1,8 @@
 import type { MockProduct } from "@/lib/mock-data";
 import { CATEGORIES, MOCK_PRODUCTS } from "@/lib/mock-data";
+import { readTokens } from "@/lib/auth-storage";
 import { apiFetchJson, getApiV1Base, getBackendOrigin } from "@/lib/api/client";
 import { V1 } from "@/lib/api/v1-paths";
-
-const STORAGE_ACCESS = "sikapa_access_token";
 
 export type ApiCategoryRow = {
   id: number;
@@ -187,7 +186,7 @@ export function pingProductSearchAnalytics(query: string): void {
   const url = `${getApiV1Base()}${V1.products.search}?${params.toString()}`;
   const headers: Record<string, string> = { Accept: "application/json" };
   try {
-    const tok = localStorage.getItem(STORAGE_ACCESS)?.trim();
+    const tok = readTokens().access?.trim();
     if (tok) headers.Authorization = `Bearer ${tok}`;
   } catch {
     /* ignore */
