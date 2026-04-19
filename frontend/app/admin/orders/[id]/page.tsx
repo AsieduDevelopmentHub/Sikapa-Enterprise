@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import {
   adminDownloadInvoicePdf,
   adminFetchOrderDetail,
@@ -23,6 +24,7 @@ export default function AdminOrderDetailPage() {
   const params = useParams();
   const id = Number(params.id);
   const { accessToken } = useAuth();
+  const { alert: alertDialog } = useDialog();
   const [order, setOrder] = useState<AdminOrderDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -65,7 +67,7 @@ export default function AdminOrderDetailPage() {
       await adminUpdateOrderStatus(accessToken, id, status);
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Update failed");
+      void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
     } finally {
       setBusy(false);
     }
@@ -83,7 +85,7 @@ export default function AdminOrderDetailPage() {
       });
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Update failed");
+      void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
     } finally {
       setBusy(false);
     }
@@ -99,7 +101,7 @@ export default function AdminOrderDetailPage() {
       });
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Update failed");
+      void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
     } finally {
       setBusy(false);
     }
@@ -116,7 +118,7 @@ export default function AdminOrderDetailPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "PDF failed");
+      void alertDialog(e instanceof Error ? e.message : "PDF failed", { variant: "error" });
     }
   };
 

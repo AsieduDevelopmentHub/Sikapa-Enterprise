@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
 import { AdminImageGridSkeleton } from "@/components/admin/Skeleton";
+import { useDialog } from "@/context/DialogContext";
 
 type Props = {
   accessToken: string;
@@ -34,6 +35,7 @@ function resolveSrc(url: string, origin: string): string {
  *   - individual delete
  */
 export function ProductImagesManager({ accessToken, productId, onPrimaryChange }: Props) {
+  const { confirm: confirmDialog } = useDialog();
   const [items, setItems] = useState<AdminProductImage[]>([]);
   const [variants, setVariants] = useState<AdminVariant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +111,13 @@ export function ProductImagesManager({ accessToken, productId, onPrimaryChange }
   };
 
   const onDelete = async (imageId: number) => {
-    if (!confirm("Remove this image?")) return;
+    const ok = await confirmDialog({
+      title: "Remove image",
+      message: "Remove this image from the product?",
+      confirmLabel: "Remove",
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     setErr(null);
     try {

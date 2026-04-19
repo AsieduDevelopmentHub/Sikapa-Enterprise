@@ -148,7 +148,7 @@ export function SearchAutocomplete({
         <div
           id={listboxId}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[12px] border border-sikapa-gray-soft bg-white shadow-xl dark:border-white/10 dark:bg-zinc-900"
+          className="absolute left-0 right-0 top-full z-[55] mt-2 max-h-[min(70vh,26rem)] w-full overflow-y-auto overflow-x-hidden rounded-[12px] border border-sikapa-gray-soft bg-white shadow-xl dark:border-white/10 dark:bg-zinc-900"
         >
           {term.trim().length > 0 ? (
             suggestions.length > 0 || matchedCategories.length > 0 ? (

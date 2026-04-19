@@ -42,7 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto max-w-mobile rounded-[12px] px-4 py-3 text-center text-small font-medium shadow-lg ring-1 ${
+            className={`pointer-events-auto max-w-mobile rounded-[12px] px-4 py-3 text-center text-small font-medium shadow-lg ring-1 md:max-w-xl ${
               t.tone === "err"
                 ? "bg-red-900 text-white ring-red-800"
                 : "bg-sikapa-text-primary text-white ring-black/20 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-white/20"

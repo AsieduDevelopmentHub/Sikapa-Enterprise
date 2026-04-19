@@ -9,12 +9,14 @@ import {
   type CouponRow,
 } from "@/lib/api/admin";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminCouponsTableSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminCouponsPage() {
   const { accessToken } = useAuth();
+  const { confirm: confirmDialog } = useDialog();
   const [rows, setRows] = useState<CouponRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -198,8 +200,17 @@ export default function AdminCouponsPage() {
                     type="button"
                     className="text-[11px] font-semibold text-red-700 hover:underline"
                     onClick={() => {
-                      if (!accessToken || !confirm(`Delete coupon ${c.code}?`)) return;
-                      void adminDeleteCoupon(accessToken, c.id).then(load).catch((e) => setErr(e instanceof Error ? e.message : "Delete failed"));
+                      void (async () => {
+                        if (!accessToken) return;
+                        const ok = await confirmDialog({
+                          title: "Delete coupon",
+                          message: `Delete coupon ${c.code}?`,
+                          confirmLabel: "Delete",
+                          variant: "danger",
+                        });
+                        if (!ok) return;
+                        void adminDeleteCoupon(accessToken, c.id).then(load).catch((e) => setErr(e instanceof Error ? e.message : "Delete failed"));
+                      })();
                     }}
                   >
                     Delete
