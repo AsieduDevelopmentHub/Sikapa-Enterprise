@@ -10,6 +10,7 @@ import {
   type AdminVariant,
 } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
+import { useDialog } from "@/context/DialogContext";
 import { AdminVariantRowsSkeleton } from "@/components/admin/Skeleton";
 
 type Props = {
@@ -73,6 +74,7 @@ function parseFloatSafe(s: string, fallback = 0): number {
 }
 
 export function ProductVariantsManager({ accessToken, productId }: Props) {
+  const { confirm: confirmDialog } = useDialog();
   const [variants, setVariants] = useState<AdminVariant[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -180,7 +182,13 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
   };
 
   const remove = async (id: number) => {
-    if (!confirm("Delete this variant? This cannot be undone.")) return;
+    const ok = await confirmDialog({
+      title: "Delete variant",
+      message: "Delete this variant? This cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     setSaving(id);
     setErr(null);
     try {

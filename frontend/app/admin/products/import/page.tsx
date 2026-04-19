@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import {
   adminBulkImportProducts,
   type BulkImportResult,
@@ -52,6 +53,7 @@ function downloadTemplate() {
 
 export default function AdminProductsImportPage() {
   const { accessToken } = useAuth();
+  const { confirm: confirmDialog } = useDialog();
   const [file, setFile] = useState<File | null>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -156,9 +158,14 @@ export default function AdminProductsImportPage() {
             type="button"
             disabled={loading || !file}
             onClick={() => {
-              if (confirm("Commit this import? Products will be created or updated.")) {
-                void run(true);
-              }
+              void (async () => {
+                const ok = await confirmDialog({
+                  title: "Commit import",
+                  message: "Commit this import? Products will be created or updated.",
+                  confirmLabel: "Commit import",
+                });
+                if (ok) void run(true);
+              })();
             }}
             className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60"
           >

@@ -6,7 +6,7 @@ import { useCatalog } from "@/context/CatalogContext";
 import { HomeProductCarouselCard } from "@/components/home/HomeProductCarouselCard";
 
 const railScroll =
-  "flex gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  "flex gap-3 overflow-x-auto px-4 pb-2 md:px-6 lg:px-8 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
 export function HomeCategoryRails() {
   const { homeRailCategoryKeys, getProductsForHomeRail, categories } = useCatalog();

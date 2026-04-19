@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import {
   adminDeleteReview,
   adminFetchProducts,
@@ -15,6 +16,7 @@ import { AdminReviewsListSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminReviewsPage() {
   const { accessToken } = useAuth();
+  const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const [rows, setRows] = useState<AdminReview[]>([]);
   const [users, setUsers] = useState<Record<number, string>>({});
   const [products, setProducts] = useState<Record<number, string>>({});
@@ -104,13 +106,22 @@ export default function AdminReviewsPage() {
                 type="button"
                 className="w-full shrink-0 rounded-full bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-800 sm:w-auto"
                 onClick={() => {
-                  if (!accessToken || !confirm("Delete this review?")) return;
                   void (async () => {
+                    if (!accessToken) return;
+                    const ok = await confirmDialog({
+                      title: "Delete review",
+                      message: "Delete this review? This cannot be undone.",
+                      confirmLabel: "Delete",
+                      variant: "danger",
+                    });
+                    if (!ok) return;
                     try {
                       await adminDeleteReview(accessToken, r.id);
                       await load();
                     } catch (e) {
-                      alert(e instanceof Error ? e.message : "Failed");
+                      await alertDialog(e instanceof Error ? e.message : "Failed", {
+                        variant: "error",
+                      });
                     }
                   })();
                 }}

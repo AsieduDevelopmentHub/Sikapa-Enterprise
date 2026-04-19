@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import {
   adminCreateCategory,
   adminDeleteCategory,
@@ -23,6 +24,7 @@ function slugify(name: string): string {
 
 export default function AdminCategoriesPage() {
   const { accessToken } = useAuth();
+  const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const [rows, setRows] = useState<AdminCategory[]>([]);
   const [name, setName] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -137,7 +139,7 @@ export default function AdminCategoriesPage() {
                         await adminUpdateCategory(accessToken, c.id, { is_active: !c.is_active });
                         await load();
                       } catch (e) {
-                        alert(e instanceof Error ? e.message : "Update failed");
+                        void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
                       }
                     })();
                   }}
@@ -148,13 +150,22 @@ export default function AdminCategoriesPage() {
                   type="button"
                   className="text-[11px] font-semibold text-red-700 hover:underline"
                   onClick={() => {
-                    if (!accessToken || !confirm(`Delete category "${c.name}"?`)) return;
                     void (async () => {
+                      if (!accessToken) return;
+                      const ok = await confirmDialog({
+                        title: "Delete category",
+                        message: `Delete category "${c.name}"? This cannot be undone.`,
+                        confirmLabel: "Delete",
+                        variant: "danger",
+                      });
+                      if (!ok) return;
                       try {
                         await adminDeleteCategory(accessToken, c.id);
                         await load();
                       } catch (e) {
-                        alert(e instanceof Error ? e.message : "Delete failed");
+                        await alertDialog(e instanceof Error ? e.message : "Delete failed", {
+                          variant: "error",
+                        });
                       }
                     })();
                   }}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import {
   adminFetchUsers,
   adminSetStaffRole,
@@ -32,6 +33,7 @@ const ROLE_PRESETS: Record<"super_admin" | "admin" | "staff", string[]> = {
 
 export default function AdminStaffPage() {
   const { accessToken, user: me } = useAuth();
+  const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const [rows, setRows] = useState<AdminUser[]>([]);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [candidateId, setCandidateId] = useState<number | "">("");
@@ -107,7 +109,7 @@ export default function AdminStaffPage() {
             <select
               value={candidateId}
               onChange={(e) => setCandidateId(e.target.value ? Number(e.target.value) : "")}
-              className="w-full min-w-0 rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-small sm:min-w-[200px] sm:flex-1 sm:max-w-md"
+              className="sikapa-select w-full min-w-0 text-small sm:min-w-[200px] sm:flex-1 sm:max-w-md"
             >
               <option value="">Select user…</option>
               {candidates.map((u) => (
@@ -119,7 +121,7 @@ export default function AdminStaffPage() {
             <select
               value={candidateRole}
               onChange={(e) => setCandidateRole(e.target.value as "admin" | "staff")}
-              className="w-full rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-small sm:w-auto sm:shrink-0"
+              className="sikapa-select w-full text-small sm:w-auto sm:shrink-0"
             >
               <option value="staff">staff</option>
               <option value="admin">admin</option>
@@ -141,7 +143,7 @@ export default function AdminStaffPage() {
                     setCandidateId("");
                     await load();
                   } catch (e) {
-                    alert(e instanceof Error ? e.message : "Failed");
+                    void alertDialog(e instanceof Error ? e.message : "Failed", { variant: "error" });
                   }
                 })();
               }}
@@ -187,7 +189,7 @@ export default function AdminStaffPage() {
               {u.id !== me?.id ? (
                 <>
                   <select
-                    className="min-w-0 flex-1 rounded-lg border border-black/[0.1] bg-white px-2 py-1 text-[11px] sm:flex-none sm:min-w-[8rem]"
+                    className="sikapa-select min-w-0 flex-1 py-1.5 pl-2 pr-8 text-[11px] sm:flex-none sm:min-w-[8rem]"
                     value={u.admin_role ?? "admin"}
                     onChange={(e) => {
                       if (!accessToken) return;
@@ -197,7 +199,9 @@ export default function AdminStaffPage() {
                         permissions: ROLE_PRESETS[role],
                       })
                         .then(load)
-                        .catch((er) => alert(er instanceof Error ? er.message : "Failed"));
+                        .catch((er) =>
+                          void alertDialog(er instanceof Error ? er.message : "Failed", { variant: "error" })
+                        );
                     }}
                   >
                     <option value="super_admin">super_admin</option>
@@ -208,13 +212,20 @@ export default function AdminStaffPage() {
                     type="button"
                     className="text-[11px] font-semibold text-red-700 hover:underline"
                     onClick={() => {
-                      if (!accessToken || !confirm(`Revoke admin from @${u.username}?`)) return;
                       void (async () => {
+                        if (!accessToken) return;
+                        const ok = await confirmDialog({
+                          title: "Revoke admin access",
+                          message: `Revoke admin from @${u.username}?`,
+                          confirmLabel: "Revoke",
+                          variant: "danger",
+                        });
+                        if (!ok) return;
                         try {
                           await adminRevokeAdmin(accessToken, u.id);
                           await load();
                         } catch (e) {
-                          alert(e instanceof Error ? e.message : "Failed");
+                          await alertDialog(e instanceof Error ? e.message : "Failed", { variant: "error" });
                         }
                       })();
                     }}
