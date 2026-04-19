@@ -27,6 +27,10 @@ Open [http://localhost:3000](http://localhost:3000). The API should be running s
    The app builds paths like `/v1/auth/...`, so the full login URL becomes `http://localhost:8000/api/v1/auth/login`.
 
 3. Use **only one** `NEXT_PUBLIC_API_URL` line in `.env.local` (duplicate keys: last wins).
+4. To embed the store map on `/help/contact`, set:
+   - `NEXT_PUBLIC_STORE_LAT`
+   - `NEXT_PUBLIC_STORE_LNG`
+   - optional `NEXT_PUBLIC_STORE_MAP_ZOOM`, `NEXT_PUBLIC_STORE_LABEL`
 
 ## Build
 
@@ -41,7 +45,7 @@ See [docs/hosting/vercel.md](docs/hosting/vercel.md).
 
 ## Authentication in the browser
 
-- Sign-in / Register supports **Keep me signed in on this device**. When checked (default), access and refresh tokens persist in **`localStorage`** until logout. When unchecked, tokens use **`sessionStorage`** only (typically cleared when the browser session ends).
+- Sign-in / Register supports **Keep me signed in on this device**. When checked (default), access and refresh tokens persist in **`localStorage`** until logout. When unchecked, tokens use **`sessionStorage`** (typically cleared when the browser session ends).
 - Token refresh on **401** uses the refresh token from the active storage bucket (`frontend/lib/auth-storage.ts`).
 - Google OAuth completes via `/auth/google/callback` and persists tokens in **`localStorage`**.
 - Full detail: [../docs/AUTH_SESSION_AND_ADMIN.md](../docs/AUTH_SESSION_AND_ADMIN.md).
