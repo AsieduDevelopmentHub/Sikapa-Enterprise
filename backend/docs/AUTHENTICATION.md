@@ -1,132 +1,135 @@
-# Authentication System Documentation
+# Authentication & authorization
 
-## Overview
+Sikapa uses **username or email** for login, **JWT access + refresh** tokens, optional **TOTP 2FA**, **Google OAuth**, and **granular admin RBAC** for the admin panel.
 
-Sikapa authentication now supports **username or email login** with one identifier field.
+All auth routes are under **`/api/v1/auth`**. Admin user-management routes are under **`/api/v1/admin/users`**.
 
-- Login accepts `identifier` (`username` or `email`) + `password`
-- Registration requires `username`, `name`, `password`; `email` is optional
-- JWT access + refresh tokens (refresh rotates tokens)
-- TOTP 2FA, password reset, email verification (only for users with email)
+---
 
-All routes are under `/api/v1/auth`.
+## Endpoints (auth)
 
-## Endpoints
+### Registration & session
 
-### Registration & login
-- `POST /register`
-- `POST /login`
-- `POST /login-2fa`
-- `POST /logout`
+| Method | Path | Notes |
+|--------|------|--------|
+| POST | `/register` | `username`, `name`, `password`; optional `email` |
+| POST | `/login` | `identifier` (username or email), `password` |
+| POST | `/login-2fa` | After login when TOTP is enabled |
+| POST | `/logout` | Blacklists access token; client should discard stored tokens |
+| POST | `/refresh` | Body: `{ "refresh_token": "..." }` — returns rotated tokens |
 
-### Email verification and reset
-- `POST /verify-email`
-- `POST /password-reset/request`
-- `POST /password-reset/confirm`
-- `POST /password/change`
+### Email & password
 
-### Token and profile
-- `POST /refresh`
-- `GET /profile`
-- `PUT /profile`
+| POST | Path |
+|------|------|
+| `/verify-email` | OTP flow when email is present |
+| `/resend-email-verification` | |
+| `/password-reset/request` | |
+| `/password-reset/confirm` | |
+| `/password/change` | Authenticated |
 
-### 2FA
-- `POST /2fa/setup`
-- `POST /2fa/enable`
-- `POST /2fa/disable`
-- `GET /2fa/backup-codes`
+### Profile & account
 
-### Account
-- `POST /account/delete`
+| GET/PUT | `/profile` | |
+| POST | `/account/delete` | |
 
-## Database Models
+### Google OAuth
 
-### User
-- id, username (unique), name
-- email (optional, unique when present), hashed_password
-- first_name/last_name retained temporarily for backward compatibility
-- phone
-- email_verified, is_active
-- two_fa_enabled, two_fa_method
-- role (admin/user), is_admin
-- created_at, updated_at
+| GET | `/google/start` | Redirects to Google |
+| GET | `/google/callback` | Server-side; issues tokens (see frontend callback on web) |
+| POST | `/google/verify-2fa` | When Google sign-in + TOTP on account |
 
-### TokenBlacklist
-- id, user_id (FK), token
-- expires_at (indexed for cleanup)
+### 2FA (TOTP)
 
-### OTPCode
-- id, user_id (FK), code
-- purpose (email_verification, password_reset)
-- used, expires_at
+| POST | `/2fa/setup` | |
+| POST | `/2fa/enable` | |
+| POST | `/2fa/disable` | |
+| GET | `/2fa/backup-codes` | |
 
-### TwoFactorSecret
-- id, user_id (FK)
-- secret (TOTP), backup_codes (JSON)
-- verified, verified_at
+---
 
-### PasswordReset
-- id, user_id (FK), token
-- used, expires_at
+## User model (relevant fields)
 
-## Security Features
+On table `user` (see `backend/app/models.py`):
 
-✓ **JWT with Refresh Tokens**
-  - Access token TTL: `ACCESS_TOKEN_EXPIRE_MINUTES`
-  - Refresh token TTL: `REFRESH_TOKEN_EXPIRE_DAYS`
-  - HS256 algorithm
-  - Token blacklist for revocation
+| Field | Purpose |
+|-------|---------|
+| `username`, `name`, `email` | `email` optional but unique when set |
+| `hashed_password` | bcrypt |
+| `google_sub` | Google “sub”; unique when set |
+| `email_verified`, `is_active` | |
+| `is_admin` | Must be true for admin UI |
+| `admin_role` | `customer`, `staff`, `admin`, or `super_admin` |
+| `admin_permissions` | Comma-separated permission keys; `super_admin` bypasses checks |
+| `two_fa_enabled`, `two_fa_method` | |
 
-✓ **Password Security**
-  - bcrypt hashing with salt
-  - Minimum 8 characters enforced
-  - Password reset with expiring tokens
+Supporting tables include `TokenBlacklist`, `OTPCode`, `TwoFactorSecret`, `PasswordReset` (see models and Alembic migrations).
 
-✓ **2FA TOTP**
-  - Time-based One Time Password
-  - QR code generation for setup
-  - 10 backup codes (recovery)
-  - TOTP window: ±1 time window
+---
 
-✓ **Email Verification**
-  - OTP codes (6 digits)
-  - 24-hour expiration
-  - One-time use enforcement
+## Admin RBAC
 
-✓ **Token Management**
-  - Automatic token blacklisting on logout
-  - Token expiration validation
-  - Separate access/refresh token logic
+- **`super_admin`**: full admin access; bypasses `admin_permissions` checks.
+- **`admin` / `staff`**: must have required keys in `admin_permissions` for each protected route (`require_admin_permission("...")` in `app/api/v1/auth/dependencies.py`).
+- Permission catalog: `app/api/v1/admin/permission_catalog.py`.
 
-✓ **Authentication Levels**
-  - User (authenticated)
-  - Active user (account not disabled)
-  - Admin user (role-based access control)
+**Staff / admin APIs** (selection):
 
-## Request/Response Examples
+| Method | Path | Permission (typical) |
+|--------|------|----------------------|
+| GET | `/admin/users/permission-catalog` | `manage_staff` |
+| POST | `/admin/users/staff-accounts` | `manage_staff` |
+| PATCH | `/admin/users/{id}/staff-role` | `manage_staff` |
 
-### Register
-```json
-POST /register
-{
-  "username": "john.doe",
-  "name": "John Doe",
-  "email": "user@example.com",
-  "password": "SecurePass123!",
-}
+Only **`super_admin`** may assign `super_admin` or alter another super admin’s access.
 
-Response: { "id": 1, "username": "john.doe", "name": "John Doe", "email": "...", ... }
+---
+
+## Security features (summary)
+
+- **JWT** access (short TTL) + refresh (longer TTL, rotation on refresh).
+- **Token blacklist** on logout and for revoked access tokens where applicable.
+- **bcrypt** password hashing; minimum password length enforced (e.g. 8 chars on register).
+- **TOTP 2FA** optional; backup codes supported in services.
+- **Email verification** via OTP when email is provided at registration.
+
+---
+
+## Environment (`backend/.env`)
+
+```env
+SECRET_KEY=...
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
 
+If **`SECRET_KEY`** changes, existing JWTs are invalid and users must sign in again.
+
+---
+
+## Service layer
+
+Primary implementation: `backend/app/api/v1/auth/services.py` (registration, login, tokens, refresh, profile, 2FA, password flows).
+
+---
+
+## Request/response examples
+
 ### Login
-```json
-POST /login
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
 {
   "identifier": "john.doe",
   "password": "SecurePass123!"
 }
+```
 
-Response: {
+```json
+{
   "access_token": "eyJ0eXAi...",
   "refresh_token": "eyJ0eXAi...",
   "token_type": "bearer",
@@ -134,132 +137,26 @@ Response: {
 }
 ```
 
-### 2FA Setup
-```json
-POST /2fa/setup (requires Authorization header)
-Authorization: Bearer {access_token}
+### Refresh
 
-Response: {
-  "secret": "JBSWY3DPEBLW64TMMQ======",
-  "qr_code": "data:image/png;base64,...",
-  "backup_codes": ["XXXX-XXXX", "XXXX-XXXX", ...]
-}
-```
+```http
+POST /api/v1/auth/refresh
+Content-Type: application/json
 
-### Refresh Token
-```json
-POST /refresh
 {
   "refresh_token": "eyJ0eXAi..."
 }
-
-Response: {
-  "access_token": "eyJ0eXAi...",
-  "refresh_token": "eyJ0eXAi...",
-  "token_type": "bearer",
-  "expires_in": 900
-}
 ```
 
-## Service Functions
+---
 
-All business logic implemented in `backend/app/api/v1/auth/services.py`:
+## Frontend integration
 
-- `register_user()` - User registration with OTP generation
-- `authenticate_user()` - Email/password validation
-- `create_user_tokens()` - JWT token generation
-- `refresh_access_token()` - Refresh token logic
-- `logout_user()` - Token blacklisting
-- `verify_email()` - Email verification with OTP
-- `request_password_reset()` - Generate reset token
-- `reset_password()` - Password reset with token
-- `update_user_profile()` - Profile updates
-- `change_password()` - Password change
-- `delete_user_account()` - Account deletion (soft)
-- `setup_two_fa_totp()` - 2FA secret generation
-- `enable_two_fa_totp()` - Enable 2FA after verification
-- `disable_two_fa()` - Disable 2FA
-- `verify_two_fa_code()` - TOTP code verification
-- `get_backup_codes()` - Retrieve backup codes
+- API base: `NEXT_PUBLIC_API_URL` (must include `/api`; the client appends `/v1/...`).
+- Session storage behavior (“Keep me signed in”) and admin overview: **[../../docs/AUTH_SESSION_AND_ADMIN.md](../../docs/AUTH_SESSION_AND_ADMIN.md)**.
 
-## Authentication Dependencies
+---
 
-All dependencies in `backend/app/api/v1/auth/dependencies.py`:
+## Interactive API docs
 
-- `get_current_user()` - JWT validation + token blacklist check
-- `get_current_active_user()` - Ensures account is active
-- `get_current_admin_user()` - Ensures admin role
-
-Usage: Add `current_user: User = Depends(get_current_active_user)` to route
-
-## Security Configuration
-
-In `backend/.env`:
-```
-SECRET_KEY={random_secure_key}
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=15
-REFRESH_TOKEN_EXPIRE_DAYS=7
-HTTPS_ENABLED=true
-```
-
-## Alembic Migrations
-
-All migrations applied automatically:
-- `a83bbcaf54ed` - Add user email field
-- `a4011e455772` - Test update
-- `b3c2f1a8e9d4` - Add authentication models (TokenBlacklist, OTPCode, TwoFactorSecret, PasswordReset, User columns)
-
-## Testing Status
-
-✓ All imports validated
-✓ All database tables created
-✓ All 16 endpoints registered
-✓ All services available
-✓ Database connections working
-✓ Migrations applied successfully
-
-## Notes
-
-- Users without email can still register and login, but email-only flows (verification/reset notifications) require an email address.
-- If `SECRET_KEY` changes, all existing JWTs become invalid and users must sign in again.
-
-## File Structure
-
-```
-backend/
-├── app/
-│   ├── api/v1/
-│   │   └── auth/
-│   │       ├── __init__.py
-│   │       ├── routes.py (16 endpoints)
-│   │       ├── services.py (15 functions)
-│   │       ├── schemas.py (20+ Pydantic models)
-│   │       └── dependencies.py (3 auth levels)
-│   ├── core/
-│   │   └── security.py (JWT, TOTP, OTP, passwords)
-│   ├── models.py (5 auth models + User)
-│   └── main.py
-├── alembic/
-│   ├── versions/
-│   │   ├── a83bbcaf54ed_add_user_email_field.py
-│   │   ├── a4011e455772_test_update.py
-│   │   └── b3c2f1a8e9d4_add_authentication_models.py
-│   └── alembic.ini
-└── .env (configuration)
-```
-
-## API Base URL
-
-**Development**: http://localhost:8000/api/v1/auth
-**Staging**: https://sikapa-backend.onrender.com/api/v1/auth
-**Production**: https://api.sikapa.com/v1/auth (when deployed)
-
-## Related Frontend Integration
-
-Frontend environment in `frontend/.env.local`:
-```
-NEXT_PUBLIC_API_URL=https://sikapa-backend.onrender.com/api
-```
-
-All auth endpoints available at: `${NEXT_PUBLIC_API_URL}/v1/auth/`
+With the server running: `http://localhost:8000/docs` (Swagger UI).
