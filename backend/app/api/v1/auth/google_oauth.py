@@ -61,7 +61,7 @@ def verify_google_oauth_state(state: str | None) -> None:
 def get_google_oauth_settings() -> tuple[str, str, str]:
     client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
     client_secret = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
-    redirect_uri = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "").strip()
+    redirect_uri = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "").strip().rstrip("/")
     return client_id, client_secret, redirect_uri
 
 
