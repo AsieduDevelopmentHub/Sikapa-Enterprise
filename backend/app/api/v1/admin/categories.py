@@ -2,7 +2,7 @@
 Admin category management routes
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlmodel import Session
 
 from app.db import get_session
@@ -12,6 +12,7 @@ from app.api.v1.admin.services import (
     update_category_admin,
     delete_category_admin,
     get_all_categories_admin,
+    upload_product_image,
 )
 from app.api.v1.admin.schemas import (
     CategoryAdminRead,
@@ -61,3 +62,15 @@ async def delete_category(
     current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     await delete_category_admin(session, category_id)
+
+
+@router.post("/{category_id}/image", response_model=CategoryAdminRead)
+async def upload_category_image(
+    category_id: int,
+    image: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin_permission("manage_products")),
+):
+    """Upload and set category image."""
+    image_url = await upload_product_image(image, session, folder="categories")
+    return await update_category_admin(session, category_id, {"image_url": image_url})

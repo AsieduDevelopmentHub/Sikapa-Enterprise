@@ -1,6 +1,7 @@
 """
 Email subscriptions business logic
 """
+from datetime import datetime
 import uuid
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
@@ -59,28 +60,46 @@ async def subscribe_email(session: Session, email: str) -> EmailSubscription:
 
 
 async def unsubscribe_email(session: Session, email: str) -> None:
-    """Unsubscribe an email from the newsletter."""
+    """Unsubscribe an email from the newsletter (idempotent)."""
     
     subscription = session.exec(
         select(EmailSubscription).where(EmailSubscription.email == email)
     ).first()
     
     if not subscription:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Email not found in subscription list",
-        )
-    
+        return
     if not subscription.is_subscribed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is already unsubscribed",
-        )
-    
+        return
     subscription.is_subscribed = False
-    subscription.unsubscribed_at = None
+    subscription.unsubscribed_at = datetime.utcnow()
     session.add(subscription)
     session.commit()
+
+
+async def unsubscribe_by_token(session: Session, token: str) -> None:
+    """One-click unsubscribe from email footer links."""
+    if not token:
+        return
+    subscription = session.exec(
+        select(EmailSubscription).where(EmailSubscription.verification_token == token)
+    ).first()
+    if not subscription:
+        return
+    if not subscription.is_subscribed:
+        return
+    subscription.is_subscribed = False
+    subscription.unsubscribed_at = datetime.utcnow()
+    session.add(subscription)
+    session.commit()
+
+
+def newsletter_recipients(session: Session) -> list[EmailSubscription]:
+    """Verified and active newsletter recipients."""
+    stmt = select(EmailSubscription).where(
+        EmailSubscription.is_subscribed == True,  # noqa: E712
+        EmailSubscription.verified == True,  # noqa: E712
+    )
+    return list(session.exec(stmt).all())
 
 
 async def verify_subscription(session: Session, token: str) -> dict:

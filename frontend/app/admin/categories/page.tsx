@@ -7,6 +7,7 @@ import {
   adminCreateCategory,
   adminDeleteCategory,
   adminFetchCategories,
+  adminUploadCategoryImage,
   adminUpdateCategory,
   type AdminCategory,
 } from "@/lib/api/admin";
@@ -27,10 +28,12 @@ export default function AdminCategoriesPage() {
   const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const [rows, setRows] = useState<AdminCategory[]>([]);
   const [name, setName] = useState("");
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const derivedSlug = useMemo(() => slugify(name.trim()), [name]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [uploadingImageFor, setUploadingImageFor] = useState<number | null>(null);
   const [query, setQuery] = useState("");
 
   const visibleRows = useMemo(() => {
@@ -61,14 +64,21 @@ export default function AdminCategoriesPage() {
     setErr(null);
     setCreating(true);
     try {
-      await adminCreateCategory(accessToken, {
+      const created = await adminCreateCategory(accessToken, {
         name: name.trim(),
         slug: derivedSlug || slugify(name.trim()),
         is_active: true,
         sort_order: 0,
       });
+      if (newImageFile) {
+        await adminUploadCategoryImage(accessToken, created.id, newImageFile);
+      }
       setName("");
+      setNewImageFile(null);
       await load();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("sikapa-catalog-refresh"));
+      }
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Create failed");
     } finally {
@@ -105,6 +115,15 @@ export default function AdminCategoriesPage() {
           />
           <p className="mt-1 text-[11px] font-normal text-sikapa-text-muted">Auto-generated from the name.</p>
         </div>
+        <label className="block min-w-0 flex-1 text-small font-medium text-sikapa-text-secondary sm:min-w-[180px]">
+          Category image (optional)
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setNewImageFile(e.target.files?.[0] ?? null)}
+            className="mt-1 block w-full text-[12px] file:mr-3 file:rounded-full file:border-0 file:bg-sikapa-cream file:px-3 file:py-1.5 file:text-[12px] file:font-semibold"
+          />
+        </label>
         <button
           type="submit"
           disabled={creating}
@@ -133,9 +152,46 @@ export default function AdminCategoriesPage() {
         <ul className="mt-4 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
           {visibleRows.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-semibold">{c.name}</p>
                 <p className="font-mono text-[11px] text-sikapa-text-muted">{c.slug}</p>
+                {c.image_url ? (
+                  <p className="mt-1 truncate text-[11px] text-sikapa-text-muted">{c.image_url}</p>
+                ) : (
+                  <p className="mt-1 text-[11px] text-sikapa-text-muted">No category image set.</p>
+                )}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <label className="cursor-pointer rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ring-black/[0.1]">
+                    {uploadingImageFor === c.id ? "Uploading..." : "Upload image"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (!accessToken) return;
+                        const file = e.target.files?.[0];
+                        e.currentTarget.value = "";
+                        if (!file) return;
+                        void (async () => {
+                          setUploadingImageFor(c.id);
+                          try {
+                            await adminUploadCategoryImage(accessToken, c.id, file);
+                            await load();
+                            if (typeof window !== "undefined") {
+                              window.dispatchEvent(new CustomEvent("sikapa-catalog-refresh"));
+                            }
+                          } catch (ex) {
+                            await alertDialog(ex instanceof Error ? ex.message : "Image upload failed", {
+                              variant: "error",
+                            });
+                          } finally {
+                            setUploadingImageFor(null);
+                          }
+                        })();
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -147,6 +203,9 @@ export default function AdminCategoriesPage() {
                       try {
                         await adminUpdateCategory(accessToken, c.id, { is_active: !c.is_active });
                         await load();
+                        if (typeof window !== "undefined") {
+                          window.dispatchEvent(new CustomEvent("sikapa-catalog-refresh"));
+                        }
                       } catch (e) {
                         void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
                       }
@@ -171,6 +230,9 @@ export default function AdminCategoriesPage() {
                       try {
                         await adminDeleteCategory(accessToken, c.id);
                         await load();
+                        if (typeof window !== "undefined") {
+                          window.dispatchEvent(new CustomEvent("sikapa-catalog-refresh"));
+                        }
                       } catch (e) {
                         await alertDialog(e instanceof Error ? e.message : "Delete failed", {
                           variant: "error",

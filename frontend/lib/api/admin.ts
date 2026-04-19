@@ -350,8 +350,8 @@ export async function adminCreateCategory(
     is_active?: boolean;
     sort_order?: number;
   }
-): Promise<unknown> {
-  return apiFetchJsonAuth(accessToken, `${V1.admin.categories}/`, {
+): Promise<AdminCategory> {
+  return apiFetchJsonAuth<AdminCategory>(accessToken, `${V1.admin.categories}/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -369,8 +369,8 @@ export async function adminUpdateCategory(
     is_active: boolean;
     sort_order: number;
   }>
-): Promise<unknown> {
-  return apiFetchJsonAuth(accessToken, V1.admin.category(categoryId), {
+): Promise<AdminCategory> {
+  return apiFetchJsonAuth<AdminCategory>(accessToken, V1.admin.category(categoryId), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -379,6 +379,16 @@ export async function adminUpdateCategory(
 
 export async function adminDeleteCategory(accessToken: string, categoryId: number): Promise<void> {
   await apiFetchJsonAuthMethod<undefined>(accessToken, V1.admin.category(categoryId), "DELETE");
+}
+
+export async function adminUploadCategoryImage(
+  accessToken: string,
+  categoryId: number,
+  file: File
+): Promise<AdminCategory> {
+  const fd = new FormData();
+  fd.append("image", file);
+  return apiFetchFormAuth<AdminCategory>(accessToken, V1.admin.categoryImage(categoryId), fd, "POST");
 }
 
 export async function adminFetchOrders(
