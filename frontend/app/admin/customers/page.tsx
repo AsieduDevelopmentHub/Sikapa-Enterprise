@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import {
   adminActivateUser,
   adminDeactivateUser,
@@ -13,6 +14,7 @@ import { AdminTableSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminCustomersPage() {
   const { accessToken, user: me } = useAuth();
+  const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const [rows, setRows] = useState<AdminUser[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,13 +95,20 @@ export default function AdminCustomersPage() {
                         type="button"
                         className="text-[11px] font-semibold text-red-700 hover:underline"
                         onClick={() => {
-                          if (!accessToken || !confirm(`Deactivate ${u.username}?`)) return;
                           void (async () => {
+                            if (!accessToken) return;
+                            const ok = await confirmDialog({
+                              title: "Deactivate account",
+                              message: `Deactivate ${u.username}? They will not be able to sign in.`,
+                              confirmLabel: "Deactivate",
+                              variant: "danger",
+                            });
+                            if (!ok) return;
                             try {
                               await adminDeactivateUser(accessToken, u.id);
                               await load();
                             } catch (e) {
-                              alert(e instanceof Error ? e.message : "Failed");
+                              await alertDialog(e instanceof Error ? e.message : "Failed", { variant: "error" });
                             }
                           })();
                         }}
@@ -117,7 +126,7 @@ export default function AdminCustomersPage() {
                               await adminActivateUser(accessToken, u.id);
                               await load();
                             } catch (e) {
-                              alert(e instanceof Error ? e.message : "Failed");
+                              await alertDialog(e instanceof Error ? e.message : "Failed", { variant: "error" });
                             }
                           })();
                         }}

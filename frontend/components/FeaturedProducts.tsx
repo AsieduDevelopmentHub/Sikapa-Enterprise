@@ -19,7 +19,7 @@ export function FeaturedProducts() {
         aria-labelledby="featured-title"
       >
         <HomeBannerSlideshow variant="featured" />
-        <div className="mt-3 px-4">
+        <div className="mt-3 px-4 md:px-6 lg:px-8">
           <h2
             id="featured-title"
             className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100"
@@ -50,7 +50,7 @@ export function FeaturedProducts() {
       aria-labelledby="featured-title"
     >
       <HomeBannerSlideshow variant="featured" />
-      <div className="mb-3 mt-3 flex items-center justify-between px-4">
+      <div className="mb-3 mt-3 flex items-center justify-between px-4 md:px-6 lg:px-8">
         <h2
           id="featured-title"
           className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100"
@@ -64,7 +64,7 @@ export function FeaturedProducts() {
           See all
         </Link>
       </div>
-      <div className="flex gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-3 overflow-x-auto px-4 pb-2 md:px-6 lg:px-8 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {featured.map((p) => (
           <HomeProductCarouselCard key={p.id} product={p} />
         ))}

@@ -21,11 +21,11 @@ export function HomeBrowseAll() {
   return (
     <section
       id="categories"
-      className="scroll-mt-20 bg-white px-4 py-6 dark:bg-zinc-950"
+      className="scroll-mt-20 bg-white px-4 py-6 dark:bg-zinc-950 md:px-6 lg:px-8"
       aria-labelledby="browse-all-heading"
     >
-      <div className="mx-auto max-w-mobile">
-        <div className="mb-4 flex items-end justify-between gap-2">
+      <div className="sikapa-storefront-max">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sikapa-text-muted dark:text-zinc-500">
               Find what you need
@@ -48,28 +48,30 @@ export function HomeBrowseAll() {
           </Link>
         </div>
 
-        <ul className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <ul className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-4 md:overflow-visible lg:grid-cols-5 xl:grid-cols-6 md:gap-4 md:pb-0">
           {rows.map((cat) => {
             const countLabel = cat.count === 1 ? "1 product" : `${cat.count} products`;
             const shopCat = cat.slug === "bestsellers" ? "bestsellers" : cat.slug;
             return (
-              <li key={cat.key} className="w-[132px] shrink-0">
+              <li key={cat.key} className="flex w-[132px] shrink-0 md:w-auto md:min-w-0 md:shrink">
                 <Link
                   href={`/shop?cat=${encodeURIComponent(shopCat)}`}
-                  className="sikapa-tap block overflow-hidden rounded-[10px] bg-sikapa-cream ring-1 ring-black/[0.06] transition-shadow hover:shadow-md dark:bg-zinc-900 dark:ring-white/10"
+                  className="sikapa-tap flex h-full min-h-[228px] w-full flex-col overflow-hidden rounded-[10px] bg-sikapa-cream ring-1 ring-black/[0.06] transition-shadow hover:shadow-md dark:bg-zinc-900 dark:ring-white/10"
                 >
-                  <div className="relative aspect-[4/5] w-full">
+                  <div className="relative aspect-[4/5] w-full shrink-0 bg-zinc-100 dark:bg-zinc-800">
                     <Image
                       src={cat.image}
                       alt=""
                       fill
                       className="object-cover"
-                      sizes="132px"
+                      sizes="(max-width:768px) 132px, (max-width:1024px) 25vw, 180px"
                     />
                   </div>
-                  <div className="px-2 py-2.5 text-center">
-                    <p className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">{cat.label}</p>
-                    <p className="mt-0.5 text-[10px] font-medium text-sikapa-text-muted dark:text-zinc-500">
+                  <div className="flex min-h-[4.25rem] flex-1 flex-col justify-center px-2 py-2.5 text-center">
+                    <p className="line-clamp-2 text-small font-semibold leading-snug text-sikapa-text-primary dark:text-zinc-100">
+                      {cat.label}
+                    </p>
+                    <p className="mt-1 text-[10px] font-medium text-sikapa-text-muted dark:text-zinc-500">
                       {countLabel}
                     </p>
                   </div>
