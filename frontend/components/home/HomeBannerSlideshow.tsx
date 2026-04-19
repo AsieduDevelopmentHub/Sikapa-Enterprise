@@ -1,34 +1,30 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** First four promotional banners (`banner5.png` and beyond are omitted). */
-const SLIDES: { src: string; alt: string; href: string }[] = [
+const SLIDES: { src: string; alt: string }[] = [
   {
     src: "/assets/banners/banner1.png",
     alt: "Sikapa — curated beauty and lifestyle",
-    href: "/shop",
   },
   {
     src: "/assets/banners/banner2.png",
     alt: "Featured collections — wigs, skincare, and more",
-    href: "/shop",
   },
   {
     src: "/assets/banners/banner3.png",
     alt: "Luxury beauty for every style",
-    href: "/shop",
   },
   {
     src: "/assets/banners/banner4.png",
     alt: "Seasonal picks and bundles",
-    href: "/shop",
   },
 ];
 
 const AUTO_MS = 5500;
+const SWIPE_MIN_PX = 48;
 
 type Props = {
   /** `featured` = top of #featured (inset, no full-bleed band). `full` = standalone section width. */
@@ -39,6 +35,10 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
   const [index, setIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [paused, setPaused] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchActive = useRef(false);
+  /** Prevents accidental "pause" click right after a horizontal swipe. */
+  const ignoreClickAfterSwipe = useRef(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -56,6 +56,18 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
     return () => clearInterval(id);
   }, [reducedMotion, paused]);
 
+  const goPrev = () => {
+    setPaused(true);
+    setIndex((i) => (i - 1 + SLIDES.length) % SLIDES.length);
+  };
+
+  const goNext = () => {
+    setPaused(true);
+    setIndex((i) => (i + 1) % SLIDES.length);
+  };
+
+  const slideTransition = reducedMotion ? "" : "transition-opacity duration-700 ease-in-out";
+
   const shell =
     variant === "featured"
       ? "bg-transparent px-4 pb-5 pt-2 dark:bg-transparent"
@@ -69,32 +81,77 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
       aria-label="Featured banners"
     >
       <div className="relative mx-auto w-full max-w-mobile">
-        <div className="relative overflow-hidden rounded-[14px] ring-1 ring-black/[0.06] dark:ring-white/10">
-          <div className="relative aspect-[16/10] w-full bg-zinc-200 dark:bg-zinc-800">
-            {SLIDES.map((slide, i) => (
-              <Link
-                key={slide.src}
-                href={slide.href}
-                className={`absolute inset-0 block ${
-                  i === index ? "z-[1] cursor-pointer opacity-100" : "pointer-events-none z-0 opacity-0"
-                }`}
-                aria-hidden={i !== index}
-                tabIndex={i === index ? 0 : -1}
-                aria-label={slide.alt}
-                onClick={() => setPaused(true)}
-              >
-                <Image
-                  src={slide.src}
-                  alt=""
-                  fill
-                  className="object-cover object-center"
-                  sizes="(max-width: 480px) 100vw, 430px"
-                  priority={i === 0}
-                />
-              </Link>
-            ))}
+        <div className="relative">
+          <div
+            className="relative aspect-[16/10] w-full bg-zinc-200 dark:bg-zinc-800"
+            onTouchStart={(e) => {
+              if (e.touches.length !== 1) return;
+              touchStartX.current = e.touches[0].clientX;
+              touchActive.current = true;
+            }}
+            onTouchEnd={(e) => {
+              if (!touchActive.current || touchStartX.current === null) {
+                touchStartX.current = null;
+                touchActive.current = false;
+                return;
+              }
+              const endX = e.changedTouches[0]?.clientX;
+              if (endX === undefined) {
+                touchStartX.current = null;
+                touchActive.current = false;
+                return;
+              }
+              const dx = endX - touchStartX.current;
+              touchStartX.current = null;
+              touchActive.current = false;
+              if (Math.abs(dx) < SWIPE_MIN_PX) return;
+              ignoreClickAfterSwipe.current = true;
+              window.setTimeout(() => {
+                ignoreClickAfterSwipe.current = false;
+              }, 350);
+              if (dx > 0) goPrev();
+              else goNext();
+            }}
+            onTouchCancel={() => {
+              touchStartX.current = null;
+              touchActive.current = false;
+            }}
+          >
+            {/* Inset frame so banners do not flush to the outer rounded container */}
+            <div className="pointer-events-none absolute inset-3 overflow-hidden rounded-[10px] sm:inset-4">
+              {SLIDES.map((slide, i) => (
+                <div
+                  key={slide.src}
+                  className={`pointer-events-none absolute inset-0 ${slideTransition} ${
+                    i === index ? "z-[1] opacity-100" : "z-0 opacity-0"
+                  }`}
+                  aria-hidden={i !== index}
+                >
+                  <Image
+                    src={slide.src}
+                    alt=""
+                    fill
+                    className="rounded-[5px] object-contain object-center"
+                    sizes="(max-width: 480px) 100vw, 430px"
+                    priority={i === 0}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Tap target: pause autoplay only; sits above images for pointer events */}
+            <button
+              type="button"
+              className="absolute inset-3 z-[1] cursor-default rounded-[5px] sm:inset-4"
+              aria-label={`${SLIDES[index]?.alt ?? "Banner"}. Slide ${index + 1} of ${SLIDES.length}. Tap to pause slideshow.`}
+              onClick={() => {
+                if (ignoreClickAfterSwipe.current) return;
+                setPaused(true);
+              }}
+            />
+
             <div
-              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-black/[0.03]"
               aria-hidden
             />
           </div>
@@ -103,10 +160,7 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
             type="button"
             className="sikapa-tap-static absolute left-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-sikapa-text-primary shadow-md backdrop-blur-sm hover:bg-white dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-800"
             aria-label="Previous banner"
-            onClick={() => {
-              setPaused(true);
-              setIndex((i) => (i - 1 + SLIDES.length) % SLIDES.length);
-            }}
+            onClick={goPrev}
           >
             <Chevron dir="left" />
           </button>
@@ -114,10 +168,7 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
             type="button"
             className="sikapa-tap-static absolute right-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-sikapa-text-primary shadow-md backdrop-blur-sm hover:bg-white dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-800"
             aria-label="Next banner"
-            onClick={() => {
-              setPaused(true);
-              setIndex((i) => (i + 1) % SLIDES.length);
-            }}
+            onClick={goNext}
           >
             <Chevron dir="right" />
           </button>
@@ -143,7 +194,7 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
         </div>
 
         <p className="mt-2 text-center text-[11px] font-medium uppercase tracking-[0.2em] text-sikapa-text-muted dark:text-zinc-500">
-          Tap a banner to shop
+          Swipe or use arrows · tap banner to pause
         </p>
       </div>
     </div>
