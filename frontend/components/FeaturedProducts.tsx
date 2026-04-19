@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useCatalog } from "@/context/CatalogContext";
+import { HomeBannerSlideshow } from "@/components/home/HomeBannerSlideshow";
 import { HomeProductCarouselCard } from "@/components/home/HomeProductCarouselCard";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 
@@ -14,10 +15,11 @@ export function FeaturedProducts() {
     return (
       <section
         id="featured"
-        className="scroll-mt-20 bg-sikapa-cream py-6 pb-6 dark:bg-zinc-950"
+        className="scroll-mt-20 bg-sikapa-cream py-4 pb-6 dark:bg-zinc-950"
         aria-labelledby="featured-title"
       >
-        <div className="px-4">
+        <HomeBannerSlideshow variant="featured" />
+        <div className="mt-3 px-4">
           <h2
             id="featured-title"
             className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100"
@@ -47,7 +49,8 @@ export function FeaturedProducts() {
       className="scroll-mt-20 bg-sikapa-cream py-4 pb-6 dark:bg-zinc-950"
       aria-labelledby="featured-title"
     >
-      <div className="mb-3 flex items-center justify-between px-4">
+      <HomeBannerSlideshow variant="featured" />
+      <div className="mb-3 mt-3 flex items-center justify-between px-4">
         <h2
           id="featured-title"
           className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100"

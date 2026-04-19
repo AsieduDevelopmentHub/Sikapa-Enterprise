@@ -1,0 +1,159 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+const SLIDES: { src: string; alt: string; href: string }[] = [
+  {
+    src: "/assets/banners/banner1.png",
+    alt: "Sikapa — curated beauty and lifestyle",
+    href: "/shop",
+  },
+  {
+    src: "/assets/banners/banner2.png",
+    alt: "Featured collections — wigs, skincare, and more",
+    href: "/shop",
+  },
+  {
+    src: "/assets/banners/banner3.png",
+    alt: "Luxury beauty for every style",
+    href: "/shop",
+  },
+];
+
+const AUTO_MS = 5500;
+
+type Props = {
+  /** `featured` = top of #featured (inset, no full-bleed band). `full` = standalone section width. */
+  variant?: "full" | "featured";
+};
+
+export function HomeBannerSlideshow({ variant = "full" }: Props) {
+  const [index, setIndex] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const onChange = () => setReducedMotion(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (reducedMotion || paused) return;
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % SLIDES.length);
+    }, AUTO_MS);
+    return () => clearInterval(id);
+  }, [reducedMotion, paused]);
+
+  const shell =
+    variant === "featured"
+      ? "bg-transparent px-4 pb-5 pt-2 dark:bg-transparent"
+      : "border-b border-black/[0.06] bg-sikapa-cream px-4 py-6 dark:border-white/10 dark:bg-zinc-950 sm:px-5";
+
+  return (
+    <div
+      className={shell}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Featured banners"
+    >
+      <div className="relative mx-auto w-full max-w-mobile">
+        <div className="relative overflow-hidden rounded-[14px] ring-1 ring-black/[0.06] dark:ring-white/10">
+          <div className="relative aspect-[16/10] w-full bg-zinc-200 dark:bg-zinc-800">
+            {SLIDES.map((slide, i) => (
+              <Link
+                key={slide.src}
+                href={slide.href}
+                className={`absolute inset-0 block transition-opacity duration-700 ease-out ${
+                  i === index ? "z-[1] cursor-pointer opacity-100" : "pointer-events-none z-0 opacity-0"
+                }`}
+                aria-hidden={i !== index}
+                tabIndex={i === index ? 0 : -1}
+                aria-label={slide.alt}
+                onClick={() => setPaused(true)}
+              >
+                <Image
+                  src={slide.src}
+                  alt=""
+                  fill
+                  className="object-cover object-center"
+                  sizes="(max-width: 480px) 100vw, 430px"
+                  priority={i === 0}
+                />
+              </Link>
+            ))}
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5"
+              aria-hidden
+            />
+          </div>
+
+          <button
+            type="button"
+            className="sikapa-tap absolute left-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-sikapa-text-primary shadow-md backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-100"
+            aria-label="Previous banner"
+            onClick={() => {
+              setPaused(true);
+              setIndex((i) => (i - 1 + SLIDES.length) % SLIDES.length);
+            }}
+          >
+            <Chevron dir="left" />
+          </button>
+          <button
+            type="button"
+            className="sikapa-tap absolute right-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-sikapa-text-primary shadow-md backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-100"
+            aria-label="Next banner"
+            onClick={() => {
+              setPaused(true);
+              setIndex((i) => (i + 1) % SLIDES.length);
+            }}
+          >
+            <Chevron dir="right" />
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-center gap-2" role="tablist" aria-label="Banner slides">
+          {SLIDES.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              role="tab"
+              aria-selected={i === index}
+              className={`sikapa-tap h-2 rounded-full transition-all duration-300 ${
+                i === index ? "w-6 bg-sikapa-gold" : "w-2 bg-sikapa-gray-soft dark:bg-zinc-600"
+              }`}
+              aria-label={`Go to slide ${i + 1}`}
+              onClick={() => {
+                setPaused(true);
+                setIndex(i);
+              }}
+            />
+          ))}
+        </div>
+
+        <p className="mt-2 text-center text-[11px] font-medium uppercase tracking-[0.2em] text-sikapa-text-muted dark:text-zinc-500">
+          Tap a banner to shop
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Chevron({ dir }: { dir: "left" | "right" }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d={dir === "left" ? "M15 18l-6-6 6-6" : "M9 18l6-6-6-6"}
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

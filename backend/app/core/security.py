@@ -98,6 +98,30 @@ def decode_refresh_token(token: str) -> dict:
         raise exc
 
 
+# Short-lived token after Google OAuth when the user still must pass TOTP.
+OAUTH_2FA_PENDING_MINUTES = 10
+
+
+def create_oauth_2fa_pending_token(user_id: int) -> str:
+    expire = datetime.utcnow() + timedelta(minutes=OAUTH_2FA_PENDING_MINUTES)
+    return jwt.encode(
+        {
+            "sub": str(user_id),
+            "exp": expire,
+            "type": "oauth_2fa_pending",
+        },
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+
+
+def decode_oauth_2fa_pending_token(token: str) -> dict:
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("type") != "oauth_2fa_pending":
+        raise JWTError("Invalid token type")
+    return payload
+
+
 # ============ OTP & Verification Codes ============
 def generate_otp_code(length: int = 6) -> str:
     """Generate a random OTP code (numeric)."""
