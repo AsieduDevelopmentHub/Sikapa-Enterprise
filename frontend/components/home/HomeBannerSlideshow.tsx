@@ -80,7 +80,7 @@ export function HomeBannerSlideshow({ variant = "full" }: Props) {
       aria-roledescription="carousel"
       aria-label="Featured banners"
     >
-      <div className="relative mx-auto w-full max-w-mobile">
+      <div className="sikapa-storefront-max relative w-full">
         <div className="relative">
           <div
             className="relative aspect-[16/10] w-full bg-zinc-200 dark:bg-zinc-800"

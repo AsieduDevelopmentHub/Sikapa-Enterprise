@@ -8,6 +8,7 @@ import { CatalogProvider } from "@/context/CatalogContext";
 import { CartProvider } from "@/context/CartContext";
 import { NavDrawerProvider } from "@/context/NavDrawerContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { DialogProvider } from "@/context/DialogContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 
@@ -17,14 +18,16 @@ export function Providers({ children }: { children: ReactNode }) {
       <NavDrawerProvider>
         <AuthProvider>
           <ToastProvider>
-            <CatalogProvider>
-              <WishlistProvider>
-                <CartProvider>
-                  <AppShell>{children}</AppShell>
-                  <NavSidebarPanel />
-                </CartProvider>
-              </WishlistProvider>
-            </CatalogProvider>
+            <DialogProvider>
+              <CatalogProvider>
+                <WishlistProvider>
+                  <CartProvider>
+                    <AppShell>{children}</AppShell>
+                    <NavSidebarPanel />
+                  </CartProvider>
+                </WishlistProvider>
+              </CatalogProvider>
+            </DialogProvider>
           </ToastProvider>
         </AuthProvider>
       </NavDrawerProvider>

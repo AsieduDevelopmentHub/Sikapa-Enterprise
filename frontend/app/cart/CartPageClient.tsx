@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useDialog } from "@/context/DialogContext";
 import { formatGhs } from "@/lib/mock-data";
 
 /**
@@ -16,6 +17,7 @@ import { formatGhs } from "@/lib/mock-data";
 export function CartPageClient() {
   const router = useRouter();
   const { user } = useAuth();
+  const { confirm: confirmDialog } = useDialog();
   const {
     lines,
     setQuantity,
@@ -26,6 +28,25 @@ export function CartPageClient() {
     clearCartActionError,
   } = useCart();
 
+  async function confirmRemoveLine(label: string, lineKey: string) {
+    const ok = await confirmDialog({
+      title: "Remove from cart?",
+      message: `Remove “${label}” from your bag?`,
+      confirmLabel: "Remove",
+      cancelLabel: "Keep",
+      variant: "danger",
+    });
+    if (ok) removeLine(lineKey);
+  }
+
+  async function adjustQuantity(lineKey: string, name: string, nextQty: number) {
+    if (nextQty < 1) {
+      await confirmRemoveLine(name, lineKey);
+      return;
+    }
+    setQuantity(lineKey, nextQty);
+  }
+
   const itemCount = lines.reduce((s, l) => s + l.quantity, 0);
 
   return (
@@ -33,7 +54,7 @@ export function CartPageClient() {
       <ScreenHeader variant="inner" title="Cart" left="back" backHref="/" right="profile" />
 
       {lines.length === 0 ? (
-        <div className="mx-auto max-w-mobile px-4 py-14 text-center text-body text-sikapa-text-secondary dark:text-zinc-400">
+        <div className="sikapa-storefront-max px-4 py-14 text-center text-body text-sikapa-text-secondary dark:text-zinc-400">
           <p className="font-semibold text-sikapa-text-primary dark:text-zinc-100">Your cart is empty.</p>
           <p className="mx-auto mt-2 max-w-[280px] text-small leading-relaxed">
             Sign in when you add items so your cart is saved on this device.
@@ -56,7 +77,7 @@ export function CartPageClient() {
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-mobile">
+        <div className="sikapa-storefront-max px-2 sm:px-4">
           <p className="px-5 pt-4 text-small font-medium text-sikapa-text-secondary dark:text-zinc-400">
             {itemCount} {itemCount === 1 ? "item" : "items"}
             {cartSyncing && <span className="ml-2 text-sikapa-text-muted dark:text-zinc-500">· Syncing cart…</span>}
@@ -102,7 +123,7 @@ export function CartPageClient() {
                           type="button"
                           className="sikapa-tap flex h-8 w-8 items-center justify-center rounded-lg text-lg font-medium text-sikapa-text-primary dark:text-zinc-100"
                           aria-label="Decrease quantity"
-                          onClick={() => setQuantity(line.lineKey, line.quantity - 1)}
+                          onClick={() => void adjustQuantity(line.lineKey, line.product.name, line.quantity - 1)}
                         >
                           −
                         </button>
@@ -120,7 +141,7 @@ export function CartPageClient() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeLine(line.lineKey)}
+                        onClick={() => void confirmRemoveLine(line.product.name, line.lineKey)}
                         className="text-small font-semibold text-sikapa-crimson hover:underline"
                       >
                         Remove

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import { adminDeleteProduct, adminFetchProducts, type AdminProduct } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
@@ -12,6 +13,7 @@ import { AdminTableSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminProductsPage() {
   const { accessToken } = useAuth();
+  const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const router = useRouter();
   const [rows, setRows] = useState<AdminProduct[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -145,13 +147,22 @@ export default function AdminProductsPage() {
                         className="text-[11px] font-semibold text-red-700 hover:underline"
                         onClick={(event) => {
                           event.stopPropagation();
-                          if (!accessToken || !confirm(`Delete "${p.name}"?`)) return;
                           void (async () => {
+                            if (!accessToken) return;
+                            const ok = await confirmDialog({
+                              title: "Delete product",
+                              message: `Delete “${p.name}”? This cannot be undone.`,
+                              confirmLabel: "Delete",
+                              variant: "danger",
+                            });
+                            if (!ok) return;
                             try {
                               await adminDeleteProduct(accessToken, p.id);
                               await load();
                             } catch (e) {
-                              alert(e instanceof Error ? e.message : "Delete failed");
+                              await alertDialog(e instanceof Error ? e.message : "Delete failed", {
+                                variant: "error",
+                              });
                             }
                           })();
                         }}

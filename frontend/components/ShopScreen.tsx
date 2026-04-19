@@ -216,7 +216,7 @@ export function ShopScreen() {
               id="shop-sort"
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-gray-soft py-2.5 px-3 text-body text-sikapa-text-primary dark:bg-zinc-800 dark:text-zinc-100"
+              className="sikapa-select mt-1 w-full text-body text-sikapa-text-primary"
             >
               <option value="default">Featured / default</option>
               <option value="price-asc">Price: low to high</option>

@@ -303,7 +303,7 @@ export function ProductReviewsSection({ productId }: Props) {
               id="rev-rating"
               value={rating}
               onChange={(e) => setRating(Number(e.target.value))}
-              className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              className="sikapa-select mt-1 w-full text-body"
             >
               {[5, 4, 3, 2, 1].map((n) => (
                 <option key={n} value={n}>
