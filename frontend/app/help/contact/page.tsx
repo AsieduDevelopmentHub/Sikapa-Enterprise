@@ -1,4 +1,5 @@
 import { HelpArticle } from "@/components/help/HelpArticle";
+import { StoreLocationMap } from "@/components/help/StoreLocationMap";
 import { getWhatsAppChatUrl } from "@/lib/contact";
 
 import { pageMetadata } from "@/lib/seo";
@@ -35,6 +36,8 @@ export default function HelpContactPage() {
       </ul>
       <h2>Hours</h2>
       <p>Monday–Saturday, 9am – 6pm GMT. We respond within 24 hours on business days.</p>
+      <h2>Store location</h2>
+      <StoreLocationMap />
       <h2>Before you write in</h2>
       <p>
         Please include your order reference (e.g. <span className="font-mono">#1234</span>) so we can pull it up
