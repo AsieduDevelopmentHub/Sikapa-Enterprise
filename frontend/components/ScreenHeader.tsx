@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { SikapaLogo } from "@/components/SikapaLogo";
 import { SearchAutocomplete } from "@/components/search/SearchAutocomplete";
 import { useNavDrawer } from "@/context/NavDrawerContext";
@@ -29,6 +30,9 @@ type InnerProps = {
 
 export type ScreenHeaderProps = HomeProps | InnerProps;
 
+/** Pixels scrolled before collapsing the home search bar */
+const HOME_SCROLL_COLLAPSE_PX = 56;
+
 const hit =
   "sikapa-tap flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sikapa-text-primary dark:text-zinc-100";
 
@@ -45,33 +49,78 @@ function CartBadge({ className = "" }: { className?: string }) {
   );
 }
 
+function HomeScrollHeader() {
+  const { openDrawer } = useNavDrawer();
+  const [scrolledDown, setScrolledDown] = useState(false);
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const searchMountRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      const down = y > HOME_SCROLL_COLLAPSE_PX;
+      setScrolledDown(down);
+      if (!down) setSearchExpanded(false);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const showFullSearch = !scrolledDown || searchExpanded;
+  const showSearchToggle = scrolledDown && !searchExpanded;
+
+  const expandSearch = () => {
+    setSearchExpanded(true);
+    requestAnimationFrame(() => {
+      const input = searchMountRef.current?.querySelector<HTMLInputElement>('input[type="search"], [role="combobox"]');
+      input?.focus();
+    });
+  };
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white py-2 dark:border-white/10 dark:bg-zinc-950">
+      <div className="sikapa-storefront-max px-3">
+        <div className="flex items-center gap-2">
+          <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
+            <FaBars />
+          </button>
+          <Link href="/" className="flex min-w-0 shrink-0 items-center px-1" aria-label="Sikapa home">
+            <SikapaLogo asset="navigation" priority />
+          </Link>
+          <span className="min-w-0 flex-1" aria-hidden />
+          {showSearchToggle ? (
+            <button
+              type="button"
+              className={`${hit} shrink-0`}
+              aria-label="Open search"
+              aria-expanded={false}
+              aria-controls="home-search-panel"
+              onClick={expandSearch}
+            >
+              <FaSearch />
+            </button>
+          ) : null}
+          <Link href="/cart" className={`${hit} relative shrink-0`} aria-label="Shopping cart">
+            <FaCart />
+            <CartBadge />
+          </Link>
+        </div>
+        {showFullSearch ? (
+          <div id="home-search-panel" ref={searchMountRef} className="mt-2 min-w-0">
+            <SearchAutocomplete variant="compact" autoFocus={searchExpanded} />
+          </div>
+        ) : null}
+      </div>
+    </header>
+  );
+}
+
 export function ScreenHeader(props: ScreenHeaderProps) {
   const { openDrawer } = useNavDrawer();
 
   if (props.variant === "home") {
-    return (
-      <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white py-2 dark:border-white/10 dark:bg-zinc-950">
-        <div className="sikapa-storefront-max px-3">
-          {/* Row 1: nav + logo + cart — search gets its own row for full-width suggestions */}
-          <div className="flex items-center gap-2">
-            <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
-              <FaBars />
-            </button>
-            <Link href="/" className="flex min-w-0 shrink-0 items-center px-1" aria-label="Sikapa home">
-              <SikapaLogo asset="navigation" priority />
-            </Link>
-            <span className="min-w-0 flex-1" aria-hidden />
-            <Link href="/cart" className={`${hit} relative shrink-0`} aria-label="Shopping cart">
-              <FaCart />
-              <CartBadge />
-            </Link>
-          </div>
-          <div className="mt-2 min-w-0">
-            <SearchAutocomplete variant="compact" />
-          </div>
-        </div>
-      </header>
-    );
+    return <HomeScrollHeader />;
   }
 
   const { title, left, backHref = "/", right } = props;
