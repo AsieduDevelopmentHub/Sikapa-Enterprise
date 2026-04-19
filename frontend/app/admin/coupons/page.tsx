@@ -21,6 +21,7 @@ export default function AdminCouponsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
     code: "",
     discount_type: "percent" as "percent" | "fixed",
@@ -56,7 +57,8 @@ export default function AdminCouponsPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accessToken) return;
+    if (!accessToken || creating) return;
+    setCreating(true);
     try {
       await adminCreateCoupon(accessToken, {
         code: form.code.trim().toUpperCase(),
@@ -80,6 +82,8 @@ export default function AdminCouponsPage() {
       await load();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Create failed");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -87,7 +91,6 @@ export default function AdminCouponsPage() {
     <div>
       <h1 className="font-serif text-page-title font-semibold">Coupons & discounts</h1>
       <p className="mt-2 text-small text-sikapa-text-secondary">Create and manage discount codes.</p>
-      {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       <form
         onSubmit={(e) => void submit(e)}
         className="mt-6 grid gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06] sm:grid-cols-3"
@@ -134,9 +137,18 @@ export default function AdminCouponsPage() {
           onChange={(e) => setForm((s) => ({ ...s, min_order_amount: e.target.value }))}
           className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
         />
-        <button type="submit" className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white">
-          Create coupon
+        <button
+          type="submit"
+          disabled={creating}
+          className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60"
+        >
+          {creating ? "Creating…" : "Create coupon"}
         </button>
+        {err ? (
+          <p className="sm:col-span-3 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800" role="alert">
+            {err}
+          </p>
+        ) : null}
       </form>
       <div className="mt-6">
         <AdminSearchInput
