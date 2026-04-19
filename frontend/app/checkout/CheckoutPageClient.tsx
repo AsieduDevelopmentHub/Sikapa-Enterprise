@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import { ordersCreate } from "@/lib/api/orders";
+import { ordersCreate, ordersShippingOptions, type ShippingOptions } from "@/lib/api/orders";
 import { paystackInitialize } from "@/lib/api/payments";
 import {
   DELIVERY_COURIER_OPTIONS,
@@ -78,7 +78,9 @@ export function CheckoutPageClient() {
   const [checkoutMsg, setCheckoutMsg] = useState<string | null>(null);
 
   const [shippingMethod, setShippingMethod] = useState<ShippingMethodClient>("delivery");
-  const [shippingRegion, setShippingRegion] = useState<string>(GHANA_REGIONS[0]?.slug ?? "greater-accra");
+  const [shippingOptions, setShippingOptions] = useState<ShippingOptions | null>(null);
+  const defaultRegion = GHANA_REGIONS[0]?.slug ?? "greater-accra";
+  const [shippingRegion, setShippingRegion] = useState<string>(defaultRegion);
   const [shippingProvider, setShippingProvider] = useState<string>(DELIVERY_COURIER_OPTIONS[0] ?? "Station driver");
   const [cityPick, setCityPick] = useState(
     () => citiesForRegion(GHANA_REGIONS[0]?.slug ?? "greater-accra")[0] ?? GHANA_CITY_OTHER,
@@ -89,6 +91,33 @@ export function CheckoutPageClient() {
   const [shippingContactName, setShippingContactName] = useState("");
   const [shippingContactPhone, setShippingContactPhone] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void ordersShippingOptions()
+      .then((data) => {
+        if (cancelled) return;
+        setShippingOptions(data);
+        if (data.regions?.[0]?.slug) setShippingRegion(data.regions[0].slug);
+        if (data.couriers?.[0]?.name) setShippingProvider(data.couriers[0].name);
+      })
+      .catch(() => {
+        if (!cancelled) setShippingOptions(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const regionRows = useMemo(() => {
+    if (shippingOptions?.regions?.length) return shippingOptions.regions;
+    return GHANA_REGIONS.map((r) => ({ slug: r.slug, label: r.label, base_fee: r.feeGhs, cities: [] }));
+  }, [shippingOptions]);
+
+  const courierRows = useMemo(() => {
+    if (shippingOptions?.couriers?.length) return shippingOptions.couriers;
+    return DELIVERY_COURIER_OPTIONS.map((name) => ({ name, fee_delta: 0 }));
+  }, [shippingOptions]);
 
   const hasSavedShipping = useMemo(
     () =>
@@ -107,7 +136,7 @@ export function CheckoutPageClient() {
 
   useEffect(() => {
     if (!user) return;
-    const reg = user.shipping_region?.trim() || GHANA_REGIONS[0]?.slug || "greater-accra";
+    const reg = user.shipping_region?.trim() || regionRows[0]?.slug || defaultRegion;
     if (user.shipping_region?.trim()) setShippingRegion(user.shipping_region.trim());
     const { pick, other } = splitCityForRegion(reg, user.shipping_city);
     if (user.shipping_city?.trim() || user.shipping_address_line1?.trim()) {
@@ -125,26 +154,42 @@ export function CheckoutPageClient() {
     if (merged) setShippingAddress(merged);
     if (user.shipping_contact_name) setShippingContactName(user.shipping_contact_name);
     if (user.shipping_contact_phone) setShippingContactPhone(user.shipping_contact_phone);
-  }, [user]);
+  }, [user, regionRows, defaultRegion]);
 
   const deliveryFee = useMemo(() => {
-    const regionForFee =
-      shippingMethod === "delivery"
-        ? useSavedShipping && hasSavedShipping
-          ? user?.shipping_region ?? null
-          : shippingRegion
-        : null;
-    return deliveryFeeFor(shippingMethod, regionForFee);
-  }, [shippingMethod, shippingRegion, useSavedShipping, hasSavedShipping, user?.shipping_region]);
+    if (shippingMethod !== "delivery") return 0;
+    const usingSaved = useSavedShipping && hasSavedShipping;
+    const regionForFee = usingSaved ? user?.shipping_region ?? null : shippingRegion;
+    const cityForFee = usingSaved ? user?.shipping_city ?? null : cityPick === GHANA_CITY_OTHER ? cityOther : cityPick;
+    const region = regionRows.find((r) => r.slug === (regionForFee ?? ""));
+    const cityMatch = region?.cities?.find((c) => c.name.toLowerCase() === (cityForFee ?? "").trim().toLowerCase());
+    const base = cityMatch ? cityMatch.fee : region?.base_fee ?? deliveryFeeFor("delivery", regionForFee);
+    const courierDelta =
+      courierRows.find((c) => c.name.toLowerCase() === shippingProvider.trim().toLowerCase())?.fee_delta ?? 0;
+    return Math.max(0, Number(base) + Number(courierDelta));
+  }, [
+    shippingMethod,
+    useSavedShipping,
+    hasSavedShipping,
+    user?.shipping_region,
+    user?.shipping_city,
+    shippingRegion,
+    cityPick,
+    cityOther,
+    shippingProvider,
+    regionRows,
+    courierRows,
+  ]);
 
   const total = subtotal + deliveryFee;
 
   const onRegionChange = useCallback((slug: string) => {
     setShippingRegion(slug);
-    const list = citiesForRegion(slug);
-    setCityPick(list[0] ?? GHANA_CITY_OTHER);
+    const list = (regionRows.find((r) => r.slug === slug)?.cities ?? []).map((c) => c.name);
+    const fallbackList = list.length ? list : citiesForRegion(slug);
+    setCityPick(fallbackList[0] ?? GHANA_CITY_OTHER);
     setCityOther("");
-  }, []);
+  }, [regionRows]);
 
   const validateAddress = (): string | null => {
     if (shippingMethod !== "delivery") return null;
@@ -385,9 +430,9 @@ export function CheckoutPageClient() {
                         onChange={(e) => onRegionChange(e.target.value)}
                         className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
                       >
-                        {GHANA_REGIONS.map((r) => (
+                        {regionRows.map((r) => (
                           <option key={r.slug} value={r.slug}>
-                            {r.label} — {formatGhs(r.feeGhs)}
+                            {r.label} — {formatGhs(r.base_fee)}
                           </option>
                         ))}
                       </select>
@@ -404,11 +449,15 @@ export function CheckoutPageClient() {
                         }}
                         className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
                       >
-                        {citiesForRegion(shippingRegion).map((c) => (
+                        {(() => {
+                          const listed = regionRows.find((r) => r.slug === shippingRegion)?.cities?.map((c) => c.name) ?? [];
+                          const rows = listed.length ? listed : citiesForRegion(shippingRegion);
+                          return rows.map((c) => (
                           <option key={c} value={c}>
                             {c}
                           </option>
-                        ))}
+                          ));
+                        })()}
                       </select>
                     </label>
                     {cityPick === GHANA_CITY_OTHER && (
@@ -454,9 +503,10 @@ export function CheckoutPageClient() {
                         onChange={(e) => setShippingProvider(e.target.value)}
                         className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
                       >
-                        {DELIVERY_COURIER_OPTIONS.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
+                        {courierRows.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name}
+                            {c.fee_delta ? ` (${c.fee_delta > 0 ? "+" : ""}${formatGhs(c.fee_delta)})` : ""}
                           </option>
                         ))}
                       </select>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StarRating } from "@/components/StarRating";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -29,6 +29,7 @@ function ReviewMediaGallery({
   resolveUrl: (url: string) => string;
 }) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     if (!lightboxUrl) return;
@@ -76,7 +77,15 @@ function ReviewMediaGallery({
                 onClick={() => setLightboxUrl(url)}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="h-full w-full object-cover" />
+                <>
+                  {!loaded[m.id] && <span aria-hidden className="block h-full w-full animate-pulse bg-sikapa-gray-soft dark:bg-zinc-700" />}
+                  <img
+                    src={url}
+                    alt=""
+                    className={`h-full w-full object-cover ${loaded[m.id] ? "block" : "hidden"}`}
+                    onLoad={() => setLoaded((s) => ({ ...s, [m.id]: true }))}
+                  />
+                </>
               </button>
             );
           })}
@@ -130,6 +139,8 @@ export function ProductReviewsSection({ productId }: Props) {
   const [pendingMediaFor, setPendingMediaFor] = useState<number | null>(null);
   const [mediaUploadBusy, setMediaUploadBusy] = useState(false);
   const [mediaErr, setMediaErr] = useState<string | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -145,10 +156,24 @@ export function ProductReviewsSection({ productId }: Props) {
   }, [productId]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (shouldLoad) void load();
+  }, [load, shouldLoad]);
 
   useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((x) => x.isIntersecting)) setShouldLoad(true);
+      },
+      { rootMargin: "200px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
     let cancelled = false;
     (async () => {
       setEligibilityLoaded(false);
@@ -164,7 +189,7 @@ export function ProductReviewsSection({ productId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [productId, accessToken, user?.id]);
+  }, [productId, accessToken, user?.id, shouldLoad]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -220,14 +245,19 @@ export function ProductReviewsSection({ productId }: Props) {
     url.startsWith("http") ? url : `${backendOrigin}${url}`;
 
   return (
-    <section className="mt-10 border-t border-sikapa-gray-soft/80 pt-8 dark:border-white/10">
+    <section ref={sectionRef} className="mt-10 border-t border-sikapa-gray-soft/80 pt-8 dark:border-white/10">
       <h2 className="font-serif text-[1.05rem] font-semibold text-sikapa-text-primary dark:text-zinc-100">Reviews</h2>
       {err && (
         <p className="mt-2 rounded-[10px] bg-red-50 px-3 py-2 text-small text-red-800 ring-1 ring-red-100 dark:bg-red-950/40 dark:text-red-100">
           {err}
         </p>
       )}
-      {loading ? (
+      {!shouldLoad ? (
+        <div className="mt-3 space-y-3">
+          <div className="h-20 animate-pulse rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800" />
+          <div className="h-20 animate-pulse rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800" />
+        </div>
+      ) : loading ? (
         <p className="mt-3 text-small text-sikapa-text-muted">Loading reviews…</p>
       ) : list.length === 0 ? (
         <p className="mt-3 text-small text-sikapa-text-secondary">No reviews yet.</p>

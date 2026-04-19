@@ -45,6 +45,63 @@ function relatedProductsFor(
   return { items, sameCategoryCount: sameCategory.length };
 }
 
+function isSizeOnlyVariantSet(variants: ProductVariantPublic[]): boolean {
+  const keys = new Set<string>();
+  for (const v of variants) {
+    const attrs = (v.attributes ?? {}) as Record<string, unknown>;
+    for (const key of Object.keys(attrs)) {
+      const k = key.trim().toLowerCase();
+      if (k) keys.add(k);
+    }
+  }
+  if (keys.size !== 1) return false;
+  const only = [...keys][0];
+  return only === "size" || only === "sizes" || only === "size_name";
+}
+
+function RelatedProductCard({
+  item,
+  onAdd,
+}: {
+  item: MockProduct;
+  onAdd: (productId: string) => void;
+}) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  return (
+    <article className="relative w-[46%] max-w-[200px] shrink-0 snap-start overflow-hidden rounded-[10px] bg-white shadow-[0_2px_12px_rgba(59,42,37,0.06)] ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10">
+      <ProductWishlistButton productId={item.id} className="absolute right-1.5 top-1.5 z-[1]" />
+      <Link href={`/product/${item.id}`} className="sikapa-tap block">
+        <div className="relative aspect-square w-full bg-sikapa-gray-soft dark:bg-zinc-800">
+          {!imgLoaded && <div aria-hidden className="h-full w-full animate-pulse bg-sikapa-gray-soft dark:bg-zinc-800" />}
+          <Image
+            src={item.image}
+            alt=""
+            fill
+            className={`object-cover ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+            sizes="(max-width:430px) 46vw, 200px"
+            onLoad={() => setImgLoaded(true)}
+          />
+        </div>
+        <div className="space-y-1 p-2.5 pb-10">
+          <p className="line-clamp-2 text-[0.8125rem] font-semibold leading-snug text-sikapa-text-primary dark:text-zinc-100">
+            {item.name}
+          </p>
+          <ProductPriceLabel product={item} size="sm" />
+          <StarRating value={item.rating} className="text-[11px]" />
+        </div>
+      </Link>
+      <button
+        type="button"
+        className="sikapa-tap-bounce absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-sikapa-crimson text-white shadow-md"
+        aria-label={`Add ${item.name} to cart`}
+        onClick={() => onAdd(item.id)}
+      >
+        <FaBag className="!h-[1.125rem] !w-[1.125rem] text-white" />
+      </button>
+    </article>
+  );
+}
+
 export function ProductDetailScreen({ product: p }: Props) {
   const { addProduct } = useCart();
   const { products } = useCatalog();
@@ -60,6 +117,7 @@ export function ProductDetailScreen({ product: p }: Props) {
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   const [gallery, setGallery] = useState<ProductImagePublic[]>([]);
   const [variants, setVariants] = useState<ProductVariantPublic[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
   const [activeImage, setActiveImage] = useState<string>(p.image);
 
   const selectedVariant = useMemo(
@@ -93,6 +151,7 @@ export function ProductDetailScreen({ product: p }: Props) {
   useEffect(() => {
     if (!hasNumericId) return;
     let cancelled = false;
+    setMediaLoading(true);
     fetchProductImages(numericId)
       .then((rows) => {
         if (cancelled) return;
@@ -106,10 +165,20 @@ export function ProductDetailScreen({ product: p }: Props) {
       .then((rows) => {
         if (cancelled) return;
         setVariants(rows);
+        if (rows.length > 0 && isSizeOnlyVariantSet(rows)) {
+          const fallback = rows.find((v) => v.in_stock > 0) ?? rows[0];
+          setSelectedVariantId(fallback?.id ?? null);
+        } else {
+          setSelectedVariantId(null);
+        }
       })
       .catch(() => {
         if (cancelled) return;
         setVariants([]);
+        setSelectedVariantId(null);
+      })
+      .finally(() => {
+        if (!cancelled) setMediaLoading(false);
       });
     return () => {
       cancelled = true;
@@ -147,15 +216,9 @@ export function ProductDetailScreen({ product: p }: Props) {
   const isLowStock =
     hasStockInfo && !isOutOfStock && (effectiveStock ?? 0) <= 5;
 
-  // When a product ships with variants (size / colour / etc.) we refuse to
-  // add the "default" product to cart — the shopper has to pick an option
-  // first, otherwise the order would be ambiguous.
-  const requiresVariantPick = variants.length > 0 && !selectedVariant;
-  const addDisabled = isOutOfStock || requiresVariantPick;
+  const addDisabled = isOutOfStock;
   const addLabel = isOutOfStock
     ? "Out of stock"
-    : requiresVariantPick
-    ? "Choose an option"
     : "Add to cart";
 
   const thumbnails = useMemo(() => {
@@ -247,7 +310,6 @@ export function ProductDetailScreen({ product: p }: Props) {
             aria-label={`Add ${p.name} to cart`}
             onClick={() => handleAddToCart()}
             disabled={addDisabled}
-            title={requiresVariantPick ? "Choose an option first" : undefined}
           >
             <FaCart className="!h-5 !w-5" />
           </button>
@@ -255,6 +317,14 @@ export function ProductDetailScreen({ product: p }: Props) {
 
         {thumbnails.length > 1 && (
           <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {mediaLoading &&
+              Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={`thumb-sk-${i}`}
+                  aria-hidden
+                  className="h-16 w-16 shrink-0 animate-pulse rounded-lg bg-sikapa-gray-soft ring-1 ring-black/[0.08] dark:bg-zinc-800 dark:ring-white/10"
+                />
+              ))}
             {thumbnails.map((t) => {
               const isActive = t.src === activeImage;
               const isVariant = t.variantId != null;
@@ -400,38 +470,7 @@ export function ProductDetailScreen({ product: p }: Props) {
             </div>
             <div className="mt-3 -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
               {related.map((item) => (
-                <article
-                  key={item.id}
-                  className="relative w-[46%] max-w-[200px] shrink-0 snap-start overflow-hidden rounded-[10px] bg-white shadow-[0_2px_12px_rgba(59,42,37,0.06)] ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10"
-                >
-                  <ProductWishlistButton productId={item.id} className="absolute right-1.5 top-1.5 z-[1]" />
-                  <Link href={`/product/${item.id}`} className="sikapa-tap block">
-                    <div className="relative aspect-square w-full">
-                      <Image
-                        src={item.image}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="(max-width:430px) 46vw, 200px"
-                      />
-                    </div>
-                    <div className="space-y-1 p-2.5 pb-10">
-                      <p className="line-clamp-2 text-[0.8125rem] font-semibold leading-snug text-sikapa-text-primary dark:text-zinc-100">
-                        {item.name}
-                      </p>
-                      <ProductPriceLabel product={item} size="sm" />
-                      <StarRating value={item.rating} className="text-[11px]" />
-                    </div>
-                  </Link>
-                  <button
-                    type="button"
-                    className="sikapa-tap-bounce absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-sikapa-crimson text-white shadow-md"
-                    aria-label={`Add ${item.name} to cart`}
-                    onClick={() => addProduct(item.id)}
-                  >
-                    <FaBag className="!h-[1.125rem] !w-[1.125rem] text-white" />
-                  </button>
-                </article>
+                <RelatedProductCard key={item.id} item={item} onAdd={addProduct} />
               ))}
             </div>
           </section>
