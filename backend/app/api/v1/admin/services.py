@@ -2,11 +2,15 @@
 Admin services - business logic for admin endpoints
 """
 import os
+import re
 from typing import Optional, List
 from datetime import datetime
 from fastapi import HTTPException, status, UploadFile
 from sqlmodel import Session, select
 
+from app.core.security import get_password_hash
+from app.db import apply_postgres_session_user
+from app.api.v1.admin.permission_catalog import KNOWN_ADMIN_PERMISSION_KEYS
 from app.models import (
     User,
     Product,
@@ -120,6 +124,88 @@ async def grant_admin_role(session: Session, user_id: int) -> User:
         True,
         validation_fn=validate_not_admin,
     )
+
+
+_USERNAME_RE = re.compile(r"^[a-z0-9._-]{3,50}$")
+
+
+def normalize_staff_permissions(perms: list[str]) -> str:
+    """Validate keys and return comma-separated sorted store format."""
+    cleaned = [p.strip().lower() for p in perms if p and str(p).strip()]
+    unknown = set(cleaned) - KNOWN_ADMIN_PERMISSION_KEYS
+    if unknown:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown permissions: {', '.join(sorted(unknown))}",
+        )
+    return ",".join(sorted(set(cleaned)))
+
+
+def user_is_super_admin(user: User) -> bool:
+    return (user.admin_role or "").strip().lower() == "super_admin"
+
+
+def assert_can_assign_super_admin(actor: User) -> None:
+    if not user_is_super_admin(actor):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only a super admin can assign or modify super_admin accounts",
+        )
+
+
+def create_staff_account(
+    session: Session,
+    *,
+    username_raw: str,
+    name: str,
+    email: str,
+    password: str,
+    role: str,
+    permissions: list[str],
+    creator: User,
+) -> User:
+    """Create a new user that is immediately an admin/staff member (no shopper signup emails)."""
+    role_l = role.strip().lower()
+    if role_l == "super_admin":
+        assert_can_assign_super_admin(creator)
+        perm_store = ""
+    else:
+        perm_store = normalize_staff_permissions(permissions)
+
+    username = username_raw.strip().lower()
+    if not _USERNAME_RE.fullmatch(username):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username must be 3-50 chars: lowercase letters, numbers, dot, underscore, hyphen",
+        )
+
+    dup_name = session.exec(select(User).where(User.username == username)).first()
+    if dup_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken")
+
+    em = email.strip().lower()
+    dup_email = session.exec(select(User).where(User.email == em)).first()
+    if dup_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
+    user = User(
+        username=username,
+        name=name.strip(),
+        email=em,
+        hashed_password=get_password_hash(password),
+        first_name=name.strip(),
+        last_name=None,
+        email_verified=True,
+        email_is_placeholder=False,
+        is_admin=True,
+        admin_role=role_l,
+        admin_permissions=perm_store or None,
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    apply_postgres_session_user(session, user.id)
+    return user
 
 
 async def revoke_admin_role(session: Session, user_id: int) -> User:

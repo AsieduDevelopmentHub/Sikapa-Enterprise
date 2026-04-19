@@ -216,6 +216,36 @@ export async function adminFetchRevenue(accessToken: string, days = 30): Promise
   return apiFetchJsonAuth<RevenueStat[]>(accessToken, `${V1.admin.analyticsRevenue}?${q}`);
 }
 
+export type AdminPermissionCatalogEntry = { key: string; label: string };
+
+export async function adminFetchPermissionCatalog(
+  accessToken: string
+): Promise<AdminPermissionCatalogEntry[]> {
+  const data = await apiFetchJsonAuth<{ permissions: AdminPermissionCatalogEntry[] }>(
+    accessToken,
+    V1.admin.usersPermissionCatalog
+  );
+  return data.permissions;
+}
+
+export async function adminCreateStaffAccount(
+  accessToken: string,
+  body: {
+    username: string;
+    name: string;
+    email: string;
+    password: string;
+    role: "super_admin" | "admin" | "staff";
+    permissions: string[];
+  }
+): Promise<AdminUser> {
+  return apiFetchJsonAuth<AdminUser>(accessToken, V1.admin.usersStaffAccounts, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function adminFetchUsers(
   accessToken: string,
   params?: { skip?: number; limit?: number; is_active?: boolean; is_admin?: boolean }
