@@ -12,9 +12,14 @@ from app.core.email_service import EmailService
 email_service = EmailService()
 
 
-async def subscribe_email(session: Session, email: str) -> EmailSubscription:
-    """Subscribe an email to the newsletter."""
-    
+async def subscribe_email(session: Session, email: str, *, marketing_opt_in: bool) -> EmailSubscription:
+    """Subscribe an email to the newsletter (marketing opt-in required)."""
+    if not marketing_opt_in:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Marketing email consent is required to subscribe",
+        )
+
     # Check if already subscribed
     existing = session.exec(
         select(EmailSubscription).where(EmailSubscription.email == email)
@@ -49,7 +54,7 @@ async def subscribe_email(session: Session, email: str) -> EmailSubscription:
     
     # Send verification email
     try:
-        await email_service.send_subscription_confirmation(
+        email_service.send_subscription_confirmation(
             email,
             verification_token,
         )

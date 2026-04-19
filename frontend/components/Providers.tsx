@@ -11,8 +11,15 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { DialogProvider } from "@/context/DialogContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { CookieConsentBanner } from "@/components/legal/CookieConsentBanner";
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  showCookieConsent = false,
+}: {
+  children: ReactNode;
+  showCookieConsent?: boolean;
+}) {
   return (
     <ThemeProvider>
       <NavDrawerProvider>
@@ -24,6 +31,7 @@ export function Providers({ children }: { children: ReactNode }) {
                   <CartProvider>
                     <AppShell>{children}</AppShell>
                     <NavSidebarPanel />
+                    <CookieConsentBanner required={showCookieConsent} />
                   </CartProvider>
                 </WishlistProvider>
               </CatalogProvider>
