@@ -1,10 +1,11 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { WishlistScreen } from "@/components/wishlist/WishlistScreen";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Wishlist · Sikapa Enterprise",
-  description: "The products you saved on Sikapa Enterprise.",
-};
+export const metadata = pageMetadata("Wishlist", {
+  description: "Saved products — sign in to sync your wishlist across devices and shop later.",
+  path: "/wishlist",
+});
 
 export default function WishlistPage() {
   return (

@@ -122,6 +122,10 @@ body {
 .sikapa-tap:active {
   transform: scale(0.97);
 }
+/* Use on password visibility, carousel arrows, etc. — avoids layout shift while pressing */
+.sikapa-tap-static:active {
+  transform: none;
+}
 .sikapa-tap-bounce:active {
   animation: tap-bounce 0.35s ease;
 }

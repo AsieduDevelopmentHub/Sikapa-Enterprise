@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { pageMetadata } from "@/lib/seo";
 import { whatsappHelpUrl } from "@/lib/site";
+
+export const metadata = pageMetadata("FAQs", {
+  description:
+    "Frequently asked questions about orders, delivery, account security, returns, and support for Sikapa Enterprise.",
+  path: "/faq",
+});
 
 export default function FaqPage() {
   const wa = whatsappHelpUrl();

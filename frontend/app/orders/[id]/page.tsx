@@ -1,5 +1,17 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { OrderDetailPageClient } from "@/components/orders/OrderDetailPageClient";
+import { pageMetadata } from "@/lib/seo";
+
+type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  return pageMetadata("Order details", {
+    description: `Order #${id} — status, items, delivery, and payment on Sikapa Enterprise.`,
+    path: `/orders/${id}`,
+  });
+}
 
 function DetailFallback() {
   return (
@@ -9,7 +21,7 @@ function DetailFallback() {
   );
 }
 
-export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrderDetailPage({ params }: Props) {
   const { id } = await params;
   return (
     <Suspense fallback={<DetailFallback />}>

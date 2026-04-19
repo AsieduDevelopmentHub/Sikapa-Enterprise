@@ -1,11 +1,12 @@
 import { Suspense } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SearchResultsScreen } from "@/components/search/SearchResultsScreen";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Search · Sikapa Enterprise",
-  description: "Search wigs, skincare, and perfumes on Sikapa Enterprise.",
-};
+export const metadata = pageMetadata("Search", {
+  description: "Search wigs, skincare, perfumes, and cosmetics across the Sikapa catalog.",
+  path: "/search",
+});
 
 function SearchFallback() {
   return (

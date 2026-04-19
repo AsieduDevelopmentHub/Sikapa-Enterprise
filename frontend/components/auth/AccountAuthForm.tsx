@@ -54,7 +54,7 @@ function PasswordInputWithToggle({
       />
       <button
         type="button"
-        className="sikapa-tap absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-sikapa-text-muted hover:bg-black/[0.04] hover:text-sikapa-text-primary dark:text-zinc-500 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+        className="sikapa-tap-static absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-sikapa-text-muted hover:bg-black/[0.04] hover:text-sikapa-text-primary active:bg-black/[0.06] dark:text-zinc-500 dark:hover:bg-white/10 dark:hover:text-zinc-200 dark:active:bg-white/15"
         aria-label={visible ? "Hide password" : "Show password"}
         onClick={() => setVisible((v) => !v)}
       >

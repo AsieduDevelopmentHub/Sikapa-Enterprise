@@ -1,7 +1,12 @@
 import { AccountScreen } from "@/components/account/AccountScreen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 
-export const metadata = { title: "Notifications · Sikapa Enterprise" };
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata("Notifications", {
+  description: "Notification preferences and updates from Sikapa Enterprise.",
+  path: "/account/notifications",
+});
 
 export default function AccountNotificationsPage() {
   return (

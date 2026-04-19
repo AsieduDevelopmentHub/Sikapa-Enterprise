@@ -1,7 +1,18 @@
+import type { Metadata } from "next";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { ProductDetailContainer } from "@/components/ProductDetailContainer";
+import { pageMetadata } from "@/lib/seo";
 
 type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  return pageMetadata("Product", {
+    description:
+      "View product details, images, variants, reviews, and add to cart — Sikapa Enterprise secure checkout.",
+    path: `/product/${id}`,
+  });
+}
 
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
