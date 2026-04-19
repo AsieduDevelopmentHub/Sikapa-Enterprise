@@ -86,6 +86,8 @@ export const V1 = {
     analyticsDashboard: "/admin/analytics/dashboard",
     analyticsRevenue: "/admin/analytics/revenue",
     users: "/admin/users",
+    usersPermissionCatalog: "/admin/users/permission-catalog",
+    usersStaffAccounts: "/admin/users/staff-accounts",
     products: "/admin/products",
     product: (id: number) => `/admin/products/${id}`,
     categories: "/admin/categories",

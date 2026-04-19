@@ -8,28 +8,53 @@ import {
   adminSetStaffRole,
   adminPromoteUser,
   adminRevokeAdmin,
+  adminFetchPermissionCatalog,
+  adminCreateStaffAccount,
   type AdminUser,
 } from "@/lib/api/admin";
+import type { AdminPermissionDef } from "@/lib/admin-permissions";
+import {
+  ADMIN_PERMISSION_PRESETS,
+  STATIC_ADMIN_PERMISSION_CATALOG,
+  parsePermissionString,
+} from "@/lib/admin-permissions";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminStaffListSkeleton } from "@/components/admin/Skeleton";
 
-const ROLE_PRESETS: Record<"super_admin" | "admin" | "staff", string[]> = {
-  super_admin: [],
-  admin: [
-    "view_users",
-    "manage_users",
-    "manage_staff",
-    "manage_products",
-    "manage_orders",
-    "manage_inventory",
-    "manage_coupons",
-    "manage_reviews",
-    "view_analytics",
-    "view_payments",
-    "manage_settings",
-  ],
-  staff: ["manage_products", "manage_orders", "manage_inventory", "manage_reviews", "view_analytics"],
-};
+function PermissionsCheckboxes({
+  catalog,
+  selected,
+  disabled,
+  onToggle,
+}: {
+  catalog: AdminPermissionDef[];
+  selected: Set<string>;
+  disabled: boolean;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {catalog.map(({ key, label }) => (
+        <li key={key}>
+          <label
+            className={`flex cursor-pointer items-start gap-2 rounded-lg border border-sikapa-gray-soft px-2.5 py-2 text-[11px] dark:border-white/15 ${
+              disabled ? "opacity-50" : ""
+            }`}
+          >
+            <input
+              type="checkbox"
+              className="mt-0.5 accent-sikapa-gold"
+              checked={selected.has(key)}
+              disabled={disabled}
+              onChange={() => onToggle(key)}
+            />
+            <span className="leading-snug text-sikapa-text-primary dark:text-zinc-100">{label}</span>
+          </label>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function AdminStaffPage() {
   const { accessToken, user: me } = useAuth();
@@ -42,6 +67,21 @@ export default function AdminStaffPage() {
   const [candidateQuery, setCandidateQuery] = useState("");
   const [staffQuery, setStaffQuery] = useState("");
   const [ready, setReady] = useState(false);
+  const [catalog, setCatalog] = useState<AdminPermissionDef[]>(STATIC_ADMIN_PERMISSION_CATALOG);
+
+  /** Draft permission keys per staff member (admin/staff only). */
+  const [permDrafts, setPermDrafts] = useState<Record<number, string[]>>({});
+
+  /** Create-account form */
+  const [createUsername, setCreateUsername] = useState("");
+  const [createName, setCreateName] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createRole, setCreateRole] = useState<"super_admin" | "admin" | "staff">("staff");
+  const [createPerms, setCreatePerms] = useState<string[]>(ADMIN_PERMISSION_PRESETS.staff);
+  const [createBusy, setCreateBusy] = useState(false);
+
+  const isSuperViewer = (me?.admin_role ?? "").toLowerCase() === "super_admin";
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -49,6 +89,12 @@ export default function AdminStaffPage() {
       const data = await adminFetchUsers(accessToken, { limit: 100 });
       setAllUsers(data);
       setRows(data.filter((u) => u.is_admin));
+      try {
+        const defs = await adminFetchPermissionCatalog(accessToken);
+        if (defs?.length) setCatalog(defs);
+      } catch {
+        /* keep static catalog */
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -60,14 +106,29 @@ export default function AdminStaffPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    setPermDrafts((prev) => {
+      const next = { ...prev };
+      for (const u of rows) {
+        if (next[u.id] === undefined) {
+          next[u.id] = parsePermissionString(u.admin_permissions);
+        }
+      }
+      return next;
+    });
+  }, [rows]);
+
+  useEffect(() => {
+    if (createRole === "super_admin") return;
+    setCreatePerms([...ADMIN_PERMISSION_PRESETS[createRole]]);
+  }, [createRole]);
+
   const candidates = useMemo(() => {
     const base = allUsers.filter((u) => !u.is_admin);
     const q = candidateQuery.trim().toLowerCase();
     if (!q) return base;
     return base.filter((u) =>
-      `${u.name ?? ""} ${u.username ?? ""} ${u.email ?? ""}`
-        .toLowerCase()
-        .includes(q)
+      `${u.name ?? ""} ${u.username ?? ""} ${u.email ?? ""}`.toLowerCase().includes(q)
     );
   }, [allUsers, candidateQuery]);
 
@@ -75,23 +136,163 @@ export default function AdminStaffPage() {
     const q = staffQuery.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((u) =>
-      `${u.name ?? ""} ${u.username ?? ""} ${u.email ?? ""} ${
-        u.admin_role ?? ""
-      } ${u.admin_permissions ?? ""}`
+      `${u.name ?? ""} ${u.username ?? ""} ${u.email ?? ""} ${u.admin_role ?? ""} ${
+        u.admin_permissions ?? ""
+      }`
         .toLowerCase()
         .includes(q)
     );
   }, [rows, staffQuery]);
 
+  const toggleDraft = useCallback((userId: number, key: string) => {
+    setPermDrafts((prev) => {
+      const cur = prev[userId] ?? [];
+      const set = new Set(cur);
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      return { ...prev, [userId]: Array.from(set) };
+    });
+  }, []);
+
+  const toggleCreatePerm = useCallback((key: string) => {
+    setCreatePerms((cur) => {
+      const set = new Set(cur);
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      return Array.from(set);
+    });
+  }, []);
+
   return (
     <div className="w-full min-w-0 max-w-full">
       <h1 className="font-serif text-page-title font-semibold">Staff & admins</h1>
       <p className="text-small text-sikapa-text-secondary">
-        Configure role and permission scope per team member.
+        Create accounts for staff, assign roles, and fine-tune permission scopes.
       </p>
-      <div className="mt-4">
+
+      <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5">
+        <p className="text-small font-semibold text-sikapa-text-primary">Create staff / admin account</p>
+        <p className="mt-1 text-[11px] text-sikapa-text-muted">
+          Creates a login with immediate admin access. Share the password securely with the teammate.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary">
+            Username
+            <input
+              value={createUsername}
+              onChange={(e) => setCreateUsername(e.target.value)}
+              autoComplete="off"
+              className="mt-1 w-full rounded-[10px] border border-sikapa-gray-soft bg-white px-3 py-2 text-small outline-none ring-1 ring-transparent focus:ring-sikapa-gold/40 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+              placeholder="jdoe"
+            />
+          </label>
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary">
+            Full name
+            <input
+              value={createName}
+              onChange={(e) => setCreateName(e.target.value)}
+              className="mt-1 w-full rounded-[10px] border border-sikapa-gray-soft bg-white px-3 py-2 text-small outline-none ring-1 ring-transparent focus:ring-sikapa-gold/40 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+              placeholder="Jane Doe"
+            />
+          </label>
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary">
+            Email
+            <input
+              type="email"
+              value={createEmail}
+              onChange={(e) => setCreateEmail(e.target.value)}
+              autoComplete="off"
+              className="mt-1 w-full rounded-[10px] border border-sikapa-gray-soft bg-white px-3 py-2 text-small outline-none ring-1 ring-transparent focus:ring-sikapa-gold/40 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+              placeholder="jane@company.com"
+            />
+          </label>
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary sm:col-span-2 lg:col-span-1">
+            Initial password (min 8 characters)
+            <input
+              type="password"
+              value={createPassword}
+              onChange={(e) => setCreatePassword(e.target.value)}
+              autoComplete="new-password"
+              className="mt-1 w-full rounded-[10px] border border-sikapa-gray-soft bg-white px-3 py-2 text-small outline-none ring-1 ring-transparent focus:ring-sikapa-gold/40 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+            />
+          </label>
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary">
+            Role
+            <select
+              value={createRole}
+              onChange={(e) =>
+                setCreateRole(e.target.value as "super_admin" | "admin" | "staff")
+              }
+              className="sikapa-select mt-1 w-full py-2 text-small"
+            >
+              <option value="staff">Staff</option>
+              <option value="admin">Admin</option>
+              {isSuperViewer ? <option value="super_admin">Super admin</option> : null}
+            </select>
+          </label>
+        </div>
+        {createRole !== "super_admin" ? (
+          <div className="mt-4">
+            <p className="text-[11px] font-semibold text-sikapa-text-primary">Permissions for this account</p>
+            <div className="mt-2">
+              <PermissionsCheckboxes
+                catalog={catalog}
+                selected={new Set(createPerms)}
+                disabled={createBusy}
+                onToggle={toggleCreatePerm}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-[11px] text-sikapa-text-muted">
+            Super admins have full access to the admin panel.
+          </p>
+        )}
+        <button
+          type="button"
+          disabled={createBusy || !accessToken}
+          className="mt-4 rounded-full bg-sikapa-gold px-5 py-2.5 text-small font-semibold text-white disabled:opacity-50"
+          onClick={() => {
+            if (!accessToken) return;
+            if (createPassword.length < 8) {
+              void alertDialog("Password must be at least 8 characters.", { variant: "error" });
+              return;
+            }
+            void (async () => {
+              setCreateBusy(true);
+              try {
+                await adminCreateStaffAccount(accessToken, {
+                  username: createUsername.trim(),
+                  name: createName.trim(),
+                  email: createEmail.trim(),
+                  password: createPassword,
+                  role: createRole,
+                  permissions: createRole === "super_admin" ? [] : createPerms,
+                });
+                setCreateUsername("");
+                setCreateName("");
+                setCreateEmail("");
+                setCreatePassword("");
+                setCreateRole("staff");
+                setCreatePerms([...ADMIN_PERMISSION_PRESETS.staff]);
+                await load();
+              } catch (e) {
+                await alertDialog(e instanceof Error ? e.message : "Failed to create account", {
+                  variant: "error",
+                });
+              } finally {
+                setCreateBusy(false);
+              }
+            })();
+          }}
+        >
+          {createBusy ? "Creating…" : "Create account"}
+        </button>
+      </div>
+
+      <div className="mt-6">
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5">
-          <p className="text-small font-semibold text-sikapa-text-primary">Add specific user as staff/admin</p>
+          <p className="text-small font-semibold text-sikapa-text-primary">Promote existing customer account</p>
           <div className="mt-3">
             <AdminSearchInput
               value={candidateQuery}
@@ -138,7 +339,7 @@ export default function AdminStaffPage() {
                     await adminPromoteUser(accessToken, pick.id);
                     await adminSetStaffRole(accessToken, pick.id, {
                       role: candidateRole,
-                      permissions: ROLE_PRESETS[candidateRole],
+                      permissions: ADMIN_PERMISSION_PRESETS[candidateRole],
                     });
                     setCandidateId("");
                     await load();
@@ -153,6 +354,7 @@ export default function AdminStaffPage() {
           </div>
         </div>
       </div>
+
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
@@ -168,83 +370,149 @@ export default function AdminStaffPage() {
       {!ready && !err ? (
         <AdminStaffListSkeleton />
       ) : (
-      <ul className="mt-3 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-        {visibleStaff.map((u) => (
-          <li
-            key={u.id}
-            className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
-          >
-            <div className="min-w-0">
-              <p className="break-words font-semibold">{u.name}</p>
-              <p className="break-words text-[11px] text-sikapa-text-muted">
-                @{u.username} · {u.email ?? "no email"} · role: {u.admin_role ?? "admin"}
-              </p>
-              {u.admin_permissions ? (
-                <p className="mt-1 break-words text-[11px] text-sikapa-text-muted">
-                  Permissions: {u.admin_permissions}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto sm:justify-end">
-              {u.id !== me?.id ? (
-                <>
-                  <select
-                    className="sikapa-select min-w-0 flex-1 py-1.5 pl-2 pr-8 text-[11px] sm:flex-none sm:min-w-[8rem]"
-                    value={u.admin_role ?? "admin"}
-                    onChange={(e) => {
-                      if (!accessToken) return;
-                      const role = e.target.value as "super_admin" | "admin" | "staff";
-                      void adminSetStaffRole(accessToken, u.id, {
-                        role,
-                        permissions: ROLE_PRESETS[role],
-                      })
-                        .then(load)
-                        .catch((er) =>
-                          void alertDialog(er instanceof Error ? er.message : "Failed", { variant: "error" })
-                        );
-                    }}
-                  >
-                    <option value="super_admin">super_admin</option>
-                    <option value="admin">admin</option>
-                    <option value="staff">staff</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="text-[11px] font-semibold text-red-700 hover:underline"
-                    onClick={() => {
-                      void (async () => {
-                        if (!accessToken) return;
-                        const ok = await confirmDialog({
-                          title: "Revoke admin access",
-                          message: `Revoke admin from @${u.username}?`,
-                          confirmLabel: "Revoke",
-                          variant: "danger",
-                        });
-                        if (!ok) return;
-                        try {
-                          await adminRevokeAdmin(accessToken, u.id);
-                          await load();
-                        } catch (e) {
-                          await alertDialog(e instanceof Error ? e.message : "Failed", { variant: "error" });
-                        }
-                      })();
-                    }}
-                  >
-                    Revoke admin
-                  </button>
-                </>
-              ) : (
-                <span className="text-[11px] text-sikapa-text-muted">You</span>
-              )}
-            </div>
-          </li>
-        ))}
-        {visibleStaff.length === 0 && !err && ready && (
-          <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">
-            {staffQuery ? "No staff match your search." : "No admins."}
-          </li>
-        )}
-      </ul>
+        <ul className="mt-3 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+          {visibleStaff.map((u) => {
+            const role = (u.admin_role ?? "admin").toLowerCase() as "super_admin" | "admin" | "staff";
+            const isSuperRow = role === "super_admin";
+            const draft = permDrafts[u.id] ?? parsePermissionString(u.admin_permissions);
+
+            return (
+              <li key={u.id} className="px-4 py-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words font-semibold">{u.name}</p>
+                    <p className="break-words text-[11px] text-sikapa-text-muted">
+                      @{u.username} · {u.email ?? "no email"} · role: {u.admin_role ?? "admin"}
+                    </p>
+                  </div>
+                  <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                    {u.id !== me?.id ? (
+                      <>
+                        {isSuperRow && !isSuperViewer ? (
+                          <span className="rounded-full bg-sikapa-gray-soft px-3 py-1.5 text-[11px] font-semibold text-sikapa-text-primary dark:bg-zinc-800">
+                            super_admin
+                          </span>
+                        ) : (
+                          <select
+                            className="sikapa-select min-w-0 max-w-full flex-1 py-1.5 pl-2 pr-8 text-[11px] sm:max-w-[10rem]"
+                            value={role}
+                            onChange={(e) => {
+                              if (!accessToken) return;
+                              const next = e.target.value as "super_admin" | "admin" | "staff";
+                              if (next === "super_admin" && !isSuperViewer) {
+                                void alertDialog("Only a super admin can assign the super_admin role.", {
+                                  variant: "error",
+                                });
+                                return;
+                              }
+                              void (async () => {
+                                try {
+                                  const perms =
+                                    next === "super_admin" ? [] : ADMIN_PERMISSION_PRESETS[next];
+                                  await adminSetStaffRole(accessToken, u.id, {
+                                    role: next,
+                                    permissions: perms,
+                                  });
+                                  setPermDrafts((prev) => ({ ...prev, [u.id]: perms }));
+                                  await load();
+                                } catch (er) {
+                                  await alertDialog(er instanceof Error ? er.message : "Failed", {
+                                    variant: "error",
+                                  });
+                                }
+                              })();
+                            }}
+                          >
+                            {isSuperViewer ? <option value="super_admin">super_admin</option> : null}
+                            <option value="admin">admin</option>
+                            <option value="staff">staff</option>
+                          </select>
+                        )}
+                        {isSuperRow && !isSuperViewer ? null : (
+                          <button
+                            type="button"
+                            className="text-[11px] font-semibold text-red-700 hover:underline"
+                            onClick={() => {
+                              void (async () => {
+                                if (!accessToken) return;
+                                const ok = await confirmDialog({
+                                  title: "Revoke admin access",
+                                  message: `Revoke admin from @${u.username}?`,
+                                  confirmLabel: "Revoke",
+                                  variant: "danger",
+                                });
+                                if (!ok) return;
+                                try {
+                                  await adminRevokeAdmin(accessToken, u.id);
+                                  await load();
+                                } catch (e) {
+                                  await alertDialog(e instanceof Error ? e.message : "Failed", {
+                                    variant: "error",
+                                  });
+                                }
+                              })();
+                            }}
+                          >
+                            Revoke admin
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-[11px] text-sikapa-text-muted">You</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  {isSuperRow ? (
+                    <p className="text-[11px] text-sikapa-text-muted">Full access (super admin).</p>
+                  ) : (
+                    <>
+                      <p className="text-[11px] font-semibold text-sikapa-text-primary">Permissions</p>
+                      <div className="mt-2">
+                        <PermissionsCheckboxes
+                          catalog={catalog}
+                          selected={new Set(draft)}
+                          disabled={u.id === me?.id || !accessToken}
+                          onToggle={(key) => toggleDraft(u.id, key)}
+                        />
+                      </div>
+                      {u.id !== me?.id ? (
+                        <button
+                          type="button"
+                          className="mt-3 rounded-full border border-sikapa-gold/50 bg-sikapa-cream/60 px-4 py-1.5 text-[11px] font-semibold text-sikapa-text-primary dark:bg-zinc-800"
+                          onClick={() => {
+                            if (!accessToken) return;
+                            void (async () => {
+                              try {
+                                await adminSetStaffRole(accessToken, u.id, {
+                                  role,
+                                  permissions: permDrafts[u.id] ?? draft,
+                                });
+                                await load();
+                              } catch (er) {
+                                await alertDialog(er instanceof Error ? er.message : "Failed", {
+                                  variant: "error",
+                                });
+                              }
+                            })();
+                          }}
+                        >
+                          Save permissions
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+          {visibleStaff.length === 0 && !err && ready && (
+            <li className="px-4 py-8 text-center text-small text-sikapa-text-muted">
+              {staffQuery ? "No staff match your search." : "No admins."}
+            </li>
+          )}
+        </ul>
       )}
     </div>
   );
