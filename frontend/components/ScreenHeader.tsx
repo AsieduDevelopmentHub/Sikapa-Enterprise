@@ -50,8 +50,9 @@ export function ScreenHeader(props: ScreenHeaderProps) {
 
   if (props.variant === "home") {
     return (
-      <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-950">
-        <div className="mx-auto max-w-mobile">
+      <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white py-2 dark:border-white/10 dark:bg-zinc-950">
+        <div className="sikapa-storefront-max px-3">
+          {/* Row 1: nav + logo + cart — search gets its own row for full-width suggestions */}
           <div className="flex items-center gap-2">
             <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
               <FaBars />
@@ -59,13 +60,14 @@ export function ScreenHeader(props: ScreenHeaderProps) {
             <Link href="/" className="flex min-w-0 shrink-0 items-center px-1" aria-label="Sikapa home">
               <SikapaLogo asset="navigation" priority />
             </Link>
-            <div className="relative min-w-0 flex-1">
-              <SearchAutocomplete variant="compact" />
-            </div>
-            <Link href="/cart" className={`${hit} relative`} aria-label="Shopping cart">
+            <span className="min-w-0 flex-1" aria-hidden />
+            <Link href="/cart" className={`${hit} relative shrink-0`} aria-label="Shopping cart">
               <FaCart />
               <CartBadge />
             </Link>
+          </div>
+          <div className="mt-2 min-w-0">
+            <SearchAutocomplete variant="compact" />
           </div>
         </div>
       </header>
@@ -76,7 +78,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-sikapa-gray-soft bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-950">
-      <div className="mx-auto flex max-w-mobile items-center justify-between gap-2">
+      <div className="sikapa-storefront-max flex items-center justify-between gap-2">
         {left === "menu" ? (
           <button type="button" className={hit} aria-label="Open menu" onClick={openDrawer}>
             <FaBars />

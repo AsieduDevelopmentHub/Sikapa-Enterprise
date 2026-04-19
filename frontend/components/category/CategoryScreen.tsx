@@ -82,7 +82,7 @@ export function CategoryScreen({ slug }: Props) {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2 px-2 text-small dark:bg-zinc-800 dark:text-zinc-100"
+              className="sikapa-select mt-1 w-full py-2 text-small"
             >
               {SORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>

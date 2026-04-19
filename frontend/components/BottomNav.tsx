@@ -44,7 +44,7 @@ export function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-50 flex justify-center border-t border-sikapa-gray-soft bg-white pb-[calc(0.35rem+var(--safe-bottom))] pt-1 shadow-[0_-6px_24px_rgba(59,42,37,0.05)] dark:border-white/10 dark:bg-zinc-900"
       aria-label="Primary"
     >
-      <div className="relative flex w-full max-w-mobile items-end justify-between px-1">
+      <div className="sikapa-storefront-max relative flex items-end justify-between px-1">
         {tabs.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.Icon;

@@ -49,7 +49,7 @@ export function HomeHero() {
         </div>
       </div>
 
-      <div className="relative z-[1] mx-auto flex min-h-[min(62vh,500px)] max-w-mobile flex-col px-4 pb-8 pt-9 sm:px-5 sm:pt-10">
+      <div className="relative z-[1] mx-auto flex min-h-[min(62vh,500px)] sikapa-storefront-max flex-col px-4 pb-8 pt-9 sm:px-5 sm:pt-10 md:px-6 lg:px-8">
         <div className="flex min-h-0 flex-1 items-center">
           <div className="flex max-w-[min(54%,240px)] shrink-0 flex-col pr-2 sm:max-w-[250px]">
             <div className="opacity-0 animate-hero-text">
