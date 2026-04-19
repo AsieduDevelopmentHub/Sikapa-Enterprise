@@ -66,8 +66,7 @@ if _https_enabled and os.getenv("DEBUG", "false").lower() != "true":
     app.add_middleware(HTTPSRedirectMiddleware)
 
 _cors_raw = os.getenv(
-    "CORS_ORIGINS",
-    "http://localhost:3000,https://localhost:3000,http://192.168.1.202:3000",
+    "CORS_ORIGINS"
 )
 cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
 cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
