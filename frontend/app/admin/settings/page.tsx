@@ -4,6 +4,52 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchSettings, adminUpsertSetting, type BusinessSettingRow } from "@/lib/api/admin";
 import { AdminSettingsPageSkeleton } from "@/components/admin/Skeleton";
+import { GHANA_REGIONS } from "@/lib/ghana-shipping";
+
+type ShippingCity = { name: string; fee: number };
+type ShippingRegion = { slug: string; label: string; base_fee: number; cities: ShippingCity[] };
+type ShippingCourier = { name: string; fee_delta: number };
+type ShippingMatrix = { regions: ShippingRegion[]; couriers: ShippingCourier[] };
+
+const SHIPPING_KEY = "shipping_matrix_v1";
+
+const DEFAULT_MATRIX: ShippingMatrix = {
+  regions: GHANA_REGIONS.map((r) => ({ slug: r.slug, label: r.label, base_fee: r.feeGhs, cities: [] })),
+  couriers: [
+    { name: "Station driver", fee_delta: 0 },
+    { name: "Speedaf", fee_delta: 0 },
+    { name: "FedEx", fee_delta: 0 },
+    { name: "Ghana Post", fee_delta: 0 },
+    { name: "Other courier", fee_delta: 0 },
+  ],
+};
+
+function parseMatrix(rows: BusinessSettingRow[]): ShippingMatrix {
+  const raw = rows.find((r) => r.key === SHIPPING_KEY)?.value ?? "";
+  if (!raw.trim()) return DEFAULT_MATRIX;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return DEFAULT_MATRIX;
+    const regions = Array.isArray(parsed.regions) ? parsed.regions : [];
+    const couriers = Array.isArray(parsed.couriers) ? parsed.couriers : [];
+    return {
+      regions: regions.map((r: any) => ({
+        slug: String(r.slug ?? "").trim(),
+        label: String(r.label ?? "").trim() || String(r.slug ?? "").trim(),
+        base_fee: Number(r.base_fee ?? 0),
+        cities: Array.isArray(r.cities)
+          ? r.cities.map((c: any) => ({ name: String(c.name ?? "").trim(), fee: Number(c.fee ?? 0) }))
+          : [],
+      })),
+      couriers: couriers.map((c: any) => ({
+        name: String(c.name ?? "").trim(),
+        fee_delta: Number(c.fee_delta ?? 0),
+      })),
+    };
+  } catch {
+    return DEFAULT_MATRIX;
+  }
+}
 
 export default function AdminSettingsPage() {
   const { accessToken } = useAuth();
@@ -12,11 +58,19 @@ export default function AdminSettingsPage() {
   const [value, setValue] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [shipping, setShipping] = useState<ShippingMatrix>(DEFAULT_MATRIX);
+  const [newCourier, setNewCourier] = useState("");
+  const [newCityName, setNewCityName] = useState("");
+  const [newCityFee, setNewCityFee] = useState("0");
+  const [cityRegion, setCityRegion] = useState(DEFAULT_MATRIX.regions[0]?.slug ?? "greater-accra");
 
   const load = useCallback(async () => {
     if (!accessToken) return;
     try {
-      setRows(await adminFetchSettings(accessToken));
+      const data = await adminFetchSettings(accessToken);
+      setRows(data);
+      setShipping(parseMatrix(data));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load settings");
     } finally {
@@ -30,7 +84,8 @@ export default function AdminSettingsPage() {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accessToken) return;
+    if (!accessToken || saving) return;
+    setSaving(true);
     try {
       await adminUpsertSetting(accessToken, { key, value });
       setKey("");
@@ -38,6 +93,25 @@ export default function AdminSettingsPage() {
       await load();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveShipping = async () => {
+    if (!accessToken || saving) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      await adminUpsertSetting(accessToken, {
+        key: SHIPPING_KEY,
+        value: JSON.stringify(shipping),
+      });
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to save shipping matrix");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -52,6 +126,234 @@ export default function AdminSettingsPage() {
         <AdminSettingsPageSkeleton />
       ) : (
         <>
+      <section className="mt-6 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">Shipping matrix</h2>
+        <p className="mt-1 text-small text-sikapa-text-secondary">
+          Set delivery fees by region, optional city-specific overrides, and courier extra charges.
+        </p>
+
+        <div className="mt-4 space-y-5">
+          <div>
+            <p className="text-small font-semibold text-sikapa-text-primary">Regions</p>
+            <div className="mt-2 space-y-2">
+              {shipping.regions.map((r) => (
+                <div key={r.slug} className="rounded-lg border border-black/[0.08] p-3">
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <input
+                      value={r.label}
+                      onChange={(e) =>
+                        setShipping((prev) => ({
+                          ...prev,
+                          regions: prev.regions.map((x) => (x.slug === r.slug ? { ...x, label: e.target.value } : x)),
+                        }))
+                      }
+                      className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={r.base_fee}
+                      onChange={(e) =>
+                        setShipping((prev) => ({
+                          ...prev,
+                          regions: prev.regions.map((x) =>
+                            x.slug === r.slug ? { ...x, base_fee: Number(e.target.value || 0) } : x
+                          ),
+                        }))
+                      }
+                      className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+                    />
+                    <div className="text-[11px] text-sikapa-text-muted">slug: {r.slug}</div>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {r.cities.map((c, idx) => (
+                      <div key={`${r.slug}-${idx}`} className="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
+                        <input
+                          value={c.name}
+                          onChange={(e) =>
+                            setShipping((prev) => ({
+                              ...prev,
+                              regions: prev.regions.map((x) =>
+                                x.slug !== r.slug
+                                  ? x
+                                  : {
+                                      ...x,
+                                      cities: x.cities.map((z, i) => (i === idx ? { ...z, name: e.target.value } : z)),
+                                    }
+                              ),
+                            }))
+                          }
+                          className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={c.fee}
+                          onChange={(e) =>
+                            setShipping((prev) => ({
+                              ...prev,
+                              regions: prev.regions.map((x) =>
+                                x.slug !== r.slug
+                                  ? x
+                                  : {
+                                      ...x,
+                                      cities: x.cities.map((z, i) => (i === idx ? { ...z, fee: Number(e.target.value || 0) } : z)),
+                                    }
+                              ),
+                            }))
+                          }
+                          className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+                        />
+                        <button
+                          type="button"
+                          className="rounded-lg border border-red-200 px-2 py-1.5 text-[11px] font-semibold text-red-700"
+                          onClick={() =>
+                            setShipping((prev) => ({
+                              ...prev,
+                              regions: prev.regions.map((x) =>
+                                x.slug !== r.slug ? x : { ...x, cities: x.cities.filter((_, i) => i !== idx) }
+                              ),
+                            }))
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-[180px_1fr_120px_auto]">
+              <select
+                value={cityRegion}
+                onChange={(e) => setCityRegion(e.target.value)}
+                className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+              >
+                {shipping.regions.map((r) => (
+                  <option key={r.slug} value={r.slug}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={newCityName}
+                onChange={(e) => setNewCityName(e.target.value)}
+                placeholder="City name"
+                className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+              />
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={newCityFee}
+                onChange={(e) => setNewCityFee(e.target.value)}
+                placeholder="Fee"
+                className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+              />
+              <button
+                type="button"
+                className="rounded-full bg-sikapa-crimson px-4 py-1.5 text-small font-semibold text-white"
+                onClick={() => {
+                  const city = newCityName.trim();
+                  if (!city) return;
+                  setShipping((prev) => ({
+                    ...prev,
+                    regions: prev.regions.map((r) =>
+                      r.slug !== cityRegion
+                        ? r
+                        : { ...r, cities: [...r.cities, { name: city, fee: Number(newCityFee || 0) }] }
+                    ),
+                  }));
+                  setNewCityName("");
+                  setNewCityFee("0");
+                }}
+              >
+                Add city fee
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-small font-semibold text-sikapa-text-primary">Couriers</p>
+            <div className="mt-2 space-y-2">
+              {shipping.couriers.map((c, idx) => (
+                <div key={`${c.name}-${idx}`} className="grid gap-2 sm:grid-cols-[1fr_140px_auto]">
+                  <input
+                    value={c.name}
+                    onChange={(e) =>
+                      setShipping((prev) => ({
+                        ...prev,
+                        couriers: prev.couriers.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)),
+                      }))
+                    }
+                    className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={c.fee_delta}
+                    onChange={(e) =>
+                      setShipping((prev) => ({
+                        ...prev,
+                        couriers: prev.couriers.map((x, i) =>
+                          i === idx ? { ...x, fee_delta: Number(e.target.value || 0) } : x
+                        ),
+                      }))
+                    }
+                    className="rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+                  />
+                  <button
+                    type="button"
+                    className="rounded-lg border border-red-200 px-2 py-1.5 text-[11px] font-semibold text-red-700"
+                    onClick={() =>
+                      setShipping((prev) => ({
+                        ...prev,
+                        couriers: prev.couriers.filter((_, i) => i !== idx),
+                      }))
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <input
+                value={newCourier}
+                onChange={(e) => setNewCourier(e.target.value)}
+                placeholder="New courier name"
+                className="flex-1 rounded-lg border border-black/[0.08] px-2 py-1.5 text-small"
+              />
+              <button
+                type="button"
+                className="rounded-full bg-sikapa-crimson px-4 py-1.5 text-small font-semibold text-white"
+                onClick={() => {
+                  const name = newCourier.trim();
+                  if (!name) return;
+                  setShipping((prev) => ({ ...prev, couriers: [...prev.couriers, { name, fee_delta: 0 }] }));
+                  setNewCourier("");
+                }}
+              >
+                Add courier
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={saving}
+            className="rounded-full bg-sikapa-gold px-5 py-2 text-small font-semibold text-white disabled:opacity-60"
+            onClick={() => void saveShipping()}
+          >
+            {saving ? "Saving shipping…" : "Save shipping matrix"}
+          </button>
+        </div>
+      </section>
+
       <form
         onSubmit={(e) => void save(e)}
         className="mt-6 grid gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06] sm:grid-cols-[1fr_2fr_auto]"
@@ -70,8 +372,12 @@ export default function AdminSettingsPage() {
           onChange={(e) => setValue(e.target.value)}
           className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
         />
-        <button type="submit" className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white">
-          Save
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60"
+        >
+          {saving ? "Saving…" : "Save"}
         </button>
       </form>
       <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">

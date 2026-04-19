@@ -153,3 +153,25 @@ class OrderCreateSchema(BaseModel):
                 raise ValueError("Enter a contact phone for delivery.")
         return self
 
+
+class ShippingCityOption(BaseModel):
+    name: str
+    fee: float = Field(ge=0)
+
+
+class ShippingRegionOption(BaseModel):
+    slug: str
+    label: str
+    base_fee: float = Field(ge=0)
+    cities: list[ShippingCityOption] = []
+
+
+class ShippingCourierOption(BaseModel):
+    name: str
+    fee_delta: float = 0
+
+
+class ShippingOptionsSchema(BaseModel):
+    regions: list[ShippingRegionOption] = []
+    couriers: list[ShippingCourierOption] = []
+

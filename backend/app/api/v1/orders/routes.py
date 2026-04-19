@@ -8,7 +8,7 @@ from sqlmodel import Session, select, func
 from app.db import get_session
 from app.models import Order, OrderItem, CartItem, Product, User
 from app.api.v1.auth.dependencies import get_current_active_user
-from app.core.ghana_shipping import delivery_fee_ghs, normalize_region_slug
+from app.core.shipping_matrix import delivery_fee_dynamic_ghs, shipping_options_payload
 
 from app.api.v1.orders.schemas import (
     OrderSchema,
@@ -17,6 +17,7 @@ from app.api.v1.orders.schemas import (
     OrderListItem,
     OrderItemLineSchema,
     InvoiceSchema,
+    ShippingOptionsSchema,
 )
 from app.api.v1.orders.services import (
     create_order_from_cart,
@@ -28,6 +29,12 @@ from app.api.v1.orders.services import (
 )
 
 router = APIRouter()
+
+
+@router.get("/shipping-options", response_model=ShippingOptionsSchema)
+async def get_shipping_options(session: Session = Depends(get_session)):
+    """Public shipping options used by checkout forms."""
+    return shipping_options_payload(session)
 
 
 def _order_to_list_item(session: Session, order: Order) -> OrderListItem:
@@ -132,12 +139,13 @@ async def create_order(
         subtotal += product.price * item.quantity
 
     try:
-        region_slug = (
-            normalize_region_slug(order_data.shipping_region)
-            if order_data.shipping_method == "delivery"
-            else None
+        fee = delivery_fee_dynamic_ghs(
+            session,
+            method=order_data.shipping_method,
+            region_slug=order_data.shipping_region,
+            city=order_data.shipping_city,
+            provider=order_data.shipping_provider,
         )
-        fee = delivery_fee_ghs(order_data.shipping_method, region_slug)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
