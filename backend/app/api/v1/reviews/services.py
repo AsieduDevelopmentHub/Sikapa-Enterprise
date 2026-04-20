@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from sqlmodel import Session, select, func
 
 from app.models import Review, Product, Order, OrderItem, ReviewMedia, User
+from app.core.pg_rls_auth import users_public_profiles_for_ids
 from app.api.v1.reviews.schemas import ReviewCreateSchema, ReviewMediaRead, ReviewPublic
 
 
@@ -138,8 +139,7 @@ async def list_product_reviews_public(
     if not reviews:
         return []
     user_ids = list({r.user_id for r in reviews})
-    users = session.exec(select(User).where(User.id.in_(user_ids))).all()
-    by_id = {u.id: u for u in users if u.id is not None}
+    by_id = users_public_profiles_for_ids(session, user_ids)
     media_by_review = _media_for_reviews(session, [r.id for r in reviews])
     out: list[ReviewPublic] = []
     for r in reviews:
