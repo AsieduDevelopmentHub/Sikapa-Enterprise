@@ -101,6 +101,7 @@ export const V1 = {
     orderTracking: (id: number) => `/admin/orders/${id}/tracking`,
     paymentsTransactions: "/admin/payments/transactions",
     inventoryLogs: "/admin/inventory/logs",
+    inventoryStockLevels: "/admin/inventory/stock-levels",
     inventoryAdjustments: "/admin/inventory/adjustments",
     coupons: "/admin/coupons",
     coupon: (id: number) => `/admin/coupons/${id}`,
@@ -122,5 +123,6 @@ export const V1 = {
     variant: (id: number) => `/admin/variants/${id}`,
     productsBulkImport: "/admin/products/bulk-import",
     productsLowStock: "/admin/products/low-stock/list",
+    productsLowStockAlerts: "/admin/products/low-stock/alerts",
   },
 } as const;

@@ -6,13 +6,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminFetchDashboard,
+  adminFetchLowStockAlerts,
   adminFetchOrders,
-  adminFetchProducts,
   adminFetchRevenue,
   type AdminDashboardMetrics,
   type AdminOrderListItem,
-  type AdminProduct,
   type RevenueStat,
+  type StockAlertItem,
 } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { RevenueTrendChart } from "@/components/admin/charts/RevenueTrendChart";
@@ -42,7 +42,7 @@ export function AdminDashboardContent() {
   const [data, setData] = useState<AdminDashboardMetrics | null>(null);
   const [revenue, setRevenue] = useState<RevenueStat[]>([]);
   const [recent, setRecent] = useState<AdminOrderListItem[]>([]);
-  const [lowStock, setLowStock] = useState<AdminProduct[]>([]);
+  const [lowStock, setLowStock] = useState<StockAlertItem[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -52,25 +52,21 @@ export function AdminDashboardContent() {
     setLoading(true);
     setErr(null);
     try {
-      const [dRes, revRes, ordersRes, productsRes] = await Promise.allSettled([
+      const [dRes, revRes, ordersRes, alertsRes] = await Promise.allSettled([
         adminFetchDashboard(accessToken, days),
         adminFetchRevenue(accessToken, days),
         adminFetchOrders(accessToken, { limit: 10 }),
-        adminFetchProducts(accessToken, { limit: 40 }),
+        adminFetchLowStockAlerts(accessToken, { threshold: 5, limit: 16 }),
       ]);
 
       if (dRes.status === "fulfilled") setData(dRes.value);
       if (revRes.status === "fulfilled") setRevenue(revRes.value);
       if (ordersRes.status === "fulfilled") setRecent(ordersRes.value);
-      if (productsRes.status === "fulfilled") {
-        setLowStock(
-          productsRes.value
-            .filter((p) => p.is_active && p.in_stock <= 5)
-            .slice(0, 8)
-        );
+      if (alertsRes.status === "fulfilled") {
+        setLowStock(alertsRes.value.slice(0, 8));
       }
 
-      const failures = [dRes, revRes, ordersRes, productsRes].filter(
+      const failures = [dRes, revRes, ordersRes, alertsRes].filter(
         (r): r is PromiseRejectedResult => r.status === "rejected"
       );
       if (failures.length > 0) {
@@ -324,20 +320,40 @@ export function AdminDashboardContent() {
               {lowStock.length === 0 ? (
                 <li className="py-3 text-small text-sikapa-text-muted">No low-stock alerts.</li>
               ) : (
-                lowStock.map((p) => (
-                  <li key={p.id} className="flex flex-col gap-1 py-3 text-small sm:flex-row sm:items-center sm:justify-between">
-                    <Link
-                      href={`/system/products/${p.id}`}
-                      className="truncate font-medium text-sikapa-text-primary hover:underline sm:max-w-[75%]"
-                      title={p.name}
+                lowStock.map((p) => {
+                  const key =
+                    p.kind === "variant" && p.variant_id != null
+                      ? `v-${p.product_id}-${p.variant_id}`
+                      : `p-${p.product_id}`;
+                  const title =
+                    p.kind === "variant" && p.parent_product_name
+                      ? `${p.parent_product_name} — ${p.name}`
+                      : p.name;
+                  return (
+                    <li
+                      key={key}
+                      className="flex flex-col gap-1 py-3 text-small sm:flex-row sm:items-center sm:justify-between"
                     >
-                      {p.name}
-                    </Link>
-                    <span className="w-fit rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-sikapa-crimson">
-                      {p.in_stock} left
-                    </span>
-                  </li>
-                ))
+                      <Link
+                        href={`/system/products/${p.product_id}`}
+                        className="truncate font-medium text-sikapa-text-primary hover:underline sm:max-w-[75%]"
+                        title={title}
+                      >
+                        {p.kind === "variant" ? (
+                          <>
+                            <span className="text-sikapa-text-muted">{p.parent_product_name} · </span>
+                            {p.name}
+                          </>
+                        ) : (
+                          p.name
+                        )}
+                      </Link>
+                      <span className="w-fit rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-sikapa-crimson">
+                        {p.in_stock} left
+                      </span>
+                    </li>
+                  );
+                })
               )}
             </ul>
           )}

@@ -228,6 +228,8 @@ class OrderItem(SQLModel, table=True):
     # Snapshot of the variant label at purchase time so historical orders stay
     # readable even if an admin later renames or deletes the variant.
     variant_name: Optional[str] = Field(default=None, max_length=160)
+    variant_image_url: Optional[str] = Field(default=None, max_length=1024)
+    variant_detail_snapshot: Optional[str] = Field(default=None, max_length=4000)
     quantity: int = Field(gt=0)
     price_at_purchase: float = Field(ge=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -374,6 +376,9 @@ class InventoryAdjustment(SQLModel, table=True):
     """Inventory movement audit trail (restock/reduction/manual correction)."""
     id: Optional[int] = Field(default=None, primary_key=True)
     product_id: int = Field(foreign_key="product.id", index=True)
+    variant_id: Optional[int] = Field(
+        default=None, foreign_key="productvariant.id", index=True
+    )
     admin_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
     delta: int  # + for restock, - for reduction
     previous_stock: int = Field(ge=0)
@@ -472,8 +477,8 @@ class SearchQueryLog(SQLModel, table=True):
 
 class ProductVariant(SQLModel, table=True):
     """
-    Variant SKU of a product (e.g. size/colour combination).
-    Storefront may display for browsing; cart/checkout variant-routing comes in Phase 2.
+    Variant SKU of a product (e.g. size/colour combination) with its own stock,
+    optional image, and copy. Checkout ties cart lines to a variant when selected.
     """
 
     __tablename__ = "productvariant"

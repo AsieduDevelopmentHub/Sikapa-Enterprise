@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlmodel import Session, select, func
 
 from app.db import get_session
-from app.models import Order, OrderItem, CartItem, Product, User
+from app.models import Order, OrderItem, CartItem, Product, ProductVariant, User
 from app.api.v1.auth.dependencies import get_current_active_user
 from app.core.shipping_matrix import delivery_fee_dynamic_ghs, shipping_options_payload
 
@@ -27,6 +27,7 @@ from app.api.v1.orders.services import (
     get_invoice_for_order,
     generate_invoice_pdf,
 )
+from app.api.v1.orders.line_items import build_order_item_line_schema
 
 router = APIRouter()
 
@@ -47,8 +48,16 @@ def _order_to_list_item(session: Session, order: Order) -> OrderListItem:
     if first:
         p = session.exec(select(Product).where(Product.id == first.product_id)).first()
         if p:
-            name = p.name
-            img = p.image_url
+            if first.variant_id:
+                name = (first.variant_name or "").strip() or p.name
+                img = (first.variant_image_url or "").strip() or None
+                if not img:
+                    v = session.get(ProductVariant, first.variant_id)
+                    if v and v.image_url:
+                        img = str(v.image_url).strip() or None
+            else:
+                name = p.name
+                img = p.image_url
     line_count = session.exec(
         select(func.count(OrderItem.id)).where(OrderItem.order_id == order.id)
     ).one()
@@ -84,18 +93,7 @@ async def get_order(
     lines: list[OrderItemLineSchema] = []
     for it in raw_items:
         prod = session.exec(select(Product).where(Product.id == it.product_id)).first()
-        lines.append(
-            OrderItemLineSchema(
-                id=it.id,
-                order_id=it.order_id,
-                product_id=it.product_id,
-                quantity=it.quantity,
-                price_at_purchase=it.price_at_purchase,
-                created_at=it.created_at,
-                product_name=prod.name if prod else None,
-                product_image_url=prod.image_url if prod else None,
-            )
-        )
+        lines.append(build_order_item_line_schema(session, it, prod))
 
     inv_schema = InvoiceSchema.model_validate(invoice) if invoice else None
     base = OrderSchema.model_validate(order)
@@ -120,7 +118,7 @@ async def create_order(
             detail="Cart is empty"
         )
 
-    # Calculate subtotal and verify stock
+    # Calculate subtotal and verify stock (variant rows use variant inventory).
     subtotal = 0.0
     for item in cart_items:
         product = session.exec(
@@ -131,12 +129,32 @@ async def create_order(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Product {item.product_id} not found"
             )
-        if item.quantity > product.in_stock:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Insufficient stock for {product.name}"
-            )
-        subtotal += product.price * item.quantity
+        variant: ProductVariant | None = None
+        if item.variant_id is not None:
+            variant = session.get(ProductVariant, item.variant_id)
+            if (
+                not variant
+                or variant.product_id != product.id
+                or not variant.is_active
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Selected option for {product.name} is no longer available",
+                )
+            if item.quantity > variant.in_stock:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Insufficient stock for {product.name} ({variant.name})",
+                )
+            unit = float(product.price) + float(variant.price_delta)
+        else:
+            if item.quantity > product.in_stock:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Insufficient stock for {product.name}",
+                )
+            unit = float(product.price)
+        subtotal += unit * item.quantity
 
     try:
         fee = delivery_fee_dynamic_ghs(
