@@ -290,6 +290,11 @@ export default function AdminOrderDetailPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{line.product_name ?? `Product ${line.product_id}`}</p>
+                  {line.variant_detail_snapshot?.trim() ? (
+                    <p className="mt-1 whitespace-pre-wrap text-[11px] leading-snug text-sikapa-text-muted">
+                      {line.variant_detail_snapshot.trim()}
+                    </p>
+                  ) : null}
                   <p className="text-[11px] text-sikapa-text-muted">
                     Qty {line.quantity} × {formatGhs(line.price_at_purchase)}
                   </p>

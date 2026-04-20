@@ -20,7 +20,7 @@ from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.models import Invoice, Order, OrderItem, Product, User
+from app.models import Invoice, Order, OrderItem, Product, ProductVariant, User
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +132,7 @@ class InvoiceService:
         user: User,
         order_items: list[OrderItem],
         products_by_id: Optional[dict[int, Product]] = None,
+        variants_by_id: Optional[dict[int, ProductVariant]] = None,
         company_name: str = "Sikapa Enterprise",
         currency_code: str | None = None,
     ) -> bytes:
@@ -144,11 +145,13 @@ class InvoiceService:
             user: Billing customer
             order_items: Line items
             products_by_id: Map of product id -> Product (for names, SKU, images)
+            variants_by_id: Map of variant id -> ProductVariant for variant lines
             company_name: Header brand (default Sikapa Enterprise)
             currency_code: ISO currency for amounts (default PAYSTACK_CURRENCY or GHS)
         """
         cur = (currency_code or os.getenv("PAYSTACK_CURRENCY", "GHS")).strip().upper()
         products_by_id = products_by_id or {}
+        variants_by_id = variants_by_id or {}
         items_sorted = sorted(order_items, key=lambda x: (x.id or 0))
 
         buffer = io.BytesIO()
@@ -322,16 +325,44 @@ class InvoiceService:
 
         for item in items_sorted:
             prod = products_by_id.get(item.product_id)
-            pname = (
-                (prod.name if prod else None)
-                or f"Product #{item.product_id}"
+            var = (
+                variants_by_id.get(item.variant_id)
+                if item.variant_id
+                else None
             )
-            sku = (prod.sku if prod and prod.sku else "—")
-            img_url = prod.image_url if prod else None
+            if item.variant_id:
+                pname = (
+                    (item.variant_name or "").strip()
+                    or (var.name if var else None)
+                    or (prod.name if prod else None)
+                    or f"Product #{item.product_id}"
+                )
+                sku = (
+                    (var.sku if var and var.sku else None)
+                    or (prod.sku if prod and prod.sku else None)
+                    or "—"
+                )
+                snap_img = (item.variant_image_url or "").strip() or None
+                img_url = snap_img or (var.image_url if var else None)
+                detail_src = (item.variant_detail_snapshot or "").strip() or None
+                if not detail_src and var:
+                    if var.description and var.description.strip():
+                        detail_src = var.description.strip()
+                    elif var.attributes and var.attributes.strip():
+                        detail_src = var.attributes.strip()
+            else:
+                pname = (
+                    (prod.name if prod else None)
+                    or f"Product #{item.product_id}"
+                )
+                sku = prod.sku if prod and prod.sku else "—"
+                img_url = prod.image_url if prod else None
+                detail_src = prod.description.strip() if prod and prod.description else None
+
             thumb = _thumbnail_flowable(img_url)
             desc_bits = f"<b>{escape(pname)}</b>"
-            if prod and prod.description:
-                desc_short = prod.description.strip()
+            if detail_src:
+                desc_short = detail_src
                 if len(desc_short) > 120:
                     desc_short = desc_short[:117] + "…"
                 desc_bits += f"<br/><font size='8' color='#7a6a62'>{escape(desc_short)}</font>"

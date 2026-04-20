@@ -22,11 +22,14 @@ class OrderItemSchema(BaseModel):
 
 
 class OrderItemLineSchema(BaseModel):
-    """Order line with product display fields for customer order detail."""
+    """Order line with display fields (variant-first when a variant was purchased)."""
 
     id: int
     order_id: int
     product_id: int
+    variant_id: Optional[int] = None
+    variant_name: Optional[str] = None
+    variant_detail_snapshot: Optional[str] = None
     quantity: int = Field(gt=0)
     price_at_purchase: float = Field(ge=0)
     created_at: datetime

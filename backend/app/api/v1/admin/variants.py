@@ -1,8 +1,8 @@
 """
 Admin product-variant management.
 
-Variants are display-only on the storefront for now; checkout variant-routing
-is deferred to a future phase. Admins can create/update/delete variants and
+Each variant has its own stock (`in_stock`), optional image and copy, and is
+sold through checkout when the shopper picks that option. Admins can create/update/delete variants and
 browse them per product.
 """
 from __future__ import annotations
@@ -20,6 +20,7 @@ from app.api.v1.admin.services import upload_product_image
 from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text
 from app.db import get_session
 from app.models import Product, ProductVariant, User
+from app.core.sku_generator import generate_variant_sku
 
 router = APIRouter()
 
@@ -180,10 +181,13 @@ async def create_variant(
             status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
         )
     now = datetime.utcnow()
+    sku = body.sku
+    if sku is None or not str(sku).strip():
+        sku = generate_variant_sku(session, product=product, variant_name=body.name or "")
     v = ProductVariant(
         product_id=body.product_id,
         name=body.name or "",
-        sku=body.sku,
+        sku=sku,
         attributes=_serialize_attributes(body.attributes),
         price_delta=float(body.price_delta),
         in_stock=int(body.in_stock),
@@ -232,6 +236,15 @@ async def update_variant(
     if "description" in data:
         v.description = data["description"]
     v.updated_at = datetime.utcnow()
+    if not (v.sku or "").strip():
+        p = session.get(Product, v.product_id)
+        if p:
+            v.sku = generate_variant_sku(
+                session,
+                product=p,
+                variant_name=v.name or "",
+                exclude_variant_id=v.id,
+            )
     session.add(v)
     session.commit()
     session.refresh(v)

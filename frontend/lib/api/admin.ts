@@ -76,6 +76,9 @@ export type AdminOrderLine = {
   id: number;
   order_id: number;
   product_id: number;
+  variant_id?: number | null;
+  variant_name?: string | null;
+  variant_detail_snapshot?: string | null;
   quantity: number;
   price_at_purchase: number;
   created_at: string;
@@ -169,12 +172,35 @@ export type AdminReview = {
 export type InventoryAdjustmentRow = {
   id: number;
   product_id: number;
+  variant_id?: number | null;
   admin_id?: number | null;
   delta: number;
   previous_stock: number;
   new_stock: number;
   reason?: string | null;
   created_at: string;
+};
+
+export type InventoryStockLevelRow = {
+  kind: "product" | "variant";
+  product_id: number;
+  variant_id?: number | null;
+  label: string;
+  name: string;
+  parent_product_name?: string | null;
+  sku?: string | null;
+  in_stock: number;
+};
+
+export type StockAlertItem = {
+  kind: "product" | "variant";
+  product_id: number;
+  variant_id?: number | null;
+  name: string;
+  parent_product_name?: string | null;
+  sku?: string | null;
+  in_stock: number;
+  unit_price: number;
 };
 
 export type CouponRow = {
@@ -469,25 +495,50 @@ export async function adminDeleteReview(accessToken: string, reviewId: number): 
 
 export async function adminFetchInventoryLogs(
   accessToken: string,
-  params?: { product_id?: number; skip?: number; limit?: number }
+  params?: { product_id?: number; variant_id?: number; skip?: number; limit?: number }
 ): Promise<InventoryAdjustmentRow[]> {
   const q = new URLSearchParams();
   if (params?.product_id != null) q.set("product_id", String(params.product_id));
+  if (params?.variant_id != null) q.set("variant_id", String(params.variant_id));
   if (params?.skip != null) q.set("skip", String(params.skip));
   if (params?.limit != null) q.set("limit", String(params.limit));
   const suffix = q.toString() ? `?${q}` : "";
   return apiFetchJsonAuth<InventoryAdjustmentRow[]>(accessToken, `${V1.admin.inventoryLogs}${suffix}`);
 }
 
+export async function adminFetchInventoryStockLevels(
+  accessToken: string,
+  params?: { limit_products?: number }
+): Promise<InventoryStockLevelRow[]> {
+  const q = new URLSearchParams();
+  if (params?.limit_products != null) q.set("limit_products", String(params.limit_products));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<InventoryStockLevelRow[]>(
+    accessToken,
+    `${V1.admin.inventoryStockLevels}${suffix}`
+  );
+}
+
 export async function adminCreateInventoryAdjustment(
   accessToken: string,
-  body: { product_id: number; delta: number; reason?: string }
+  body: { product_id: number; variant_id?: number | null; delta: number; reason?: string }
 ): Promise<InventoryAdjustmentRow> {
   return apiFetchJsonAuth<InventoryAdjustmentRow>(accessToken, V1.admin.inventoryAdjustments, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export async function adminFetchLowStockAlerts(
+  accessToken: string,
+  params?: { threshold?: number; limit?: number }
+): Promise<StockAlertItem[]> {
+  const q = new URLSearchParams();
+  if (params?.threshold != null) q.set("threshold", String(params.threshold));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<StockAlertItem[]>(accessToken, `${V1.admin.productsLowStockAlerts}${suffix}`);
 }
 
 export async function adminFetchCoupons(accessToken: string): Promise<CouponRow[]> {
