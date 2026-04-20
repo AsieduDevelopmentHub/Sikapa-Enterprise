@@ -553,7 +553,6 @@ export function ProductDetailScreen({ product: p }: Props) {
           onClick={() => handleAddToCart()}
           disabled={addDisabled}
         >
-          <FaCart className="!h-5 !w-5 shrink-0 text-sikapa-crimson dark:text-red-950" />
           <span className="text-[8px] font-bold uppercase leading-tight tracking-wide text-sikapa-crimson dark:text-red-950">
             Add to cart
           </span>
