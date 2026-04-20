@@ -304,15 +304,6 @@ export function ProductDetailScreen({ product: p }: Props) {
             unoptimized={activeImage.startsWith("http") && !activeImage.includes("images.unsplash.com")}
           />
           <ProductWishlistButton productId={p.id} size="md" className="absolute right-3 top-3 z-[1]" />
-          <button
-            type="button"
-            className="sikapa-tap-bounce absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center rounded-full bg-sikapa-gold text-white shadow-lg ring-2 ring-white/90 disabled:cursor-not-allowed disabled:opacity-60 dark:ring-zinc-900"
-            aria-label={`Add ${p.name} to cart`}
-            onClick={() => handleAddToCart()}
-            disabled={addDisabled}
-          >
-            <FaCart className="!h-5 !w-5" />
-          </button>
         </div>
 
         {thumbnails.length > 1 && (
@@ -397,6 +388,21 @@ export function ProductDetailScreen({ product: p }: Props) {
               </p>
             )}
           </div>
+          <button
+            type="button"
+            className="sikapa-btn-gold sikapa-tap-bounce mt-4 flex w-full items-center justify-center gap-2 rounded-[10px] py-3 text-small font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => handleAddToCart()}
+            disabled={addDisabled}
+          >
+            <FaCart className="!h-4 !w-4 shrink-0" />
+            {addLabel}
+          </button>
+          <Link
+            href="/shop"
+            className="sikapa-tap mt-2 flex w-full items-center justify-center rounded-[10px] border border-sikapa-gray-soft bg-white py-2.5 text-center text-small font-semibold text-sikapa-text-primary dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+          >
+            Continue shopping
+          </Link>
         </div>
 
         {hasNumericId && (
@@ -417,24 +423,6 @@ export function ProductDetailScreen({ product: p }: Props) {
         {hasNumericId && (
           <ProductReviewsSection productId={numericId} />
         )}
-
-        <div className="mt-8 flex flex-col gap-2.5 sm:flex-row">
-          <button
-            type="button"
-            className="sikapa-btn-gold sikapa-tap-bounce flex flex-1 items-center justify-center gap-2 rounded-[10px] py-3 text-small font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => handleAddToCart()}
-            disabled={addDisabled}
-          >
-            <FaCart className="!h-4 !w-4 shrink-0" />
-            {addLabel}
-          </button>
-          <Link
-            href="/shop"
-            className="sikapa-tap flex flex-1 items-center justify-center rounded-[10px] border border-sikapa-gray-soft bg-white py-3 text-center text-small font-semibold text-sikapa-text-primary dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
-          >
-            Continue shopping
-          </Link>
-        </div>
 
         {recentlyViewed.length > 0 && (
           <div className="mt-10">
