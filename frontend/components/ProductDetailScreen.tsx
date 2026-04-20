@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FaBag, FaCart } from "@/components/FaIcons";
 import { ProductCarouselRail } from "@/components/product/ProductCarouselRail";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
@@ -21,7 +21,6 @@ import {
   type ProductVariantPublic,
 } from "@/lib/api/product-variants";
 import type { MockProduct } from "@/lib/mock-data";
-import { formatGhs } from "@/lib/mock-data";
 import { variantValueSummary } from "@/lib/variant-display";
 
 type Props = { product: MockProduct };
@@ -121,6 +120,8 @@ export function ProductDetailScreen({ product: p }: Props) {
   const [mediaLoading, setMediaLoading] = useState(false);
   const [activeImage, setActiveImage] = useState<string>(p.image);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [showFloatingAdd, setShowFloatingAdd] = useState(false);
+  const addToCartAnchorRef = useRef<HTMLButtonElement>(null);
 
   const selectedVariant = useMemo(
     () => variants.find((v) => v.id === selectedVariantId) ?? null,
@@ -302,8 +303,22 @@ export function ProductDetailScreen({ product: p }: Props) {
     [addProduct, addDisabled, p.id, selectedVariant]
   );
 
+  /** Floating add-to-cart when the main CTA scrolls off-screen (sits above bottom nav like WhatsApp). */
+  useLayoutEffect(() => {
+    const el = addToCartAnchorRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        setShowFloatingAdd(!entry.isIntersecting);
+      },
+      { root: null, threshold: 0.08, rootMargin: "0px 0px -8px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [p.id, selectedVariantId, addDisabled]);
+
   return (
-    <div className="bg-sikapa-cream px-4 pb-28 pt-4 dark:bg-zinc-950">
+    <div className="bg-sikapa-cream px-4 pb-24 pt-4 dark:bg-zinc-950">
       <div className="mx-auto max-w-mobile">
         <div className="relative aspect-square w-full overflow-hidden rounded-[12px] bg-sikapa-gray-soft shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-800 dark:ring-white/10">
           <div className="absolute inset-2 z-[1] sm:inset-3">
@@ -423,6 +438,7 @@ export function ProductDetailScreen({ product: p }: Props) {
               )}
           </div>
           <button
+            ref={addToCartAnchorRef}
             type="button"
             className="sikapa-btn-gold sikapa-tap-bounce mt-4 flex w-full items-center justify-center gap-2 rounded-[10px] py-3 text-small font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => handleAddToCart()}
@@ -529,46 +545,20 @@ export function ProductDetailScreen({ product: p }: Props) {
         </div>
       ) : null}
 
-      <div
-        className="sticky-buy-bar fixed inset-x-0 bottom-0 z-30 border-t border-sikapa-gray-soft/80 bg-white/95 px-4 py-2.5 backdrop-blur md:hidden dark:border-white/10 dark:bg-zinc-950/95"
-        role="region"
-        aria-label="Quick add to cart"
-      >
-        <div className="mx-auto flex max-w-mobile items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              {displayTitle}
-            </p>
-            <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
-              {p.categoryLabel}
-              {hasStockInfo && (
-                <span
-                  className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                    isOutOfStock
-                      ? "bg-rose-50 text-rose-700"
-                      : isLowStock
-                      ? "bg-amber-50 text-amber-800"
-                      : "bg-emerald-50 text-emerald-700"
-                  }`}
-                >
-                  {isOutOfStock ? "0 left" : `${effectiveStock} left`}
-                </span>
-              )}
-            </p>
-            <p className="truncate text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              {formatGhs(effectivePrice)}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="sikapa-btn-gold sikapa-tap-bounce shrink-0 rounded-full px-5 py-2.5 text-small font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => handleAddToCart()}
-            disabled={addDisabled}
-          >
-            {addLabel}
-          </button>
-        </div>
-      </div>
+      {showFloatingAdd && !lightboxOpen ? (
+        <button
+          type="button"
+          className="sikapa-tap-bounce fixed bottom-[calc(4.75rem+var(--safe-bottom))] left-3 z-[68] flex w-[4.75rem] flex-col items-center gap-1 rounded-2xl bg-gradient-to-b from-amber-200 to-sikapa-gold px-2 py-2.5 text-center shadow-[0_6px_20px_rgba(200,169,106,0.45)] ring-2 ring-white/95 disabled:cursor-not-allowed disabled:opacity-50 dark:from-amber-300 dark:to-amber-500 dark:ring-zinc-900"
+          aria-label={addLabel}
+          onClick={() => handleAddToCart()}
+          disabled={addDisabled}
+        >
+          <FaCart className="!h-5 !w-5 shrink-0 text-sikapa-crimson dark:text-red-950" />
+          <span className="text-[8px] font-bold uppercase leading-tight tracking-wide text-sikapa-crimson dark:text-red-950">
+            Add to cart
+          </span>
+        </button>
+      ) : null}
     </div>
   );
 }
