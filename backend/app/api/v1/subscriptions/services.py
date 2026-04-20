@@ -1,13 +1,21 @@
 """
 Email subscriptions business logic
 """
-from datetime import datetime
 import uuid
 from fastapi import HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.models import EmailSubscription
 from app.core.email_service import EmailService
+from app.core.pg_rls_auth import (
+    emailsubscription_by_email,
+    emailsubscription_by_verify_token,
+    newsletter_active_subscribers,
+    newsletter_run_reactivate,
+    newsletter_run_unsubscribe_email,
+    newsletter_run_unsubscribe_token,
+    newsletter_run_verify,
+)
 
 email_service = EmailService()
 
@@ -20,118 +28,84 @@ async def subscribe_email(session: Session, email: str, *, marketing_opt_in: boo
             detail="Marketing email consent is required to subscribe",
         )
 
-    # Check if already subscribed
-    existing = session.exec(
-        select(EmailSubscription).where(EmailSubscription.email == email)
-    ).first()
-    
+    existing = emailsubscription_by_email(session, email.strip().lower())
+
     if existing:
         if existing.is_subscribed:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email is already subscribed",
             )
-        else:
-            # Reactivate subscription
-            existing.is_subscribed = True
-            existing.unsubscribed_at = None
-            session.add(existing)
-            session.commit()
-            session.refresh(existing)
-            return existing
-    
-    # Create new subscription
+        updated = newsletter_run_reactivate(session, email.strip().lower())
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not reactivate subscription",
+            )
+        return updated
+
     verification_token = str(uuid.uuid4())
+    em = email.strip().lower()
     subscription = EmailSubscription(
-        email=email,
+        email=em,
         verification_token=verification_token,
         verified=False,
     )
-    
+
     session.add(subscription)
     session.commit()
     session.refresh(subscription)
-    
-    # Send verification email
+
     try:
         email_service.send_subscription_confirmation(
-            email,
+            em,
             verification_token,
         )
     except Exception as e:
         print(f"Failed to send subscription email: {e}")
-    
+
     return subscription
 
 
 async def unsubscribe_email(session: Session, email: str) -> None:
     """Unsubscribe an email from the newsletter (idempotent)."""
-    
-    subscription = session.exec(
-        select(EmailSubscription).where(EmailSubscription.email == email)
-    ).first()
-    
-    if not subscription:
-        return
-    if not subscription.is_subscribed:
-        return
-    subscription.is_subscribed = False
-    subscription.unsubscribed_at = datetime.utcnow()
-    session.add(subscription)
-    session.commit()
+    newsletter_run_unsubscribe_email(session, email)
 
 
 async def unsubscribe_by_token(session: Session, token: str) -> None:
     """One-click unsubscribe from email footer links."""
     if not token:
         return
-    subscription = session.exec(
-        select(EmailSubscription).where(EmailSubscription.verification_token == token)
-    ).first()
-    if not subscription:
-        return
-    if not subscription.is_subscribed:
-        return
-    subscription.is_subscribed = False
-    subscription.unsubscribed_at = datetime.utcnow()
-    session.add(subscription)
-    session.commit()
+    newsletter_run_unsubscribe_token(session, token)
 
 
 def newsletter_recipients(session: Session) -> list[EmailSubscription]:
     """Verified and active newsletter recipients."""
-    stmt = select(EmailSubscription).where(
-        EmailSubscription.is_subscribed == True,  # noqa: E712
-        EmailSubscription.verified == True,  # noqa: E712
-    )
-    return list(session.exec(stmt).all())
+    return newsletter_active_subscribers(session)
 
 
 async def verify_subscription(session: Session, token: str) -> dict:
     """Verify email subscription using verification token."""
-    
-    subscription = session.exec(
-        select(EmailSubscription).where(
-            EmailSubscription.verification_token == token
+
+    pending = emailsubscription_by_verify_token(session, token)
+    if not pending:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid verification token",
         )
-    ).first()
-    
+    if pending.verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already verified",
+        )
+
+    subscription = newsletter_run_verify(session, token)
     if not subscription:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Invalid verification token",
         )
-    
-    if subscription.verified:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is already verified",
-        )
-    
-    subscription.verified = True
-    session.add(subscription)
-    session.commit()
-    
+
     return {
         "message": "Email verified successfully",
         "email": subscription.email,

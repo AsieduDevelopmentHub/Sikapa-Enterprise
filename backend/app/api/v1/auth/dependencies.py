@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 security = HTTPBearer(scheme_name="BearerAuth", auto_error=False)
 
 from app.core.security import decode_access_token
+from app.core.pg_rls_auth import fetch_user_by_subject, pg_rls_enabled
 from app.db import get_session
 from app.models import User, TokenBlacklist
 
@@ -55,7 +56,9 @@ async def get_current_user(
         )
 
     # Get user from database (new tokens use user id; legacy tokens may still carry email/username)
-    if str(subject).isdigit():
+    if pg_rls_enabled():
+        user = fetch_user_by_subject(session, str(subject))
+    elif str(subject).isdigit():
         user = session.get(User, int(subject))
     else:
         sub = str(subject).strip().lower()

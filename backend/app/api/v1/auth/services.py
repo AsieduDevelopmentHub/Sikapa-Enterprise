@@ -25,6 +25,15 @@ from app.core.security import (
 )
 from app.core.email_service import email_service
 from app.db import apply_postgres_session_user
+from app.core.pg_rls_auth import (
+    email_exists,
+    email_taken_except,
+    fetch_password_reset_row,
+    fetch_user_by_subject,
+    fetch_user_for_login,
+    username_exists,
+    username_taken_except,
+)
 from app.models import (
     User,
     TokenBlacklist,
@@ -53,10 +62,7 @@ def _identifier_is_email(identifier: str) -> bool:
 def _load_user_by_token_subject(session: Session, sub: str | None) -> User | None:
     if not sub:
         return None
-    if sub.isdigit():
-        return session.get(User, int(sub))
-    ident = sub.strip().lower()
-    return session.exec(select(User).where((User.email == ident) | (User.username == ident))).first()
+    return fetch_user_by_subject(session, str(sub))
 
 # ============ User Registration ============
 def register_user(
@@ -74,8 +80,7 @@ def register_user(
             detail="Username must be 3-50 chars: lowercase letters, numbers, dot, underscore, hyphen",
         )
 
-    existing_user = session.exec(select(User).where(User.username == username)).first()
-    if existing_user:
+    if username_exists(session, username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken"
@@ -83,8 +88,7 @@ def register_user(
 
     if email:
         email = email.strip().lower()
-        existing_email = session.exec(select(User).where(User.email == email)).first()
-        if existing_email:
+        if email_exists(session, email):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered",
@@ -135,10 +139,7 @@ def register_user(
 def authenticate_user(session: Session, identifier: str, password: str) -> User:
     """Authenticate user and return user object."""
     ident = identifier.strip().lower()
-    if _identifier_is_email(ident):
-        user = session.exec(select(User).where(User.email == ident)).first()
-    else:
-        user = session.exec(select(User).where(User.username == ident)).first()
+    user = fetch_user_for_login(session, ident)
     if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -217,7 +218,7 @@ def logout_user(session: Session, user_id: int, token: str) -> None:
 # ============ Email Verification ============
 def verify_email(session: Session, email: str, code: str) -> User:
     """Verify email using OTP code."""
-    user = session.exec(select(User).where(User.email == email)).first()
+    user = fetch_user_for_login(session, email.strip().lower())
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -270,7 +271,7 @@ def verify_email(session: Session, email: str, code: str) -> User:
 # ============ Password Reset ============
 def request_password_reset(session: Session, email: str) -> None:
     """Request password reset - generate token and send email."""
-    user = session.exec(select(User).where(User.email == email)).first()
+    user = fetch_user_for_login(session, email.strip().lower())
     if not user:
         # Don't reveal if user exists for security
         return None
@@ -297,11 +298,7 @@ def request_password_reset(session: Session, email: str) -> None:
 
 def reset_password(session: Session, token: str, new_password: str) -> User:
     """Reset password using reset token."""
-    password_reset = session.exec(
-        select(PasswordReset)
-        .where(PasswordReset.token == token)
-        .where(PasswordReset.used == False)
-    ).first()
+    password_reset = fetch_password_reset_row(session, token)
 
     if not password_reset:
         raise HTTPException(
@@ -406,8 +403,7 @@ def update_user_profile(session: Session, user_id: int, patch: dict) -> User:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username must be 3-50 chars: lowercase letters, numbers, dot, underscore, hyphen",
             )
-        exists = session.exec(select(User).where((User.username == uname) & (User.id != user_id))).first()
-        if exists:
+        if username_taken_except(session, uname, user_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already taken",
@@ -434,8 +430,7 @@ def update_user_profile(session: Session, user_id: int, patch: dict) -> User:
             if ne == old_norm:
                 pass
             else:
-                taken = session.exec(select(User).where(User.email == ne)).first()
-                if taken and taken.id != user_id:
+                if email_taken_except(session, ne, user_id):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="Email already registered",

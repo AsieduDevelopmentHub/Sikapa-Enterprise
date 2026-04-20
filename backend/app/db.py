@@ -63,7 +63,7 @@ def _configure_postgres_rls_for_request(session: Session, request: Request) -> N
         return
 
     from app.core.security import decode_access_token
-    from app.models import TokenBlacklist, User
+    from app.models import TokenBlacklist
 
     conn = session.connection()
 
@@ -95,11 +95,9 @@ def _configure_postgres_rls_for_request(session: Session, request: Request) -> N
         _clear()
         return
 
-    if str(subject).isdigit():
-        user = session.get(User, int(subject))
-    else:
-        sub = str(subject).strip().lower()
-        user = session.exec(select(User).where((User.email == sub) | (User.username == sub))).first()
+    from app.core.pg_rls_auth import fetch_user_by_subject
+
+    user = fetch_user_by_subject(session, str(subject))
     if not user:
         _clear()
         return
