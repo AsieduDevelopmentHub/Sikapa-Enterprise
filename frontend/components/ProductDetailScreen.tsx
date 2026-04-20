@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/product-variants";
 import type { MockProduct } from "@/lib/mock-data";
 import { formatGhs } from "@/lib/mock-data";
+import { variantValueSummary } from "@/lib/variant-display";
 
 type Props = { product: MockProduct };
 
@@ -119,6 +120,7 @@ export function ProductDetailScreen({ product: p }: Props) {
   const [variants, setVariants] = useState<ProductVariantPublic[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [activeImage, setActiveImage] = useState<string>(p.image);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const selectedVariant = useMemo(
     () => variants.find((v) => v.id === selectedVariantId) ?? null,
@@ -185,6 +187,15 @@ export function ProductDetailScreen({ product: p }: Props) {
     };
   }, [hasNumericId, numericId]);
 
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxOpen]);
+
   // Stable handler for the variant picker so toggling a size/colour chip only
   // flows through `selectedVariantId`; the effect above handles the image.
   const onSelectedIdChange = useCallback((id: number | null) => {
@@ -221,6 +232,8 @@ export function ProductDetailScreen({ product: p }: Props) {
     ? "Out of stock"
     : "Add to cart";
 
+  const displayTitle = selectedVariant?.name ?? p.name;
+
   const thumbnails = useMemo(() => {
     const list: {
       key: string;
@@ -244,7 +257,7 @@ export function ProductDetailScreen({ product: p }: Props) {
         list.push({
           key: `v-${v.id}`,
           src,
-          label: v.name,
+          label: variantValueSummary(v),
           variantId: v.id,
         });
       }
@@ -292,18 +305,28 @@ export function ProductDetailScreen({ product: p }: Props) {
   return (
     <div className="bg-sikapa-cream px-4 pb-28 pt-4 dark:bg-zinc-950">
       <div className="mx-auto max-w-mobile">
-        <div className="relative aspect-square w-full overflow-hidden rounded-[12px] bg-white shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">
-          <Image
-            key={activeImage}
-            src={activeImage}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width:430px) 100vw, 400px"
-            priority
-            unoptimized={activeImage.startsWith("http") && !activeImage.includes("images.unsplash.com")}
+        <div className="relative aspect-square w-full overflow-hidden rounded-[12px] bg-sikapa-gray-soft shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-800 dark:ring-white/10">
+          <div className="absolute inset-2 z-[1] sm:inset-3">
+            <div className="relative h-full w-full">
+              <Image
+                key={activeImage}
+                src={activeImage}
+                alt=""
+                fill
+                className="object-contain"
+                sizes="(max-width:430px) 100vw, 400px"
+                priority
+                unoptimized={activeImage.startsWith("http") && !activeImage.includes("images.unsplash.com")}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="absolute inset-0 z-[5] cursor-zoom-in rounded-[12px]"
+            aria-label="View larger image"
+            onClick={() => setLightboxOpen(true)}
           />
-          <ProductWishlistButton productId={p.id} size="md" className="absolute right-3 top-3 z-[1]" />
+          <ProductWishlistButton productId={p.id} size="md" className="pointer-events-auto absolute right-3 top-3 z-[15]" />
         </div>
 
         {thumbnails.length > 1 && (
@@ -334,7 +357,11 @@ export function ProductDetailScreen({ product: p }: Props) {
                   title={t.label ?? undefined}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={t.src} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={t.src}
+                    alt=""
+                    className="h-full w-full bg-sikapa-gray-soft object-contain p-0.5 dark:bg-zinc-800"
+                  />
                   {isVariant && (
                     <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-black/55 px-1 py-[1px] text-[9px] font-semibold text-white">
                       {t.label}
@@ -350,8 +377,14 @@ export function ProductDetailScreen({ product: p }: Props) {
           {p.categoryLabel}
         </p>
         <h1 className="mt-1 font-serif text-[1.35rem] font-semibold leading-tight text-sikapa-text-primary dark:text-zinc-100 sm:text-[1.5rem]">
-          {p.name}
+          {displayTitle}
         </h1>
+        {selectedVariant ? (
+          <p className="mt-1 text-[11px] text-sikapa-text-muted dark:text-zinc-500">
+            <span className="text-sikapa-text-muted">From </span>
+            <span className="font-medium text-sikapa-text-secondary dark:text-zinc-400">{p.name}</span>
+          </p>
+        ) : null}
         <div className="mt-2 flex items-center gap-2">
           <StarRating value={p.rating} />
           {hasStockInfo && (
@@ -382,11 +415,12 @@ export function ProductDetailScreen({ product: p }: Props) {
           </p>
           <div className="mt-1">
             <ProductPriceLabel product={priceSnapshot} size="md" />
-            {selectedVariant && (
-              <p className="mt-0.5 text-[11px] font-medium text-sikapa-text-muted dark:text-zinc-500">
-                {selectedVariant.name}
-              </p>
-            )}
+            {selectedVariant &&
+              variantValueSummary(selectedVariant) !== selectedVariant.name && (
+                <p className="mt-0.5 text-[11px] font-medium text-sikapa-text-muted dark:text-zinc-500">
+                  {variantValueSummary(selectedVariant)}
+                </p>
+              )}
           </div>
           <button
             type="button"
@@ -465,6 +499,36 @@ export function ProductDetailScreen({ product: p }: Props) {
         )}
       </div>
 
+      {lightboxOpen ? (
+        <div
+          className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Enlarged product image"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            type="button"
+            className="absolute right-3 top-3 z-[2] flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-2xl font-light leading-none text-white ring-1 ring-white/30 backdrop-blur hover:bg-white/25"
+            aria-label="Close image"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxOpen(false);
+            }}
+          >
+            ×
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={activeImage}
+            alt={displayTitle}
+            className="relative z-[1] max-h-[min(88vh,820px)] w-auto max-w-[min(94vw,960px)] object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="mt-3 max-w-full truncate px-2 text-center text-small text-white/80">{displayTitle}</p>
+        </div>
+      ) : null}
+
       <div
         className="sticky-buy-bar fixed inset-x-0 bottom-0 z-30 border-t border-sikapa-gray-soft/80 bg-white/95 px-4 py-2.5 backdrop-blur md:hidden dark:border-white/10 dark:bg-zinc-950/95"
         role="region"
@@ -472,7 +536,10 @@ export function ProductDetailScreen({ product: p }: Props) {
       >
         <div className="mx-auto flex max-w-mobile items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
+            <p className="truncate text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-100">
+              {displayTitle}
+            </p>
+            <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
               {p.categoryLabel}
               {hasStockInfo && (
                 <span

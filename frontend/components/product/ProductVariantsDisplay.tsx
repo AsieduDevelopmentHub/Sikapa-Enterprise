@@ -6,6 +6,7 @@ import {
   type ProductVariantPublic,
 } from "@/lib/api/product-variants";
 import { formatGhs } from "@/lib/mock-data";
+import { variantValueSummary } from "@/lib/variant-display";
 
 type Props = {
   productId: number;
@@ -238,7 +239,7 @@ export function ProductVariantsDisplay({
                 } ${outOfStock ? "opacity-50 line-through" : ""}`}
                 aria-pressed={isSelected}
               >
-                {v.name}
+                {variantValueSummary(v)}
                 {v.price_delta !== 0 && (
                   <span className="ml-1 text-sikapa-gold">
                     {v.price_delta > 0 ? "+" : ""}
@@ -253,7 +254,7 @@ export function ProductVariantsDisplay({
 
       {selected && (
         <p className="mt-3 text-small text-sikapa-text-secondary dark:text-zinc-400">
-          {selected.name} ·{" "}
+          {variantValueSummary(selected)} ·{" "}
           <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">
             {formatGhs(basePrice + (selected.price_delta ?? 0))}
           </span>
