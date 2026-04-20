@@ -27,6 +27,7 @@ from app.api.v1.orders.services import (
     get_invoice_for_order,
     update_order_status_and_notify,
 )
+from app.api.v1.orders.line_items import build_order_item_line_schema
 from app.api.v1.payments import services as payment_services
 from app.api.v1.payments.schemas import (
     PaystackRefundRequestBody,
@@ -81,18 +82,7 @@ async def admin_get_order_detail(
     lines: list[OrderItemLineSchema] = []
     for it in raw_items:
         prod = session.exec(select(Product).where(Product.id == it.product_id)).first()
-        lines.append(
-            OrderItemLineSchema(
-                id=it.id,
-                order_id=it.order_id,
-                product_id=it.product_id,
-                quantity=it.quantity,
-                price_at_purchase=it.price_at_purchase,
-                created_at=it.created_at,
-                product_name=prod.name if prod else None,
-                product_image_url=prod.image_url if prod else None,
-            )
-        )
+        lines.append(build_order_item_line_schema(session, it, prod))
     inv_schema = InvoiceSchema.model_validate(invoice) if invoice else None
     base = OrderSchema.model_validate(order)
     return OrderDetailSchema(**base.model_dump(), items=lines, invoice=inv_schema)

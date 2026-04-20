@@ -14,6 +14,7 @@ from app.api.v1.admin.permission_catalog import KNOWN_ADMIN_PERMISSION_KEYS
 from app.models import (
     User,
     Product,
+    ProductVariant,
     Order,
     Category,
     AdminAuditLog,
@@ -22,6 +23,7 @@ from app.models import (
     BusinessSetting,
 )
 from app.core.email_service import EmailService
+from app.core.sku_generator import generate_product_sku
 from app.api.v1.admin.crud_helpers import (
     get_entity_or_404,
     create_entity_with_slug,
@@ -231,8 +233,16 @@ async def revoke_admin_role(session: Session, user_id: int) -> User:
 # ============ PRODUCT MANAGEMENT SERVICES ============
 
 async def create_product_admin(session: Session, product_data: dict) -> Product:
-    """Create a product."""
-    return await create_entity_with_slug(session, Product, product_data)
+    """Create a product. Fills `sku` when omitted or blank (category + name)."""
+    data = dict(product_data)
+    sku_val = data.get("sku")
+    if sku_val is None or (isinstance(sku_val, str) and not str(sku_val).strip()):
+        data["sku"] = generate_product_sku(
+            session,
+            name=data["name"],
+            category=data.get("category"),
+        )
+    return await create_entity_with_slug(session, Product, data)
 
 
 async def update_product_admin(
@@ -247,6 +257,16 @@ async def update_product_admin(
     updated = await update_entity_generic(
         session, Product, product_id, product_data, has_slug=True
     )
+    if not (updated.sku or "").strip():
+        updated.sku = generate_product_sku(
+            session,
+            name=updated.name,
+            category=updated.category,
+            exclude_product_id=updated.id,
+        )
+        session.add(updated)
+        session.commit()
+        session.refresh(updated)
     if "in_stock" in product_data and int(updated.in_stock) != prev_stock:
         delta = int(updated.in_stock) - prev_stock
         log = InventoryAdjustment(
@@ -452,12 +472,15 @@ async def list_inventory_adjustments(
     session: Session,
     *,
     product_id: Optional[int] = None,
+    variant_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100,
 ) -> List[InventoryAdjustment]:
     stmt = select(InventoryAdjustment).order_by(InventoryAdjustment.created_at.desc())
     if product_id is not None:
         stmt = stmt.where(InventoryAdjustment.product_id == product_id)
+    if variant_id is not None:
+        stmt = stmt.where(InventoryAdjustment.variant_id == variant_id)
     return session.exec(stmt.offset(skip).limit(limit)).all()
 
 
@@ -465,23 +488,46 @@ async def create_inventory_adjustment(
     session: Session,
     *,
     product_id: int,
+    variant_id: Optional[int] = None,
     delta: int,
     admin_id: Optional[int],
     reason: Optional[str] = None,
 ) -> InventoryAdjustment:
     product = await get_entity_or_404(session, Product, product_id)
-    prev = int(product.in_stock)
-    nxt = max(prev + int(delta), 0)
-    product.in_stock = nxt
-    session.add(product)
-    log = InventoryAdjustment(
-        product_id=product.id,
-        admin_id=admin_id,
-        delta=int(delta),
-        previous_stock=prev,
-        new_stock=nxt,
-        reason=reason,
-    )
+    if variant_id is not None:
+        variant = session.get(ProductVariant, variant_id)
+        if not variant or variant.product_id != product.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Variant does not belong to this product",
+            )
+        prev = int(variant.in_stock)
+        nxt = max(prev + int(delta), 0)
+        variant.in_stock = nxt
+        session.add(variant)
+        log = InventoryAdjustment(
+            product_id=product.id,
+            variant_id=variant.id,
+            admin_id=admin_id,
+            delta=int(delta),
+            previous_stock=prev,
+            new_stock=nxt,
+            reason=reason,
+        )
+    else:
+        prev = int(product.in_stock)
+        nxt = max(prev + int(delta), 0)
+        product.in_stock = nxt
+        session.add(product)
+        log = InventoryAdjustment(
+            product_id=product.id,
+            variant_id=None,
+            admin_id=admin_id,
+            delta=int(delta),
+            previous_stock=prev,
+            new_stock=nxt,
+            reason=reason,
+        )
     session.add(log)
     session.commit()
     session.refresh(log)

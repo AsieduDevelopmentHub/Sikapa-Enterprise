@@ -165,11 +165,18 @@ def order_lines_table(
                 f'<div style="width:56px;height:56px;border-radius:8px;background:{CREAM};'
                 f'border:1px solid {STROKE};"></div>'
             )
+        detail_html = ""
+        det_raw = li.get("detail")
+        if det_raw and str(det_raw).strip():
+            d = html.escape(str(det_raw).strip())
+            if len(d) > 180:
+                d = d[:177] + "…"
+            detail_html = f'<br/><span style="color:{MUTED};font-size:11px;line-height:1.35;">{d}</span>'
         rows.append(
             f"<tr>"
             f'<td style="padding:12px 8px 12px 0;vertical-align:middle;width:64px;">{img_html}</td>'
             f'<td style="padding:12px 8px;vertical-align:middle;color:{INK};font-size:14px;">'
-            f"<b>{name}</b><br/>"
+            f"<b>{name}</b>{detail_html}<br/>"
             f'<span style="color:{MUTED};font-size:12px;">Qty {qty} × {cur} {unit:,.2f}</span>'
             f"</td>"
             f'<td style="padding:12px 0 12px 8px;vertical-align:middle;text-align:right;'

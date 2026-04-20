@@ -1,7 +1,7 @@
 """
 Admin endpoint schemas
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text, sanitize_slug
@@ -109,6 +109,7 @@ class PaystackTransactionRead(BaseModel):
 class InventoryAdjustmentRead(BaseModel):
     id: int
     product_id: int
+    variant_id: Optional[int] = None
     admin_id: Optional[int] = None
     delta: int
     previous_stock: int
@@ -118,6 +119,32 @@ class InventoryAdjustmentRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class InventoryStockLevelRow(BaseModel):
+    """Single stock row: parent product or a variant SKU."""
+
+    kind: Literal["product", "variant"]
+    product_id: int
+    variant_id: Optional[int] = None
+    label: str
+    name: str
+    parent_product_name: Optional[str] = None
+    sku: Optional[str] = None
+    in_stock: int
+
+
+class StockAlertItem(BaseModel):
+    """Low-stock dashboard row (product or variant)."""
+
+    kind: Literal["product", "variant"]
+    product_id: int
+    variant_id: Optional[int] = None
+    name: str
+    parent_product_name: Optional[str] = None
+    sku: Optional[str] = None
+    in_stock: int
+    unit_price: float
 
 
 class CouponRead(BaseModel):

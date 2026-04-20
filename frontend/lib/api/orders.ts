@@ -30,6 +30,9 @@ export type OrderLineItem = {
   id: number;
   order_id: number;
   product_id: number;
+  variant_id?: number | null;
+  variant_name?: string | null;
+  variant_detail_snapshot?: string | null;
   quantity: number;
   price_at_purchase: number;
   created_at: string;

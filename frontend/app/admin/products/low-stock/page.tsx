@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { adminFetchLowStock, type AdminProduct } from "@/lib/api/admin";
+import { adminFetchLowStockAlerts, type StockAlertItem } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminTableSkeleton } from "@/components/admin/Skeleton";
@@ -11,7 +11,7 @@ import { AdminTableSkeleton } from "@/components/admin/Skeleton";
 export default function AdminLowStockPage() {
   const { accessToken } = useAuth();
   const [threshold, setThreshold] = useState<number>(5);
-  const [rows, setRows] = useState<AdminProduct[]>([]);
+  const [rows, setRows] = useState<StockAlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -21,7 +21,7 @@ export default function AdminLowStockPage() {
     setLoading(true);
     setErr(null);
     try {
-      const data = await adminFetchLowStock(accessToken, { threshold, limit: 100 });
+      const data = await adminFetchLowStockAlerts(accessToken, { threshold, limit: 100 });
       setRows(data);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
@@ -37,9 +37,11 @@ export default function AdminLowStockPage() {
   const visibleRows = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return rows;
-    return rows.filter((p) =>
-      `${p.name} ${p.slug ?? ""} ${p.sku ?? ""}`.toLowerCase().includes(q)
-    );
+    return rows.filter((r) => {
+      const hay = `${r.name} ${r.parent_product_name ?? ""} ${r.sku ?? ""} ${r.kind}`
+        .toLowerCase();
+      return hay.includes(q);
+    });
   }, [rows, query]);
 
   return (
@@ -48,7 +50,8 @@ export default function AdminLowStockPage() {
         <div>
           <h1 className="font-serif text-page-title font-semibold">Low stock</h1>
           <p className="text-small text-sikapa-text-secondary">
-            Products at or below your threshold. Restock soon to avoid missed orders.
+            Base products and variant SKUs at or below your threshold. Restock soon to avoid missed
+            orders.
           </p>
         </div>
         <Link
@@ -86,7 +89,7 @@ export default function AdminLowStockPage() {
         <AdminSearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Search product or SKU…"
+          placeholder="Search name or SKU…"
           hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
         />
       </div>
@@ -95,56 +98,70 @@ export default function AdminLowStockPage() {
 
       {loading ? (
         <div className="mt-6">
-          <AdminTableSkeleton minWidthClass="min-w-[560px]" columns={4} />
+          <AdminTableSkeleton minWidthClass="min-w-[560px]" columns={5} />
         </div>
       ) : visibleRows.length === 0 ? (
         <div className="mt-6 rounded-xl bg-white p-8 text-center text-small text-sikapa-text-muted shadow-sm ring-1 ring-black/[0.06]">
           {query
-            ? "No products match your search."
-            : `All products are above the threshold of ${threshold}.`}
+            ? "No rows match your search."
+            : `All catalog rows are above the threshold of ${threshold}.`}
         </div>
       ) : (
         <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-          <table className="w-full min-w-[560px] text-left text-small">
+          <table className="w-full min-w-[640px] text-left text-small">
             <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
               <tr>
-                <th className="px-4 py-3">Product</th>
+                <th className="px-4 py-3">Item</th>
+                <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Price</th>
                 <th className="px-4 py-3 text-right">Stock</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sikapa-gray-soft">
-              {visibleRows.map((p) => (
-                <tr key={p.id}>
-                  <td className="px-4 py-3">
-                    <div>
-                      <span className="font-semibold text-sikapa-crimson">{p.name}</span>
-                      <p className="text-[11px] text-sikapa-text-muted">{p.slug}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">{formatGhs(p.price)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                        p.in_stock === 0
-                          ? "bg-rose-100 text-rose-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {p.in_stock} left
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/system/products/${p.id}`}
-                      className="text-[11px] font-semibold text-sikapa-gold hover:underline"
-                    >
-                      Edit
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {visibleRows.map((r) => {
+                const key =
+                  r.kind === "variant" && r.variant_id != null
+                    ? `v-${r.product_id}-${r.variant_id}`
+                    : `p-${r.product_id}`;
+                return (
+                  <tr key={key}>
+                    <td className="px-4 py-3">
+                      <div>
+                        <span className="font-semibold text-sikapa-crimson">{r.name}</span>
+                        {r.kind === "variant" && r.parent_product_name ? (
+                          <p className="text-[11px] text-sikapa-text-muted">
+                            Under: {r.parent_product_name}
+                          </p>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 capitalize text-[11px] text-sikapa-text-muted">
+                      {r.kind}
+                    </td>
+                    <td className="px-4 py-3">{formatGhs(r.unit_price)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          r.in_stock === 0
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {r.in_stock} left
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/system/products/${r.product_id}`}
+                        className="text-[11px] font-semibold text-sikapa-gold hover:underline"
+                      >
+                        Edit
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

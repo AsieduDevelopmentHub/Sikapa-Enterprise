@@ -298,6 +298,7 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
                     <input
                       value={d.sku}
                       onChange={(e) => set({ sku: e.target.value })}
+                      placeholder="Auto if empty"
                       className="input-base"
                     />
                   </Field>
@@ -391,6 +392,7 @@ export function ProductVariantsManager({ accessToken, productId }: Props) {
                 <input
                   value={draft.sku}
                   onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
+                  placeholder="Auto from category & names if empty"
                   className="input-base"
                 />
               </Field>

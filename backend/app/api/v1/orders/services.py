@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 
 from app.models import Order, OrderItem, CartItem, Product, ProductVariant, Invoice, User
 from app.api.v1.orders.schemas import OrderCreateSchema
+from app.api.v1.orders.line_items import variant_detail_snapshot_from_model
 from app.core.email_service import EmailService
 from app.core.invoice_service import InvoiceService
 from app.core.order_mail import line_items_for_order_email
@@ -81,11 +82,20 @@ async def create_order_from_cart(
 
         unit_price = float(product.price) + float(variant.price_delta) if variant else float(product.price)
 
+        v_img = (
+            str(variant.image_url).strip()
+            if variant and variant.image_url
+            else None
+        )
+        v_detail = variant_detail_snapshot_from_model(variant) if variant else None
+
         order_item = OrderItem(
             order_id=order.id,
             product_id=cart_item.product_id,
             variant_id=variant.id if variant else None,
             variant_name=variant.name if variant else None,
+            variant_image_url=v_img,
+            variant_detail_snapshot=v_detail,
             quantity=cart_item.quantity,
             price_at_purchase=round(unit_price, 2),
         )
@@ -94,7 +104,8 @@ async def create_order_from_cart(
         if variant:
             variant.in_stock = max(0, variant.in_stock - cart_item.quantity)
             session.add(variant)
-        product.in_stock -= cart_item.quantity
+        else:
+            product.in_stock -= cart_item.quantity
         product.sales_count += cart_item.quantity
         session.add(product)
 
@@ -259,6 +270,13 @@ async def generate_invoice_pdf(
     if product_ids:
         products = session.exec(select(Product).where(Product.id.in_(product_ids))).all()
         products_by_id = {p.id: p for p in products if p.id is not None}
+    variant_ids = list({i.variant_id for i in order_items if i.variant_id})
+    variants_by_id: dict[int, ProductVariant] = {}
+    if variant_ids:
+        vars_ = session.exec(
+            select(ProductVariant).where(ProductVariant.id.in_(variant_ids))
+        ).all()
+        variants_by_id = {v.id: v for v in vars_ if v.id is not None}
 
     currency = os.getenv("PAYSTACK_CURRENCY", "GHS").strip().upper()
 
@@ -268,6 +286,7 @@ async def generate_invoice_pdf(
         user=user,
         order_items=order_items,
         products_by_id=products_by_id,
+        variants_by_id=variants_by_id,
         company_name=company_name,
         currency_code=currency,
     )
