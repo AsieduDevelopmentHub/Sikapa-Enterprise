@@ -14,9 +14,10 @@ from urllib.parse import urlencode
 
 import httpx
 from fastapi import HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.core.security import SECRET_KEY, get_password_hash
+from app.core.pg_rls_auth import fetch_user_by_email_exact, fetch_user_by_google_sub, username_exists
 from app.db import apply_postgres_session_user
 from app.models import User
 
@@ -124,8 +125,7 @@ def _unique_username(session: Session, base: str) -> str:
         suffix = "" if _ == 0 else str(secrets.randbelow(900000) + 100000)
         candidate = (stem + suffix)[:50]
         if _USERNAME_RE.fullmatch(candidate):
-            exists = session.exec(select(User).where(User.username == candidate)).first()
-            if not exists:
+            if not username_exists(session, candidate):
                 return candidate
     raise HTTPException(
         status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -165,13 +165,13 @@ def find_or_create_user_from_google(session: Session, profile: dict) -> User:
             "Your Google email must be verified to use Google sign-in.",
         )
 
-    user = session.exec(select(User).where(User.google_sub == sub)).first()
+    user = fetch_user_by_google_sub(session, sub)
     if user:
         if not user.is_active:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "User account is inactive")
         return user
 
-    by_email = session.exec(select(User).where(User.email == email)).first()
+    by_email = fetch_user_by_email_exact(session, email)
     if by_email:
         if by_email.google_sub and by_email.google_sub != sub:
             raise HTTPException(
