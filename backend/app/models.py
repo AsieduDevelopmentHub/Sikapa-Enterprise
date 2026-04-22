@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import Field, SQLModel
-from sqlalchemy import Column, String, UniqueConstraint
+from sqlalchemy import Column, String, UniqueConstraint, func
 
 
 class ProductBase(SQLModel):
@@ -11,13 +11,14 @@ class ProductBase(SQLModel):
     price: float
     image_url: Optional[str] = None
     category: Optional[str] = Field(default=None, sa_column=Column("category", String, nullable=True))
-    sku: Optional[str] = Field(default=None, index=True)
+    sku: Optional[str] = Field(default=None, max_length=10, index=True)  # Shortened to 10 chars max
     weight: Optional[float] = None
     in_stock: int = 0
     is_active: bool = True
     sales_count: int = Field(default=0, ge=0)
     avg_rating: float = Field(default=0.0, ge=0, le=5)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    deleted_at: Optional[datetime] = Field(default=None, index=True)  # Soft delete support
 
 
 class Product(ProductBase, table=True):
@@ -41,7 +42,7 @@ class UserBase(SQLModel):
     )
     is_active: bool = True
     is_admin: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class User(UserBase, table=True):
@@ -66,7 +67,8 @@ class User(UserBase, table=True):
     admin_role: str = Field(default="customer", max_length=32)
     # Comma-separated permission keys for staff/admin (super_admin bypasses checks).
     admin_permissions: Optional[str] = Field(default="", max_length=4000)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    deleted_at: Optional[datetime] = Field(default=None, index=True)  # Soft delete support
 
 
 class UserCreate(UserBase):
@@ -106,7 +108,7 @@ class TokenBlacklist(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     token: str = Field(index=True, unique=True)
     expires_at: datetime
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class OTPCode(SQLModel, table=True):
@@ -117,7 +119,7 @@ class OTPCode(SQLModel, table=True):
     purpose: str  # "email_verification", "password_reset", "2fa_setup"
     expires_at: datetime
     used: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class TwoFactorSecret(SQLModel, table=True):
@@ -127,7 +129,7 @@ class TwoFactorSecret(SQLModel, table=True):
     secret: str  # Encrypted TOTP secret
     backup_codes: str  # JSON-encoded list of backup codes
     verified: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     verified_at: Optional[datetime] = None
 
 
@@ -138,7 +140,7 @@ class PasswordReset(SQLModel, table=True):
     token: str = Field(index=True, unique=True)
     expires_at: datetime
     used: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ============ E-COMMERCE MODELS ============
@@ -152,7 +154,7 @@ class Category(SQLModel, table=True):
     image_url: Optional[str] = None
     is_active: bool = True
     sort_order: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CartItem(SQLModel, table=True):
@@ -169,8 +171,8 @@ class CartItem(SQLModel, table=True):
         default=None, foreign_key="productvariant.id", index=True
     )
     quantity: int = Field(gt=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class WishlistItem(SQLModel, table=True):
@@ -183,7 +185,7 @@ class WishlistItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
     product_id: int = Field(foreign_key="product.id", index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Order(SQLModel, table=True):
@@ -213,8 +215,8 @@ class Order(SQLModel, table=True):
         default="pending"
     )  # pending | paid | failed | abandoned | refunded | partially_refunded
     confirmation_email_sent_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class OrderItem(SQLModel, table=True):
@@ -232,7 +234,7 @@ class OrderItem(SQLModel, table=True):
     variant_detail_snapshot: Optional[str] = Field(default=None, max_length=4000)
     quantity: int = Field(gt=0)
     price_at_purchase: float = Field(ge=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Review(SQLModel, table=True):
@@ -245,8 +247,8 @@ class Review(SQLModel, table=True):
     content: Optional[str] = None
     verified_purchase: bool = False
     helpful_count: int = Field(default=0, ge=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ============ SCHEMA CLASSES ============
@@ -279,7 +281,7 @@ class EmailSubscription(SQLModel, table=True):
     email: str = Field(index=True, unique=True)
     user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
     is_subscribed: bool = True
-    subscribed_at: datetime = Field(default_factory=datetime.utcnow)
+    subscribed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     unsubscribed_at: Optional[datetime] = None
     verification_token: Optional[str] = Field(default=None, index=True)
     verified: bool = False
@@ -299,7 +301,7 @@ class PaystackInitIdempotency(SQLModel, table=True):
     reference: str = Field(max_length=128)
     authorization_url: str
     access_code: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class PaystackTransaction(SQLModel, table=True):
@@ -324,8 +326,8 @@ class PaystackTransaction(SQLModel, table=True):
     raw_last_event: Optional[str] = Field(default=None)
     paid_at: Optional[datetime] = None
     failed_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Invoice(SQLModel, table=True):
@@ -339,7 +341,7 @@ class Invoice(SQLModel, table=True):
     total: float = Field(ge=0)
     payment_method: Optional[str] = None
     status: str = Field(default="pending")  # pending, paid, overdue, cancelled, refunded
-    issued_at: datetime = Field(default_factory=datetime.utcnow)
+    issued_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     due_at: Optional[datetime] = None
     paid_at: Optional[datetime] = None
     pdf_url: Optional[str] = None
@@ -355,21 +357,51 @@ class ProductImage(SQLModel, table=True):
     alt_text: Optional[str] = None
     is_primary: bool = False
     sort_order: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-# ============ ADMIN AUDIT LOGS ============
+# ============ AUDIT LOGS ============
 
-class AdminAuditLog(SQLModel, table=True):
-    """Admin action audit logs"""
+class AuditLog(SQLModel, table=True):
+    """
+    Comprehensive audit trail for all important actions.
+    Tracks user actions, admin changes, auth events, and system operations.
+    """
     id: Optional[int] = Field(default=None, primary_key=True)
-    admin_id: int = Field(foreign_key="user.id", index=True)
-    action: str  # "create_product", "update_product", "delete_product", etc.
-    entity_type: str  # "product", "user", "order", etc.
-    entity_id: Optional[int] = None
-    changes: Optional[str] = None  # JSON diff of changes
-    ip_address: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Who performed the action
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    
+    # What action was performed
+    action: str = Field(index=True, max_length=64)  # "create", "update", "delete", "login", etc.
+    resource_type: str = Field(index=True, max_length=64)  # "product", "user", "order", "auth", etc.
+    resource_id: Optional[int] = Field(default=None, index=True)
+    
+    # Details of what changed
+    changes: Optional[str] = Field(default=None)  # JSON with {field: {old: value, new: value}}
+    
+    # Status and error tracking
+    status: str = Field(default="success", max_length=16)  # "success" or "failed"
+    error_message: Optional[str] = Field(default=None, max_length=500)
+    
+    # Metadata
+    ip_address: Optional[str] = Field(default=None, max_length=45)  # IPv4 or IPv6
+    user_agent: Optional[str] = Field(default=None, max_length=500)
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    
+    # Retention: consider archiving old records after 90 days
+    __table_args__ = (
+        # Index for efficient queries by date
+        None,
+    )
+
+
+# Keep backward compatibility
+class AdminAuditLog(AuditLog):
+    """Deprecated: Use AuditLog instead"""
+    pass
 
 
 class InventoryAdjustment(SQLModel, table=True):
@@ -384,7 +416,7 @@ class InventoryAdjustment(SQLModel, table=True):
     previous_stock: int = Field(ge=0)
     new_stock: int = Field(ge=0)
     reason: Optional[str] = Field(default=None, max_length=255)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Coupon(SQLModel, table=True):
@@ -400,8 +432,8 @@ class Coupon(SQLModel, table=True):
     expires_at: Optional[datetime] = None
     is_active: bool = True
     created_by: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CouponUsage(SQLModel, table=True):
@@ -411,7 +443,7 @@ class CouponUsage(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     order_id: Optional[int] = Field(default=None, foreign_key="order.id", index=True)
     discount_amount: float = Field(default=0, ge=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class BusinessSetting(SQLModel, table=True):
@@ -420,7 +452,7 @@ class BusinessSetting(SQLModel, table=True):
     key: str = Field(index=True, unique=True, max_length=120)
     value: str = Field(default="", max_length=8000)
     updated_by: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ============ RETURNS ============
@@ -441,8 +473,8 @@ class OrderReturn(SQLModel, table=True):
     admin_notes: Optional[str] = Field(default=None, max_length=4000)
     resolved_by: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
     resolved_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class OrderReturnItem(SQLModel, table=True):
@@ -454,7 +486,7 @@ class OrderReturnItem(SQLModel, table=True):
     return_id: int = Field(foreign_key="orderreturn.id", index=True)
     order_item_id: int = Field(foreign_key="orderitem.id", index=True)
     quantity: int = Field(gt=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ============ SEARCH ANALYTICS ============
@@ -470,7 +502,7 @@ class SearchQueryLog(SQLModel, table=True):
     result_count: int = Field(default=0, ge=0)
     user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
     ip_hash: Optional[str] = Field(default=None, max_length=64)
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
 
 # ============ PRODUCT VARIANTS ============
@@ -486,7 +518,7 @@ class ProductVariant(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     product_id: int = Field(foreign_key="product.id", index=True)
     name: str = Field(max_length=160)  # e.g. "Red / Small"
-    sku: Optional[str] = Field(default=None, max_length=120, index=True)
+    sku: Optional[str] = Field(default=None, max_length=10, index=True)  # Shortened to 10 chars max
     attributes: Optional[str] = Field(default=None, max_length=2000)
     # JSON-encoded dict of attributes e.g. {"color":"red","size":"S"}
     price_delta: float = Field(default=0.0)  # signed offset from base product price
@@ -498,8 +530,8 @@ class ProductVariant(SQLModel, table=True):
     # package shots, and short descriptions without duplicating the whole record.
     image_url: Optional[str] = Field(default=None, max_length=1024)
     description: Optional[str] = Field(default=None, max_length=4000)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ============ REVIEW MEDIA ============
@@ -514,4 +546,4 @@ class ReviewMedia(SQLModel, table=True):
     url: str = Field(max_length=1024)
     kind: str = Field(default="image", max_length=16)  # image | video
     sort_order: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

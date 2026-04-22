@@ -135,41 +135,61 @@ export default function AdminInventoryPage() {
             onSubmit={(e) => void adjust(e)}
             className="mt-6 grid gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06] sm:grid-cols-4"
           >
-            <select
-              value={stockKey}
-              onChange={(e) => setStockKey(e.target.value)}
-              required
-              className="rounded-lg border border-black/[0.08] px-3 py-2 text-small sm:col-span-2"
-            >
-              <option value="">Select product or variant</option>
-              {rows.map((r) => (
-                <option key={stockOptionValue(r)} value={stockOptionValue(r)}>
-                  {r.label}
-                  {r.kind === "variant" ? " · variant" : " · base product"}
-                </option>
-              ))}
-            </select>
-            <input
-              required
-              type="number"
-              placeholder="Delta (+/-)"
-              value={delta}
-              onChange={(e) => setDelta(e.target.value)}
-              className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
-            />
-            <input
-              placeholder="Reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
-            />
-            <button
-              type="submit"
-              disabled={adjusting}
-              className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60 sm:col-span-4 sm:justify-self-start"
-            >
-              {adjusting ? "Saving…" : "Save adjustment"}
-            </button>
+            <div className="sm:col-span-2">
+              <label htmlFor="stock-select" className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted mb-1">
+                Product or Variant
+              </label>
+              <select
+                id="stock-select"
+                value={stockKey}
+                onChange={(e) => setStockKey(e.target.value)}
+                required
+                className="w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small"
+              >
+                <option value="">Select product or variant</option>
+                {rows.map((r) => (
+                  <option key={stockOptionValue(r)} value={stockOptionValue(r)}>
+                    {r.label}
+                    {r.kind === "variant" ? " · variant" : " · base product"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="delta-input" className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted mb-1">
+                Delta (+/-)
+              </label>
+              <input
+                id="delta-input"
+                required
+                type="number"
+                placeholder="e.g. +5 or -2"
+                value={delta}
+                onChange={(e) => setDelta(e.target.value)}
+                className="w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small"
+              />
+            </div>
+            <div>
+              <label htmlFor="reason-input" className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted mb-1">
+                Reason
+              </label>
+              <input
+                id="reason-input"
+                placeholder="Optional reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small"
+              />
+            </div>
+            <div className="sm:col-span-4 flex justify-end">
+              <button
+                type="submit"
+                disabled={adjusting}
+                className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60"
+              >
+                {adjusting ? "Saving…" : "Save adjustment"}
+              </button>
+            </div>
             {err ? (
               <p
                 className="sm:col-span-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800"

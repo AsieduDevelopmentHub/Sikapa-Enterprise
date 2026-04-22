@@ -61,7 +61,9 @@ export function AdminDashboardContent() {
 
       if (dRes.status === "fulfilled") setData(dRes.value);
       if (revRes.status === "fulfilled") setRevenue(revRes.value);
-      if (ordersRes.status === "fulfilled") setRecent(ordersRes.value);
+      if (ordersRes.status === "fulfilled") {
+        setRecent(Array.isArray(ordersRes.value) ? ordersRes.value : []);
+      }
       if (alertsRes.status === "fulfilled") {
         setLowStock(alertsRes.value.slice(0, 8));
       }

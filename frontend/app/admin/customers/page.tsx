@@ -66,8 +66,10 @@ export default function AdminCustomersPage() {
           <AdminTableSkeleton minWidthClass="min-w-[560px]" columns={4} />
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-          <table className="w-full min-w-[560px] text-left text-small">
+        <>
+          {/* Desktop Table */}
+          <div className="mt-6 hidden lg:block overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+            <table className="w-full text-left text-small">
             <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
               <tr>
                 <th className="px-4 py-3">User</th>
@@ -139,12 +141,85 @@ export default function AdminCustomersPage() {
               ))}
             </tbody>
           </table>
-          {visibleRows.length === 0 && (
-            <p className="px-4 py-8 text-center text-small text-sikapa-text-muted">
-              {query ? "No customers match your search." : "No customers."}
-            </p>
-          )}
-        </div>
+            {visibleRows.length === 0 && (
+              <p className="px-4 py-8 text-center text-small text-sikapa-text-muted">
+                {query ? "No customers match your search." : "No customers."}
+              </p>
+            )}
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="mt-6 lg:hidden space-y-3">
+            {visibleRows.length > 0 ? (
+              visibleRows.map((u) => (
+                <div key={u.id} className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/[0.06]">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold text-sikapa-text-primary">{u.name}</p>
+                      <p className="text-[12px] text-sikapa-text-muted">@{u.username}</p>
+                      <p className="text-[12px] text-sikapa-text-muted mt-1">{u.email ?? "—"}</p>
+                      <p className="text-[11px] text-sikapa-text-muted mt-1">
+                        Joined: {new Date(u.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    {u.id === me?.id ? (
+                      <span className="text-[12px] text-sikapa-text-muted font-semibold">You (Current)</span>
+                    ) : u.is_active ? (
+                      <button
+                        type="button"
+                        className="text-[12px] font-semibold text-red-700 hover:underline"
+                        onClick={() => {
+                          void (async () => {
+                            if (!accessToken) return;
+                            const ok = await confirmDialog({
+                              title: "Deactivate account",
+                              message: `Deactivate ${u.username}? They will not be able to sign in.`,
+                              confirmLabel: "Deactivate",
+                              variant: "danger",
+                            });
+                            if (!ok) return;
+                            try {
+                              await adminDeactivateUser(accessToken, u.id);
+                              await load();
+                            } catch (e) {
+                              await alertDialog(e instanceof Error ? e.message : "Failed", { variant: "error" });
+                            }
+                          })();
+                        }}
+                      >
+                        Deactivate
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-[12px] font-semibold text-emerald-700 hover:underline"
+                        onClick={() => {
+                          if (!accessToken) return;
+                          void (async () => {
+                            try {
+                              await adminActivateUser(accessToken, u.id);
+                              await load();
+                            } catch (e) {
+                              await alertDialog(e instanceof Error ? e.message : "Failed", { variant: "error" });
+                            }
+                          })();
+                        }}
+                      >
+                        Activate
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-small text-sikapa-text-muted py-8">
+                {query ? "No customers match your search." : "No customers."}
+              </p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

@@ -25,7 +25,7 @@ export const metadata: Metadata = buildRootMetadata();
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const showCookieConsent = await cookieBannerNeeded();
   return (
-    <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${cormorant.variable} ${dmSans.variable}`}>
       <body>
         <Providers showCookieConsent={showCookieConsent}>{children}</Providers>
       </body>
