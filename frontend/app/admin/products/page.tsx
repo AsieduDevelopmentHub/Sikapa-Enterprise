@@ -10,6 +10,7 @@ import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminProductTable } from "@/components/admin/AdminProductTable";
+import { AdminTableSkeleton } from "@/components/admin/Skeleton";
 
 export default function AdminProductsPage() {
   const { accessToken } = useAuth();
@@ -50,6 +51,20 @@ export default function AdminProductsPage() {
       }
     },
     [accessToken, alertDialog, load]
+  );
+
+  const handleConfirm = useCallback(
+    async (title: string, message: string, variant?: "default" | "danger") => {
+      return await confirmDialog({ title, message, variant });
+    },
+    [confirmDialog]
+  );
+
+  const handleAlert = useCallback(
+    async (message: string, options?: { variant?: "default" | "error" }) => {
+      return await alertDialog(message, options);
+    },
+    [alertDialog]
   );
 
   const visibleRows = useMemo(() => {
@@ -109,10 +124,10 @@ export default function AdminProductsPage() {
           isLoading={false}
           query={query}
           onDelete={handleDelete}
-          onConfirm={confirmDialog}
-          onAlert={alertDialog}
-          accessToken={accessToken}
-          origin={origin}
+          onConfirm={handleConfirm}
+          onAlert={handleAlert}
+          accessToken={accessToken ?? undefined}
+          origin={getBackendOrigin()}
         />
       )}
     </div>
