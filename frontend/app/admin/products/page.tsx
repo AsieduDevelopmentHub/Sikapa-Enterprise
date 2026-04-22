@@ -9,7 +9,7 @@ import { adminDeleteProduct, adminFetchProducts, type AdminProduct } from "@/lib
 import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
-import { AdminTableSkeleton } from "@/components/admin/Skeleton";
+import { AdminProductTable } from "@/components/admin/AdminProductTable";
 
 export default function AdminProductsPage() {
   const { accessToken } = useAuth();
@@ -38,7 +38,19 @@ export default function AdminProductsPage() {
     void load();
   }, [load]);
 
-  const origin = typeof window !== "undefined" ? getBackendOrigin() : "";
+  const handleDelete = useCallback(
+    async (productId: number) => {
+      try {
+        await adminDeleteProduct(accessToken!, productId);
+        await load();
+      } catch (e) {
+        await alertDialog(e instanceof Error ? e.message : "Delete failed", {
+          variant: "error",
+        });
+      }
+    },
+    [accessToken, alertDialog, load]
+  );
 
   const visibleRows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -92,95 +104,16 @@ export default function AdminProductsPage() {
           <AdminTableSkeleton minWidthClass="min-w-[640px]" columns={5} />
         </div>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
-          <table className="w-full min-w-[640px] text-left text-small">
-            <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
-              <tr>
-                <th className="px-4 py-3">Product</th>
-                <th className="px-4 py-3">Price</th>
-                <th className="px-4 py-3">Stock</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sikapa-gray-soft">
-              {visibleRows.map((p) => {
-                const img = p.image_url
-                  ? p.image_url.startsWith("http")
-                    ? p.image_url
-                    : `${origin}${p.image_url}`
-                  : null;
-                return (
-                  <tr
-                    key={p.id}
-                    className="cursor-pointer hover:bg-sikapa-cream/80"
-                    onClick={() => router.push(`/system/products/${p.id}`)}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-sikapa-gray-soft">
-                          {img ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={img} alt="" className="h-full w-full object-cover" />
-                          ) : null}
-                        </div>
-                        <div>
-                          <span className="font-semibold text-sikapa-crimson">{p.name}</span>
-                          <p className="text-[11px] text-sikapa-text-muted">{p.slug}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">{formatGhs(p.price)}</td>
-                    <td className="px-4 py-3">{p.in_stock}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          p.is_active ? "bg-emerald-50 text-emerald-800" : "bg-neutral-100 text-neutral-600"
-                        }`}
-                      >
-                        {p.is_active ? "Live" : "Hidden"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        className="text-[11px] font-semibold text-red-700 hover:underline"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void (async () => {
-                            if (!accessToken) return;
-                            const ok = await confirmDialog({
-                              title: "Delete product",
-                              message: `Delete “${p.name}”? This cannot be undone.`,
-                              confirmLabel: "Delete",
-                              variant: "danger",
-                            });
-                            if (!ok) return;
-                            try {
-                              await adminDeleteProduct(accessToken, p.id);
-                              await load();
-                            } catch (e) {
-                              await alertDialog(e instanceof Error ? e.message : "Delete failed", {
-                                variant: "error",
-                              });
-                            }
-                          })();
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {visibleRows.length === 0 && (
-            <p className="px-4 py-8 text-center text-small text-sikapa-text-muted">
-              {query ? "No products match your search." : "No products yet."}
-            </p>
-          )}
-        </div>
+        <AdminProductTable
+          products={visibleRows}
+          isLoading={false}
+          query={query}
+          onDelete={handleDelete}
+          onConfirm={confirmDialog}
+          onAlert={alertDialog}
+          accessToken={accessToken}
+          origin={origin}
+        />
       )}
     </div>
   );

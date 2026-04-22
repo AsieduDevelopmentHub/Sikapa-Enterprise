@@ -167,11 +167,6 @@ if not _disable_openapi:
     app.openapi = configure_openapi
 
 
-@app.get("/test")
-def test_endpoint():
-    return {"message": "Test endpoint works"}
-
-
 @app.get("/")
 def root() -> dict:
     protocol = "https" if _https_enabled else "http"
