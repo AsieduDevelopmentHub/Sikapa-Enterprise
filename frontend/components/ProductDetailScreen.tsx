@@ -21,7 +21,7 @@ import {
   type ProductVariantPublic,
 } from "@/lib/api/product-variants";
 import type { MockProduct } from "@/lib/mock-data";
-import { variantValueSummary } from "@/lib/variant-display";
+import { variantValueSummary, variantDisplayCompact } from "@/lib/variant-display";
 
 type Props = { product: MockProduct };
 
@@ -292,7 +292,7 @@ export function ProductDetailScreen({ product: p }: Props) {
       if (selectedVariant) {
         addProduct(p.id, qty, {
           variantId: selectedVariant.id,
-          variantLabel: selectedVariant.name,
+          variantLabel: variantDisplayCompact(selectedVariant),
           variantImage: selectedVariant.image_url ?? null,
           priceDelta: selectedVariant.price_delta ?? 0,
         });
