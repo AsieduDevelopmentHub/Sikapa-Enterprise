@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from sqlmodel import Session
 
 from app.api.v1.orders.schemas import OrderItemLineSchema
@@ -9,13 +10,36 @@ from app.models import OrderItem, Product, ProductVariant
 
 
 def variant_detail_snapshot_from_model(variant: ProductVariant) -> str | None:
-    """Text snapshot for order rows (description + raw attributes)."""
-    parts: list[str] = []
-    if variant.description and variant.description.strip():
-        parts.append(variant.description.strip())
-    if variant.attributes and variant.attributes.strip():
-        parts.append(variant.attributes.strip())
-    return "\n\n".join(parts) if parts else None
+    """Text snapshot for order rows (formatted variant details)."""
+    if not variant.attributes:
+        return variant.description.strip() if variant.description and variant.description.strip() else None
+    
+    try:
+        # Parse attributes as JSON
+        attrs = variant.attributes
+        if isinstance(attrs, str):
+            attrs = json.loads(attrs)
+        
+        if not isinstance(attrs, dict):
+            return variant.description.strip() if variant.description and variant.description.strip() else None
+        
+        # Format attributes professionally
+        entries = []
+        for key, value in attrs.items():
+            if value is not None and str(value).strip():
+                pretty_key = key.replace('_', ' ').replace('-', ' ').title()
+                entries.append(f"{pretty_key}: {str(value).strip()}")
+        
+        variant_text = "Variant: " + ", ".join(entries)
+        
+        # Add description if present
+        if variant.description and variant.description.strip():
+            variant_text += f"\n\n{variant.description.strip()}"
+        
+        return variant_text
+    except (json.JSONDecodeError, TypeError):
+        # Fallback to description only
+        return variant.description.strip() if variant.description and variant.description.strip() else None
 
 
 def build_order_item_line_schema(
