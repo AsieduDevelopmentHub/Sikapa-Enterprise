@@ -1,11 +1,19 @@
 """
-Deterministic SKU generation from category + name (and variant name for variants).
+SKU generation with abbreviation patterns.
 
 Format:
-  Product:  {CAT}-{NAME}[-N]   (suffix only if needed for uniqueness)
-  Variant:  {PARENT_SKU}-{VNAME}[-N]
+  Product:  {PREFIX}-{SEQ:03d}   (e.g., NIV-001, BoL-001, PER-001)
+  Variant:  {PARENT_SKU}-{VAR}
 
-`product.category` is usually a category id string; we resolve `Category.slug` when numeric.
+Examples:
+  - Nivea Body Lotion → NIV-001
+  - Body Lotion category → BoL-001
+  - Perfumes category → PER-001
+
+Prefix is derived from:
+  1. Brand name (first 3 letters, e.g., Nivea → NIV)
+  2. Or category abbreviation (e.g., Body Lotion → BoL)
+  3. Or "GEN" if neither available
 """
 from __future__ import annotations
 
@@ -18,37 +26,146 @@ from app.models import Category, Product, ProductVariant
 
 _MAX_SKU = 120
 
+# Common category abbreviations
+CATEGORY_ABBREVIATIONS = {
+    "perfumes": "PER",
+    "body lotion": "BoL",
+    "body spray": "BoS",
+    "cologne": "COL",
+    " deodorant": "DEO",
+    "skincare": "SKC",
+    "hair care": "HCR",
+    "hair spray": "HSP",
+    "makeup": "MUP",
+    "lipstick": "LIP",
+    "foundation": "FND",
+    "mascara": "MSR",
+    "eye shadow": "ESH",
+    "nail polish": "NPL",
+    "face wash": "FWS",
+    "face cream": "FCR",
+    "moisturizer": "MST",
+    "serum": "SER",
+    "sunscreen": "SUN",
+    "body cream": "BCR",
+    "body oil": "BOL",
+    "hand cream": "HCR",
+    "foot cream": "FCR",
+    "shampoo": "SHP",
+    "conditioner": "CON",
+    "hair gel": "HGL",
+    "hair wax": "HWX",
+    "body mist": "BMI",
+    "gift set": "GST",
+    "bundle": "BND",
+}
 
-def _alnum_upper(s: str, max_len: int) -> str:
-    raw = re.sub(r"[^A-Za-z0-9]+", "", (s or "").strip())
-    return raw.upper()[:max_len] if raw else ""
+# Brand name abbreviations (common brands in the store)
+BRAND_ABBREVIATIONS = {
+    "nivea": "NIV",
+    "dove": "DOV",
+    "olay": "OLA",
+    "simple": "SIM",
+    "rexona": "REX",
+    "sure": "SUR",
+    "vaseline": "VAS",
+    "cerave": "CER",
+    "la roche-posay": "LRP",
+    "the ordinary": "ORD",
+    "the body shop": "TBS",
+    "bath and body works": "BBW",
+    "victoria's secret": "VIC",
+    "lattafa": "LAT",
+    "armaan": "ARM",
+    "khamrah": "KHA",
+    "yara": "YAR",
+    "ameer al oudh": "AAO",
+    "invicto": "INV",
+    "ophylia": "OPH",
+    "aventus": "AVE",
+    "berries": "BER",
+    "sugar": "SUG",
+    "fragrance world": "FRW",
+    "hayaati": "HAY",
+    "angham": "ANG",
+    "vintage radio": "VRA",
+    "mr england": "MRE",
+    "face facts": "FAC",
+    "skin by zaron": "SBZ",
+    "faster white": "FAS",
+    "glow bliss": "GLO",
+    "smooth diamond": "SMD",
+    "golden glow": "GOL",
+    "diamond glow": "DIA",
+}
 
 
-def category_prefix_for_product(session: Session, category_value: Optional[str]) -> str:
-    """Short uppercase token (3–6 chars) derived from category."""
-    if not category_value or not str(category_value).strip():
+def _extract_brand(name: str) -> Optional[str]:
+    """Extract brand abbreviation from product name."""
+    name_lower = name.lower()
+    
+    # Check for known brands (longer matches first)
+    for brand, abbr in BRAND_ABBREVIATIONS.items():
+        if brand in name_lower:
+            return abbr
+    
+    return None
+
+
+def _abbreviate_category(s: str) -> str:
+    """Convert category to abbreviation."""
+    if not s:
         return "GEN"
-    s = str(category_value).strip()
-    if s.isdigit():
-        cat = session.get(Category, int(s))
-        if cat:
-            token = _alnum_upper(cat.slug, 12) or _alnum_upper(cat.name, 12)
-            return (token[:6] if token else "CAT") or "CAT"
-        return "CAT"
-    token = _alnum_upper(s, 12)
-    return (token[:6] if token else "GEN") or "GEN"
+    
+    s_lower = s.lower().strip()
+    if s_lower in CATEGORY_ABBREVIATIONS:
+        return CATEGORY_ABBREVIATIONS[s_lower]
+    
+    # Default: first 3 letters of each significant word
+    words = re.split(r"[\s\-]+", s)
+    abbrev = "".join(w[:3].upper() for w in words if w and len(w) > 1)
+    return abbrev[:6] if abbrev else "GEN"
 
 
-def name_token(name: str, max_len: int = 28) -> str:
-    """Compress product/variant name into an uppercase alphanumeric token."""
-    token = _alnum_upper(name, max_len)
-    return token or "ITEM"
+def _get_next_seq(session: Session, prefix: str) -> int:
+    """Get next sequence number for a given prefix."""
+    # Find all products with this prefix
+    pattern = f"{prefix}-%"
+    products = session.exec(
+        select(Product).where(Product.sku.like(pattern))
+    ).all()
+    
+    max_seq = 0
+    for p in products:
+        if p.sku:
+            # Extract sequence number
+            parts = p.sku.split("-")
+            if len(parts) >= 2:
+                try:
+                    seq = int(parts[-1])
+                    if seq > max_seq:
+                        max_seq = seq
+                except ValueError:
+                    pass
+    
+    return max_seq + 1
 
 
-def _base_product_sku(session: Session, *, name: str, category: Optional[str]) -> str:
-    cat = category_prefix_for_product(session, category)
-    nt = name_token(name, max_len=32)
-    return f"{cat}-{nt}"
+def _sku_prefix(session: Session, name: str, category: Optional[str]) -> str:
+    """Determine SKU prefix: brand if found, otherwise category abbreviation."""
+    # First try to extract brand from name
+    brand_abbrev = _extract_brand(name)
+    if brand_abbrev:
+        return brand_abbrev
+    
+    # Then try category abbreviation
+    if category:
+        cat_abbrev = _abbreviate_category(str(category))
+        if cat_abbrev != "GEN":
+            return cat_abbrev
+    
+    # Default to GEN
+    return "GEN"
 
 
 def _sku_exists(
@@ -103,7 +220,10 @@ def generate_product_sku(
     category: Optional[str],
     exclude_product_id: Optional[int] = None,
 ) -> str:
-    base = _base_product_sku(session, name=name, category=category)
+    """Generate SKU: {PREFIX}-{SEQ:03d} format."""
+    prefix = _sku_prefix(session, name, category)
+    seq = _get_next_seq(session, prefix)
+    base = f"{prefix}-{seq:03d}"
     return allocate_unique_sku(
         session, base, exclude_product_id=exclude_product_id
     )
@@ -116,15 +236,20 @@ def generate_variant_sku(
     variant_name: str,
     exclude_variant_id: Optional[int] = None,
 ) -> str:
-    """Prefer `{parent_product_sku}-{variant}`; if parent has no SKU yet, use category+product+variant."""
+    """Generate variant SKU: {PARENT_SKU}-{VAR}."""
     parent_sku = (product.sku or "").strip()
-    vt = name_token(variant_name, max_len=24)
-    if parent_sku:
-        base = f"{parent_sku}-{vt}"
-    else:
-        cat_p = category_prefix_for_product(session, product.category)
-        pn = name_token(product.name, max_len=22)
-        base = f"{cat_p}-{pn}-{vt}"
+    if not parent_sku:
+        raise ValueError("Product must have a SKU before generating variant SKU")
+    
+    # Create variant suffix from variant name
+    # Take first 3 letters of each significant word
+    words = re.split(r"[\s\-]+", variant_name)
+    var_suffix = "".join(w[:3].upper() for w in words if w and len(w) > 1)[:8]
+    
+    if not var_suffix:
+        var_suffix = "VAR"
+    
+    base = f"{parent_sku}-{var_suffix}"
     return allocate_unique_sku(
         session,
         base,
