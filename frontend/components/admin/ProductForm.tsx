@@ -48,7 +48,6 @@ export function ProductForm({
   );
   const [inStock, setInStock] = useState(initial != null ? String(initial.in_stock) : "0");
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
-  const [file, setFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -69,7 +68,6 @@ export function ProductForm({
       if (mode === "edit") {
         fd.append("is_active", isActive ? "true" : "false");
       }
-      if (file) fd.append("image", file);
 
       if (mode === "create") {
         await adminCreateProduct(accessToken, fd);
@@ -168,15 +166,6 @@ export function ProductForm({
           Visible in store
         </label>
       )}
-      <label className="block text-small font-medium text-sikapa-text-secondary">
-        {mode === "create" ? "Image (optional)" : "Replace image (optional)"}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="mt-1 w-full text-small"
-        />
-      </label>
       <div className="flex flex-wrap gap-3 pt-2">
         <button
           type="submit"
