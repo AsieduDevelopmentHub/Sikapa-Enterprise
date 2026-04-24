@@ -2,10 +2,47 @@
 
 import { getWhatsAppChatUrl } from "@/lib/contact";
 
-export function WhatsAppFloat() {
+interface WhatsAppFloatProps {
+  productName?: string;
+  productPrice?: string;
+  productUrl?: string;
+}
+
+function formatProductMessage({
+  productName,
+  productPrice,
+  productUrl,
+}: WhatsAppFloatProps): string {
+  const parts: string[] = [];
+
+  const cleanUrl = productUrl?.trim();
+  const cleanName = productName?.trim();
+  const cleanPrice = productPrice?.trim();
+
+  if (cleanName) parts.push(`Product: ${cleanName}`);
+  if (cleanPrice) parts.push(`Price: ${cleanPrice}`);
+  if (cleanUrl) parts.push(`Link: ${cleanUrl}`);
+
+
+  return `Hello, I'm interested in this product:
+
+${parts.join("\n")}
+
+Please confirm availability.
+Thank you.`;
+}
+
+export function WhatsAppFloat(props: WhatsAppFloatProps) {
+  if (!props.productName && !props.productPrice && !props.productUrl) {
+    return null;
+  }  console.log("WhatsApp Props:", props);
+
+  const message = formatProductMessage(props);
+  const chatUrl = getWhatsAppChatUrl(message);
+
   return (
     <a
-      href={getWhatsAppChatUrl()}
+      href={chatUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="sikapa-tap fixed bottom-[calc(4.75rem+var(--safe-bottom))] right-3 z-[70] flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white shadow-md ring-2 ring-white/90"
