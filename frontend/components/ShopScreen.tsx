@@ -11,6 +11,8 @@ import { FaBag } from "@/components/FaIcons";
 import { ProductWishlistButton } from "@/components/product/ProductWishlistButton";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
 import { StarRating } from "@/components/StarRating";
+import { cleanImageUrl } from "@/lib/clean-image-url";
+
 import {
   ProductGridSkeleton,
   ProductListSkeleton,
@@ -281,7 +283,7 @@ export function ShopScreen() {
               >
                 <div className="relative w-[40%] min-h-[168px] shrink-0 sm:w-[38%]">
                   <Image
-                    src={p.image}
+                    src={cleanImageUrl(p.image)}
                     alt=""
                     fill
                     className="object-cover"

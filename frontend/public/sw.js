@@ -1,19 +1,26 @@
-const STATIC_CACHE = "sikapa-static-v2";
-const API_CACHE = "sikapa-api-v2";
+const STATIC_CACHE = "sikapa-static-v3";
+const API_CACHE = "sikapa-api-v3";
 
 const PRECACHE_ASSETS = [
   "/",
   "/manifest.json",
   "/offline.html",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
-    })
+    (async () => {
+      const cache = await caches.open(STATIC_CACHE);
+
+      for (const asset of PRECACHE_ASSETS) {
+        try {
+          await cache.add(asset);
+          console.log("Cached:", asset);
+        } catch (error) {
+          console.warn("Failed to cache:", asset, error);
+        }
+      }
+    })()
   );
 
   self.skipWaiting();
@@ -42,13 +49,10 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Only cache GET requests
   if (request.method !== "GET") return;
-
-  // Ignore browser extensions/devtools/etc
   if (!url.protocol.startsWith("http")) return;
 
-  // Handle API requests separately
+  // API requests
   if (url.pathname.startsWith("/api")) {
     event.respondWith(
       fetch(request)
@@ -63,18 +67,16 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => caches.match(request))
     );
-
     return;
   }
 
-  // Static assets + pages
+  // Static/page requests
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
 
       return fetch(request)
         .then((response) => {
-          // Only cache successful responses
           if (
             !response ||
             response.status !== 200 ||
