@@ -123,3 +123,52 @@ export function pageMetadata(
     alternates: path ? { canonical: url } : undefined,
   };
 }
+
+export function productMetadata(options: {
+  title: string;
+  description?: string;
+  path: string;
+  image?: string;
+}): Metadata {
+  const base = metadataBaseUrl().href.replace(/\/$/, "");
+  const url = `${base}${options.path}`;
+
+  const description =
+    options.description ?? SITE_DEFAULT_DESCRIPTION;
+
+  const image =
+    options.image?.replace(/\?$/, "") || SITE_OG_IMAGE;
+
+  return {
+    title: options.title,
+    description,
+
+    openGraph: {
+      title: options.title,
+      description,
+      url,
+      siteName: SITE_NAME,
+      locale: "en_US",
+      type: "website",
+      images: [
+        {
+          url: image,
+          width: 1200,
+          height: 630,
+          alt: options.title,
+        },
+      ],
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title: options.title,
+      description,
+      images: [image],
+    },
+
+    alternates: {
+      canonical: url,
+    },
+  };
+}

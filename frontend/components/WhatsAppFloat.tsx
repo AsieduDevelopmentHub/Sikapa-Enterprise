@@ -6,23 +6,28 @@ interface WhatsAppFloatProps {
   productName?: string;
   productPrice?: string;
   productUrl?: string;
+  productDescription?: string;
+  productImage?: string;
 }
 
 function formatProductMessage({
   productName,
   productPrice,
   productUrl,
+  productDescription,
 }: WhatsAppFloatProps): string {
   const parts: string[] = [];
 
   const cleanUrl = productUrl?.trim();
   const cleanName = productName?.trim();
   const cleanPrice = productPrice?.trim();
+  const cleanDescription = productDescription?.trim();
 
   if (cleanName) parts.push(`Product: ${cleanName}`);
   if (cleanPrice) parts.push(`Price: ${cleanPrice}`);
-  if (cleanUrl) parts.push(`Link: ${cleanUrl}`);
 
+  if (cleanUrl) parts.push(`Link: ${cleanUrl}`);
+  if (cleanDescription) parts.push(`Description: ${cleanDescription}`);
 
   return `Hello, I'm interested in this product:
 
