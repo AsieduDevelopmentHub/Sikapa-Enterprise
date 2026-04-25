@@ -65,6 +65,7 @@ export function HomeBrowseAll() {
                       fill
                       className="object-cover"
                       sizes="(max-width:768px) 132px, (max-width:1024px) 25vw, 180px"
+                      unoptimized
                     />
                   </div>
                   <div className="flex min-h-[4.25rem] flex-1 flex-col justify-center px-2 py-2.5 text-center">
