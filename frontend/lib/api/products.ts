@@ -75,7 +75,7 @@ function absoluteUrlLooksInvalid(trimmed: string): boolean {
   return false;
 }
 
-function resolveImageUrl(path: string | null | undefined): string {
+export function resolveImageUrl(path: string | null | undefined): string {
   if (!path || !path.trim()) return PLACEHOLDER_IMG;
   const trimmed = path.trim();
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
