@@ -41,6 +41,7 @@ export function HomeHero() {
             className="object-cover object-[center_12%]"
             sizes="(max-width:430px) 78vw, 320px"
             priority
+            unoptimized
           />
           <div
             className="absolute inset-0 bg-gradient-to-r from-[#5c2520]/55 via-transparent to-transparent mix-blend-soft-light"
