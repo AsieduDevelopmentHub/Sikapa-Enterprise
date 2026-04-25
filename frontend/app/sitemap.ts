@@ -22,7 +22,7 @@ const STATIC_ROUTES: Array<{
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = publicSiteBaseUrl() || "https://sikapa.local";
+  const base = publicSiteBaseUrl();
   const now = new Date();
   return STATIC_ROUTES.map((r) => ({
     url: `${base}${r.path}`,

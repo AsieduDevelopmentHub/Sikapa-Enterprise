@@ -44,7 +44,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.supabase.co",
+        hostname: "pqfowptaguuxhujvclvr.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
       /* Local API static files and any other same-origin paths (dev) */

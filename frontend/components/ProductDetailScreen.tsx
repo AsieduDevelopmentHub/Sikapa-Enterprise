@@ -331,7 +331,7 @@ export function ProductDetailScreen({ product: p }: Props) {
                 className="object-contain"
                 sizes="(max-width:430px) 100vw, 400px"
                 priority
-                unoptimized={activeImage.startsWith("http") && !activeImage.includes("images.unsplash.com")}
+                unoptimized={activeImage.startsWith("https") && !activeImage.includes("images.unsplash.com")}
               />
             </div>
           </div>

@@ -286,6 +286,7 @@ export function ShopScreen() {
                     fill
                     className="object-cover"
                     sizes="(max-width:430px) 40vw, 180px"
+                    unoptimized
                   />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 px-3 py-3 sm:px-4">

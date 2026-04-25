@@ -16,7 +16,7 @@ export function HomeProductCarouselCard({ product: p }: Props) {
         className="sikapa-tap block transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.02)]"
       >
         <div className="relative aspect-square w-full">
-          <Image src={p.image} alt="" fill className="object-cover" sizes="(max-width:768px) 158px, (max-width:1024px) 180px, 200px" />
+          <Image src={p.image} alt="" fill className="object-cover" sizes="(max-width:768px) 158px, (max-width:1024px) 180px, 200px" unoptimized/>
         </div>
         <div className="space-y-1.5 p-2.5">
           <p className="line-clamp-2 text-small font-medium leading-snug text-sikapa-text-primary dark:text-zinc-100">

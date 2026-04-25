@@ -1,0 +1,27 @@
+{
+  "name": "Sikapa Enterprise",
+  "short_name": "Sikapa",
+  "description": "Luxury eCommerce platform for beauty, cosmetics and premium shopping experience.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf7f2",
+  "theme_color": "#2c1810",
+  "lang": "en",
+  "scope": "/",
+  "categories": ["shopping", "business", "lifestyle", "beauty", "cosmetics", "ecommerce", "luxury"],
+  "icons": [
+    {
+      "src": "/assets/logos/brandmark.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/logos/brandmark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

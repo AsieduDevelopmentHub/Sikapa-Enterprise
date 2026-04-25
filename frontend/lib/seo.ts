@@ -51,6 +51,7 @@ export function buildRootMetadata(): Metadata {
     authors: [{ name: SITE_NAME }],
     creator: SITE_NAME,
     publisher: SITE_NAME,
+    manifest: "/manifest.json",
     formatDetection: { email: false, address: false, telephone: false },
     openGraph: {
       type: "website",
@@ -67,6 +68,11 @@ export function buildRootMetadata(): Metadata {
           alt: `${SITE_NAME} — luxury beauty & lifestyle`,
         },
       ],
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: `${SITE_NAME} · Luxury Beauty & Lifestyle`,
     },
     twitter: {
       card: "summary_large_image",
