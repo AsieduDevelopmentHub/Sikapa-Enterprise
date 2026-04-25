@@ -8,6 +8,8 @@ import { ProductPriceLabel } from "@/components/ProductPriceLabel";
 import { ProductWishlistButton } from "@/components/product/ProductWishlistButton";
 import { StarRating } from "@/components/StarRating";
 import { useCart } from "@/context/CartContext";
+import { cleanImageUrl } from "@/lib/clean-image-url";
+
 
 type Props = {
   product: MockProduct;
@@ -28,7 +30,7 @@ export function ProductCardGrid({
     <article className="relative overflow-hidden rounded-[10px] border border-black/[0.04] bg-white shadow-[0_1px_8px_rgba(59,42,37,0.05)] ring-1 ring-black/[0.04] transition-shadow hover:shadow-[0_4px_18px_rgba(59,42,37,0.08)] dark:border-white/10 dark:bg-zinc-900 dark:ring-white/10">
       <Link href={`/product/${p.id}`} className="sikapa-tap block">
         <div className="relative aspect-square w-full">
-          <Image src={p.image} alt="" fill className="object-cover" sizes={sizesHint} unoptimized />
+          <Image src={cleanImageUrl(p.image)} alt="" fill className="object-cover" sizes={sizesHint} unoptimized />
         </div>
         <div className="space-y-1.5 p-2.5 pb-11">
           <p className="line-clamp-2 text-[0.8125rem] font-semibold leading-snug text-sikapa-text-primary dark:text-zinc-100">

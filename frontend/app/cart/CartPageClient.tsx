@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useDialog } from "@/context/DialogContext";
 import { formatGhs } from "@/lib/mock-data";
-import { variantDisplayCompact } from "@/lib/variant-display";
+// import { variantDisplayCompact } from "@/lib/variant-display";
 
 /**
  * `/cart` is now a pure "bag editor": view lines, change quantities, remove.

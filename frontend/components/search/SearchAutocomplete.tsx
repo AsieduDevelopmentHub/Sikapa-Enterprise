@@ -20,6 +20,7 @@ import {
   matchesQuery,
   readRecentSearches,
 } from "@/lib/search-helpers";
+import { cleanImageUrl } from "@/lib/clean-image-url";
 
 type Props = {
   /** Shows a compact variant that fits in the home header (mobile). */
@@ -186,7 +187,7 @@ export function SearchAutocomplete({
                       }}
                     >
                       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-sikapa-cream">
-                        <Image src={p.image} alt="" fill sizes="40px" className="object-cover" unoptimized />
+                        <Image src={cleanImageUrl(p.image)} alt="" fill sizes="40px" className="object-cover" unoptimized />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-small font-medium text-sikapa-text-primary dark:text-zinc-100">

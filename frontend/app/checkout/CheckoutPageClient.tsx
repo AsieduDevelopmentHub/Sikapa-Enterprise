@@ -9,6 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { ordersCreate, ordersShippingOptions, type ShippingOptions } from "@/lib/api/orders";
 import { paystackInitialize } from "@/lib/api/payments";
+import { cleanImageUrl } from "@/lib/clean-image-url";
+
 import {
   DELIVERY_COURIER_OPTIONS,
   GHANA_CITY_OTHER,
@@ -581,7 +583,7 @@ export function CheckoutPageClient() {
                     <li key={l.lineKey} className="flex gap-3 py-3 first:pt-0">
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[10px] bg-sikapa-cream">
                         <Image
-                          src={l.variantImage || l.product.image}
+                          src={cleanImageUrl(l.variantImage || l.product.image)}
                           alt=""
                           fill
                           sizes="56px"
