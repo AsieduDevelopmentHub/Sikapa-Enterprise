@@ -14,6 +14,8 @@ import { useCart } from "@/context/CartContext";
 import { useCatalog } from "@/context/CatalogContext";
 import { useRecentlyViewedProducts, trackProductView } from "@/hooks/useRecentlyViewed";
 import { getBackendOrigin } from "@/lib/api/client";
+import { cleanImageUrl } from "@/lib/clean-image-url";
+
 import {
   fetchProductImages,
   fetchProductVariants,
@@ -74,7 +76,7 @@ function RelatedProductCard({
         <div className="relative aspect-square w-full bg-sikapa-gray-soft dark:bg-zinc-800">
           {!imgLoaded && <div aria-hidden className="h-full w-full animate-pulse bg-sikapa-gray-soft dark:bg-zinc-800" />}
           <Image
-            src={item.image}
+            src={cleanImageUrl(item.image)}
             alt=""
             fill
             className={`object-cover ${imgLoaded ? "opacity-100" : "opacity-0"}`}
@@ -325,13 +327,13 @@ export function ProductDetailScreen({ product: p }: Props) {
             <div className="relative h-full w-full">
               <Image
                 key={activeImage}
-                src={activeImage}
+                src={cleanImageUrl(activeImage)}
                 alt=""
                 fill
                 className="object-contain"
                 sizes="(max-width:430px) 100vw, 400px"
                 priority
-                unoptimized={activeImage.startsWith("https") && !activeImage.includes("images.unsplash.com")}
+                unoptimized={activeImage.startsWith("http") && !activeImage.includes("images.unsplash.com")}
               />
             </div>
           </div>

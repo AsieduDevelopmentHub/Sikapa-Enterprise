@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useCatalog } from "@/context/CatalogContext";
 import { productsForHomeCategory } from "@/lib/mock-data";
+import { cleanImageUrl } from "@/lib/clean-image-url";
+
 
 export function HomeBrowseAll() {
   const { categories, products } = useCatalog();
@@ -60,7 +62,7 @@ export function HomeBrowseAll() {
                 >
                   <div className="relative aspect-[4/5] w-full shrink-0 bg-zinc-100 dark:bg-zinc-800">
                     <Image
-                      src={cat.image}
+                      src={cleanImageUrl(cat.image)}
                       alt=""
                       fill
                       className="object-cover"
