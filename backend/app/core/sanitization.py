@@ -1,19 +1,16 @@
 """
 Strip dangerous markup and normalize user-supplied text for storage and display.
+Uses nh3 (Rust-backed, actively maintained) instead of deprecated bleach.
 """
 from __future__ import annotations
 
 import re
 from typing import Optional
 
-import bleach
+import nh3
 
-# No HTML tags allowed in plain-text fields; bleach removes tags and escapes as needed.
-_BLEACH_KWARGS = {
-    "tags": [],
-    "attributes": {},
-    "strip": True,
-}
+# No HTML tags allowed in plain-text fields.
+_ALLOWED_TAGS: set[str] = set()   # nh3.clean with empty set strips all tags
 
 
 def sanitize_plain_text(
@@ -28,7 +25,7 @@ def sanitize_plain_text(
     text = str(value).strip()
     if not text:
         return None
-    cleaned = bleach.clean(text, **_BLEACH_KWARGS).strip()
+    cleaned = nh3.clean(text, tags=_ALLOWED_TAGS).strip()
     if single_line:
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
     if max_length is not None and len(cleaned) > max_length:
@@ -43,7 +40,7 @@ def sanitize_multiline_text(value: Optional[str], *, max_length: Optional[int] =
     text = str(value).strip()
     if not text:
         return None
-    cleaned = bleach.clean(text, **_BLEACH_KWARGS).strip()
+    cleaned = nh3.clean(text, tags=_ALLOWED_TAGS).strip()
     if max_length is not None and len(cleaned) > max_length:
         cleaned = cleaned[:max_length].rstrip()
     return cleaned or None
@@ -64,7 +61,7 @@ def sanitize_phone(value: Optional[str]) -> Optional[str]:
     """Keep common phone characters only."""
     if value is None:
         return None
-    raw = bleach.clean(str(value).strip(), **_BLEACH_KWARGS)
+    raw = nh3.clean(str(value).strip(), tags=_ALLOWED_TAGS)
     if not raw:
         return None
     allowed = re.sub(r"[^\d+\-().\s]", "", raw)

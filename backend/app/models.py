@@ -392,10 +392,6 @@ class AuditLog(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     
     # Retention: consider archiving old records after 90 days
-    __table_args__ = (
-        # Index for efficient queries by date
-        None,
-    )
 
 
 # Keep backward compatibility

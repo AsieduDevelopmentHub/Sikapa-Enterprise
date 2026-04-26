@@ -1,5 +1,5 @@
 """
-Products business logic
+Products business logic with Redis caching layer
 """
 from typing import Optional
 from fastapi import HTTPException, status
@@ -8,6 +8,7 @@ from sqlmodel import Session, select, and_, or_
 
 from app.models import Product, Category
 from app.api.v1.products.schemas import ProductSearchResponse
+from app.core.cache import cache, TTL_CATEGORIES, TTL_PRODUCT, TTL_PRODUCT_LIST, TTL_SEARCH
 
 
 async def get_products_with_filters(
@@ -20,8 +21,12 @@ async def get_products_with_filters(
     sort_order: str = "desc",
     skip: int = 0,
     limit: int = 20,
-) -> ProductSearchResponse:
-    """Get products with advanced filtering and sorting."""
+) -> dict:
+    """Get products with advanced filtering and sorting (cached)."""
+    cache_key = f"products:filters:{category_id}:{min_price}:{max_price}:{min_rating}:{sort_by}:{sort_order}:{skip}:{limit}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     filters = [Product.is_active == True]
     if category_id is not None:
@@ -60,12 +65,14 @@ async def get_products_with_filters(
 
     products = session.exec(query).all()
 
-    return ProductSearchResponse(
-        total=total,
-        skip=skip,
-        limit=limit,
-        items=products,
-    )
+    result = {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "items": [p.model_dump() for p in products],
+    }
+    cache.set(cache_key, result, ttl=TTL_PRODUCT_LIST)
+    return result
 
 
 async def search_products(
@@ -73,8 +80,12 @@ async def search_products(
     search_query: str,
     skip: int = 0,
     limit: int = 20,
-) -> ProductSearchResponse:
-    """Search products by name, description, or SKU."""
+) -> dict:
+    """Search products by name, description, or SKU (cached)."""
+    cache_key = f"products:search:{search_query}:{skip}:{limit}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     search_term = f"%{search_query}%"
 
@@ -96,16 +107,23 @@ async def search_products(
 
     products = session.exec(query).all()
 
-    return ProductSearchResponse(
-        total=total,
-        skip=skip,
-        limit=limit,
-        items=products,
-    )
+    result = {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "items": [p.model_dump() for p in products],
+    }
+    cache.set(cache_key, result, ttl=TTL_SEARCH)
+    return result
 
 
 async def get_product_by_id(session: Session, product_id: int):
-    """Get product by ID."""
+    """Get product by ID (cached)."""
+    cache_key = f"product:id:{product_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     product = session.exec(
         select(Product).where(Product.id == product_id)
     ).first()
@@ -116,11 +134,18 @@ async def get_product_by_id(session: Session, product_id: int):
             detail="Product not found",
         )
 
-    return product
+    result = product.model_dump()
+    cache.set(cache_key, result, ttl=TTL_PRODUCT)
+    return result
 
 
 async def get_product_by_slug(session: Session, slug: str):
-    """Get product by slug."""
+    """Get product by slug (cached)."""
+    cache_key = f"product:slug:{slug}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     product = session.exec(
         select(Product).where(Product.slug == slug)
     ).first()
@@ -131,20 +156,34 @@ async def get_product_by_slug(session: Session, slug: str):
             detail="Product not found",
         )
 
-    return product
+    result = product.model_dump()
+    cache.set(cache_key, result, ttl=TTL_PRODUCT)
+    return result
 
 
 async def get_all_categories(session: Session):
-    """Get all active categories."""
+    """Get all active categories (cached)."""
+    cache_key = "categories:all"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     categories = session.exec(
         select(Category).where(Category.is_active == True).order_by(Category.sort_order)
     ).all()
 
-    return categories
+    result = [c.model_dump() for c in categories]
+    cache.set(cache_key, result, ttl=TTL_CATEGORIES)
+    return result
 
 
 async def get_category_by_id(session: Session, category_id: int):
-    """Get category by ID."""
+    """Get category by ID (cached)."""
+    cache_key = f"category:id:{category_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     category = session.exec(
         select(Category).where(Category.id == category_id)
     ).first()
@@ -155,4 +194,6 @@ async def get_category_by_id(session: Session, category_id: int):
             detail="Category not found",
         )
 
-    return category
+    result = category.model_dump()
+    cache.set(cache_key, result, ttl=TTL_CATEGORIES)
+    return result

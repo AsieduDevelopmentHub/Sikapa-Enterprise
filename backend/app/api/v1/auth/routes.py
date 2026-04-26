@@ -33,6 +33,13 @@ from app.api.v1.auth.schemas import (
     RefreshTokenRequest,
     GoogleOAuth2FAVerifyRequest,
 )
+from sqlmodel import SQLModel
+from pydantic import Field as PydanticField
+
+
+class DisableTwoFARequest(SQLModel):
+    """Typed request body for disabling 2FA (replaces unvalidated raw dict)."""
+    password: str = PydanticField(min_length=1, max_length=128)
 from app.api.v1.auth.services import (
     register_user,
     authenticate_user,
@@ -395,19 +402,12 @@ def enable_2fa_endpoint(
 
 @router.post("/2fa/disable")
 def disable_2fa_endpoint(
-    request: dict,
+    request: DisableTwoFARequest,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session)
 ):
     """Disable 2FA."""
-    password = request.get("password")
-    if not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="password is required"
-        )
-
-    user = disable_two_fa(session, current_user.id, password)
+    user = disable_two_fa(session, current_user.id, request.password)
     return {
         "message": "2FA disabled successfully",
         "two_fa_enabled": user.two_fa_enabled,

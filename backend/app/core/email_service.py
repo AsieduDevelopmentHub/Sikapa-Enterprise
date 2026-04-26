@@ -26,6 +26,8 @@ else:
         print("⚠️  INFO: Emails are disabled for local development (EMAIL_ENABLED=false).")
 
 
+from app.core.tasks import send_email_task
+
 class EmailService:
     """Service for sending emails via Resend API."""
 
@@ -39,25 +41,20 @@ class EmailService:
         if from_email is None:
             from_email = default_from_email
 
-        if to_email and is_undeliverable_placeholder_email(to_email):
-            print(f"[INFO] Skipping email to synthetic/placeholder address: {to_email}")
-            return "skipped-placeholder"
-
-        if not email_enabled or not resend_api_key:
-            print(f"[DEBUG] Would send email to {to_email}: {subject}")
-            print(f"[DEBUG] From: {from_email}")
-            return "debug-mode"
-
         try:
-            response = resend.Emails.send({
-                "from": from_email,
-                "to": to_email,
-                "subject": subject,
-                "html": html_content,
-            })
-            return response.get("id")
+            # Dispatch to Celery worker (fire and forget)
+            # We return a dummy "queued" ID because the actual Resend ID
+            # won't be available until the async worker completes the job.
+            send_email_task.delay(
+                to_email=to_email,
+                subject=subject,
+                html_content=html_content,
+                from_email=from_email,
+            )
+            return "queued-in-celery"
         except Exception as e:
-            print(f"[ERROR] Failed to send email: {e}")
+            import logging
+            logging.getLogger(__name__).warning("Failed to queue email task: %s", e)
             return None
 
     @staticmethod
