@@ -56,11 +56,20 @@ async def create_order_from_cart(
     session.add(order)
     session.flush()
 
-    for cart_item in cart_items:
-        product = session.exec(
-            select(Product).where(Product.id == cart_item.product_id)
-        ).first()
+    # Batch-load products / variants to avoid N+1 DB calls.
+    product_ids = {ci.product_id for ci in cart_items}
+    products: dict[int, Product] = {}
+    if product_ids:
+        rows = session.exec(select(Product).where(Product.id.in_(product_ids))).all()
+        products = {p.id: p for p in rows if p.id is not None}
+    variant_ids = {ci.variant_id for ci in cart_items if getattr(ci, "variant_id", None)}
+    variants: dict[int, ProductVariant] = {}
+    if variant_ids:
+        v_rows = session.exec(select(ProductVariant).where(ProductVariant.id.in_(variant_ids))).all()
+        variants = {v.id: v for v in v_rows if v.id is not None}
 
+    for cart_item in cart_items:
+        product = products.get(cart_item.product_id)
         if not product:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -73,8 +82,8 @@ async def create_order_from_cart(
         variant: ProductVariant | None = None
         variant_id = getattr(cart_item, "variant_id", None)
         if variant_id is not None:
-            variant = session.get(ProductVariant, variant_id)
-            if not variant or variant.product_id != product.id:
+            variant = variants.get(int(variant_id)) if variant_id else None
+            if not variant or variant.product_id != product.id or not variant.is_active:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Selected option for product {product.id} is no longer available",

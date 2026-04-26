@@ -4,9 +4,173 @@
   <title>Offline | Sikapa Enterprise</title>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#2c1810" />
+  <script>
+    (function () {
+      // Keep in sync with `frontend/context/ThemeContext.tsx`
+      var KEY = "sikapa-theme"; // "light" | "dark" | "system"
+      var pref = "system";
+      try {
+        var v = localStorage.getItem(KEY);
+        if (v === "light" || v === "dark" || v === "system") pref = v;
+      } catch {}
+      var isDark =
+        pref === "dark" ||
+        (pref === "system" &&
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.classList.toggle("dark", !!isDark);
+    })();
+  </script>
+  <style>
+    :root{
+      --bg: #faf7f2;
+      --panel: rgba(255,255,255,0.85);
+      --text: #2c1810;
+      --muted: #7a6a62;
+      --gold: #c6a15b;
+      --goldHover: #b48d48;
+      --crimson: #5c1528;
+      --ring: rgba(44,24,16,0.08);
+    }
+    html.dark{
+      --bg: #09090b;
+      --panel: rgba(24,24,27,0.75);
+      --text: #f4f4f5;
+      --muted: rgba(244,244,245,0.65);
+      --ring: rgba(255,255,255,0.10);
+    }
+    *{ box-sizing: border-box; }
+    body{
+      margin:0;
+      min-height: 100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 28px 16px;
+      background: radial-gradient(900px 420px at 30% 10%, rgba(198,161,91,0.18), transparent 60%),
+                  radial-gradient(700px 360px at 80% 30%, rgba(92,21,40,0.14), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    .card{
+      width: min(560px, 100%);
+      border-radius: 18px;
+      background: var(--panel);
+      border: 1px solid var(--ring);
+      box-shadow: 0 16px 46px rgba(59,42,37,0.14);
+      backdrop-filter: blur(10px);
+      padding: 22px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .logo{
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.55);
+      border: 1px solid var(--ring);
+      object-fit: contain;
+      padding: 6px;
+    }
+    .title{
+      font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+      font-size: 22px;
+      line-height: 1.15;
+      margin: 0;
+      letter-spacing: 0.2px;
+      font-weight: 700;
+    }
+    .subtitle{
+      margin: 2px 0 0;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 700;
+    }
+    h1{
+      margin: 14px 0 6px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+    p{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+    .hint{
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .actions{
+      display:flex;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .btn{
+      appearance:none;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width: 140px;
+      transition: transform .08s ease, background-color .15s ease, border-color .15s ease, opacity .15s ease;
+      user-select:none;
+    }
+    .btn:active{ transform: scale(0.98); }
+    .primary{
+      background: var(--gold);
+      color: #fff;
+    }
+    .primary:hover{ background: var(--goldHover); }
+    .secondary{
+      background: transparent;
+      border-color: var(--ring);
+      color: var(--text);
+    }
+    .secondary:hover{ background: rgba(255,255,255,0.35); }
+    html.dark .secondary:hover{ background: rgba(255,255,255,0.06); }
+  </style>
 </head>
-<body style="font-family: sans-serif; text-align:center; padding:40px;">
-  <h1>You are offline</h1>
-  <p>Please check your internet connection and try again.</p>
+<body>
+  <main class="card" role="main" aria-label="Offline screen">
+    <div class="brand" aria-hidden="true">
+      <img class="logo" src="/assets/logos/brandmark.png" alt="" />
+      <div>
+        <p class="title">Sikapa</p>
+        <p class="subtitle">Luxury commerce</p>
+      </div>
+    </div>
+
+    <h1>You’re offline</h1>
+    <p>
+      We can’t reach the internet right now. You can retry, or continue browsing pages you’ve already opened.
+    </p>
+    <p class="hint">
+      Tip: turn on mobile data or connect to Wi‑Fi, then tap Retry.
+    </p>
+
+    <div class="actions">
+      <button class="btn primary" type="button" onclick="window.location.reload()">Retry</button>
+      <a class="btn secondary" href="/" rel="nofollow">Go to home</a>
+    </div>
+  </main>
 </body>
 </html>

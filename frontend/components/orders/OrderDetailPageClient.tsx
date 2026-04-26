@@ -273,7 +273,6 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
               <ul className="mt-3 divide-y divide-sikapa-gray-soft/80 dark:divide-white/10">
                 {detail.items.map((line) => {
                   const name = line.product_name?.trim() || `Product #${line.product_id}`;
-                  const detail = line.variant_detail_snapshot?.trim();
                   const lineTotal = line.price_at_purchase * line.quantity;
                   return (
                     <li key={line.id} className="flex gap-3 py-4 first:pt-0">
@@ -293,11 +292,6 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
                         >
                           {name}
                         </Link>
-                        {detail ? (
-                          <p className="mt-1 whitespace-pre-wrap text-[11px] leading-snug text-sikapa-text-muted dark:text-zinc-500">
-                            {detail}
-                          </p>
-                        ) : null}
                         <p className="mt-1 text-small text-sikapa-text-secondary dark:text-zinc-400">
                           {formatGhs(line.price_at_purchase)} × {line.quantity}
                         </p>

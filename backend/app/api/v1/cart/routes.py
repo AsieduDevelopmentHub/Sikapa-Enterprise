@@ -3,7 +3,7 @@ Shopping cart API routes
 """
 from typing import List, Optional
 from fastapi import APIRouter, Depends, status
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.db import get_session
 from app.api.v1.auth.dependencies import get_current_active_user
@@ -26,23 +26,32 @@ from app.api.v1.cart.services import (
 router = APIRouter()
 
 
-def _enrich(session: Session, item: CartItem) -> CartItemSchema:
-    """Attach variant name/price-delta/image so callers don't need a second hop."""
-    variant: Optional[ProductVariant] = None
-    if item.variant_id:
-        variant = session.get(ProductVariant, item.variant_id)
-    return CartItemSchema(
-        id=item.id,
-        user_id=item.user_id,
-        product_id=item.product_id,
-        variant_id=item.variant_id,
-        variant_name=variant.name if variant else None,
-        variant_price_delta=float(variant.price_delta) if variant else None,
-        variant_image_url=getattr(variant, "image_url", None) if variant else None,
-        quantity=item.quantity,
-        created_at=item.created_at,
-        updated_at=item.updated_at,
-    )
+def _enrich_many(session: Session, items: list[CartItem]) -> list[CartItemSchema]:
+    """Attach variant name/price-delta/image in a single batch (avoids N+1)."""
+    variant_ids = {it.variant_id for it in items if it.variant_id}
+    variants: dict[int, ProductVariant] = {}
+    if variant_ids:
+        rows = session.exec(select(ProductVariant).where(ProductVariant.id.in_(variant_ids))).all()
+        variants = {v.id: v for v in rows if v.id is not None}
+
+    out: list[CartItemSchema] = []
+    for item in items:
+        variant: Optional[ProductVariant] = variants.get(item.variant_id) if item.variant_id else None
+        out.append(
+            CartItemSchema(
+                id=item.id,
+                user_id=item.user_id,
+                product_id=item.product_id,
+                variant_id=item.variant_id,
+                variant_name=variant.name if variant else None,
+                variant_price_delta=float(variant.price_delta) if variant else None,
+                variant_image_url=getattr(variant, "image_url", None) if variant else None,
+                quantity=item.quantity,
+                created_at=item.created_at,
+                updated_at=item.updated_at,
+            )
+        )
+    return out
 
 
 @router.get("/", response_model=List[CartItemSchema])
@@ -52,7 +61,7 @@ async def list_cart(
 ):
     """Get current user's cart items."""
     items = await get_user_cart(session, current_user.id)
-    return [_enrich(session, it) for it in items]
+    return _enrich_many(session, items)
 
 
 @router.get("/with-wishlist", response_model=CartWithWishlistSchema)
@@ -62,7 +71,7 @@ async def list_cart_with_wishlist(
 ):
     """Cart plus wishlist in one response (for cart/checkout UI)."""
     payload = await get_cart_with_wishlist(session, current_user.id)
-    payload["cart"] = [_enrich(session, it) for it in payload["cart"]]
+    payload["cart"] = _enrich_many(session, payload["cart"])
     return payload
 
 
@@ -74,7 +83,7 @@ async def add_cart_item(
 ):
     """Add item to cart. Stock + variant validity is enforced in the service."""
     created = await add_to_cart(session, current_user.id, item)
-    return _enrich(session, created)
+    return _enrich_many(session, [created])[0]
 
 
 @router.put("/items/{item_id}", response_model=CartItemSchema)
@@ -86,7 +95,7 @@ async def update_item(
 ):
     """Update cart item quantity."""
     updated = await update_cart_item(session, item_id, current_user.id, update_data)
-    return _enrich(session, updated)
+    return _enrich_many(session, [updated])[0]
 
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
