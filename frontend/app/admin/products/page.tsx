@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import { adminDeleteProduct, adminFetchProducts, type AdminProduct } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
-import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminProductTable } from "@/components/admin/AdminProductTable";
 import { AdminTableSkeleton } from "@/components/admin/Skeleton";
@@ -15,7 +13,6 @@ import { AdminTableSkeleton } from "@/components/admin/Skeleton";
 export default function AdminProductsPage() {
   const { accessToken } = useAuth();
   const { confirm: confirmDialog, alert: alertDialog } = useDialog();
-  const router = useRouter();
   const [rows, setRows] = useState<AdminProduct[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

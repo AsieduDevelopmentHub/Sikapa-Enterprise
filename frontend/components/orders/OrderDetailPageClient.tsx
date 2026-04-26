@@ -16,7 +16,6 @@ import { GHANA_REGIONS } from "@/lib/ghana-shipping";
 import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
 import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline";
 import { formatGhs } from "@/lib/mock-data";
-import { variantDisplayForInvoice } from "@/lib/variant-display";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 
