@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -26,7 +27,12 @@ export function HomeHero() {
         style={{ boxShadow: "inset 0 0 100px rgba(0,0,0,0.38)" }}
       />
 
-      <div className="pointer-events-none absolute bottom-0 right-[-8%] top-[6%] z-0 w-[78%] max-w-[300px] opacity-0 animate-hero-model sm:right-[-4%] sm:max-w-[320px]">
+      <motion.div
+        initial={{ opacity: 0, x: 28 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+        className="pointer-events-none absolute bottom-0 right-[-8%] top-[6%] z-0 w-[78%] max-w-[300px] sm:right-[-4%] sm:max-w-[320px]"
+      >
         <div
           className="relative h-full w-full"
           style={{
@@ -47,12 +53,16 @@ export function HomeHero() {
             aria-hidden
           />
         </div>
-      </div>
+      </motion.div>
 
       <div className="relative z-[1] mx-auto flex min-h-[min(62vh,500px)] sikapa-storefront-max flex-col px-4 pb-8 pt-9 sm:px-5 sm:pt-10 md:px-6 lg:px-8">
         <div className="flex min-h-0 flex-1 items-center">
           <div className="flex max-w-[min(54%,240px)] shrink-0 flex-col pr-2 sm:max-w-[250px]">
-            <div className="opacity-0 animate-hero-text">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
+            >
               <h1
                 id="hero-heading"
                 className="font-serif font-semibold tracking-[0.02em] text-white"
@@ -65,44 +75,56 @@ export function HomeHero() {
                   For All
                 </span>
               </h1>
-            </div>
+            </motion.div>
 
-            <div
-              className="mt-4 h-px w-14 bg-gradient-to-r from-sikapa-gold/90 via-sikapa-gold to-transparent opacity-0 animate-hero-text sm:w-16"
-              style={{ animationDelay: "0.28s" }}
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0 }}
+              animate={{ opacity: 1, scaleX: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut", delay: 0.5 }}
+              className="mt-4 h-px w-14 bg-gradient-to-r from-sikapa-gold/90 via-sikapa-gold to-transparent origin-left sm:w-16"
               aria-hidden
             />
 
-            <p
-              className="mt-3 font-sans text-[0.8125rem] leading-relaxed text-sikapa-hero-subtext opacity-0 animate-hero-text sm:text-[0.875rem]"
-              style={{ animationDelay: "0.4s" }}
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: "easeOut", delay: 0.65 }}
+              className="mt-3 font-sans text-[0.8125rem] leading-relaxed text-sikapa-hero-subtext sm:text-[0.875rem]"
             >
               Premium cosmetics, wigs, and skincare — for every skin and every style.
-            </p>
+            </motion.p>
 
-            <p
-              className="mt-2.5 font-sans text-[0.625rem] font-medium uppercase tracking-[0.22em] text-white/55 opacity-0 animate-hero-text sm:text-[0.6875rem]"
-              style={{ animationDelay: "0.52s" }}
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: "easeOut", delay: 0.75 }}
+              className="mt-2.5 font-sans text-[0.625rem] font-medium uppercase tracking-[0.22em] text-white/55 sm:text-[0.6875rem]"
             >
               Wigs · Skincare · Perfumes · Care
-            </p>
+            </motion.p>
 
-            <div className="opacity-0 animate-hero-text" style={{ animationDelay: "0.62s" }}>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.9 }}
+            >
               <Link
                 href="/shop"
                 className="sikapa-btn-gold sikapa-tap mt-5 inline-flex items-center justify-center rounded-[10px] px-6 py-3 text-small font-semibold text-white shadow-lg shadow-black/20"
               >
                 Shop Now
               </Link>
-            </div>
+            </motion.div>
           </div>
 
           <div className="min-w-0 flex-1" aria-hidden />
         </div>
 
-        <div
-          className="pointer-events-none flex justify-center pb-1 pt-2 opacity-0 animate-hero-text"
-          style={{ animationDelay: "0.85s" }}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.2 }}
+          className="pointer-events-none flex justify-center pb-1 pt-2"
           aria-hidden
         >
           <span className="inline-flex flex-col items-center gap-0.5 text-[0.625rem] font-medium uppercase tracking-[0.28em] text-white/40">
@@ -124,7 +146,7 @@ export function HomeHero() {
               />
             </svg>
           </span>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
