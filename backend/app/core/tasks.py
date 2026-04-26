@@ -21,41 +21,30 @@ logger = logging.getLogger(__name__)
 # Email tasks
 # ============================================================================
 
-@celery_app.task(
-    name="app.core.tasks.send_email_task",
-    bind=True,
-    max_retries=3,
-    default_retry_delay=30,  # seconds between retries
-    acks_late=True,           # only ack after the task completes (safe retry on worker crash)
-)
-def send_email_task(
-    self,
-    *,
+def send_email_immediate(
     to_email: str,
     subject: str,
     html_content: str,
     from_email: str | None = None,
 ) -> str | None:
     """
-    Send a single transactional email via Resend.
-    Retries up to 3 times on transient failure (5xx, network error).
-    Returns the Resend message ID on success, or None.
+    Core logic to send an email via Resend.
+    Can be called directly, from a Celery task, or from a FastAPI BackgroundTask.
     """
-    import resend  # noqa: PLC0415  (optional dep — not imported at module level)
-
+    import resend
+    
     resend_api_key = os.getenv("RESEND_API_KEY", "").strip()
     email_enabled = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
     default_from = os.getenv("DEFAULT_FROM_EMAIL", "Sikapa <no-reply@localhost>")
     _from = from_email or default_from
 
-    # Skip synthetic/placeholder addresses without hitting Resend
-    from app.core.placeholder_email import is_undeliverable_placeholder_email  # noqa: PLC0415
+    from app.core.placeholder_email import is_undeliverable_placeholder_email
     if is_undeliverable_placeholder_email(to_email):
-        logger.info("Skipping email — placeholder address (task skipped)")
+        logger.info("Skipping email — placeholder address")
         return "skipped-placeholder"
 
     if not email_enabled or not resend_api_key:
-        logger.debug("Email disabled — would send '%s' to user", subject)
+        logger.debug("Email disabled — would send '%s' to %s", subject, to_email)
         return "debug-mode"
 
     resend.api_key = resend_api_key
@@ -70,7 +59,34 @@ def send_email_task(
         logger.info("Email sent subject='%s' resend_id=%s", subject, msg_id)
         return msg_id
     except Exception as exc:
-        logger.warning("Email send failed (attempt %d/3): %s", self.request.retries + 1, exc)
+        logger.error("Email send failed: %s", exc)
+        return None
+
+
+@celery_app.task(
+    name="app.core.tasks.send_email_task",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=30,
+    acks_late=True,
+)
+def send_email_task(
+    self,
+    *,
+    to_email: str,
+    subject: str,
+    html_content: str,
+    from_email: str | None = None,
+) -> str | None:
+    """Celery wrapper for send_email_immediate."""
+    try:
+        return send_email_immediate(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            from_email=from_email,
+        )
+    except Exception as exc:
         raise self.retry(exc=exc)
 
 

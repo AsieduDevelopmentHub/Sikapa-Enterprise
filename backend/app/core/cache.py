@@ -35,23 +35,49 @@ TTL_SEARCH = 60            # 1 min  — search results (more volatile)
 TTL_USER_PROFILE = 180     # 3 min  — cached user profile reads
 
 
-class _NullCache:
-    """No-op cache used when Redis is not configured or not reachable."""
+import time
 
-    async def get(self, key: str) -> Any | None:  # noqa: ANN401
-        return None
+class InMemoryCache:
+    """
+    Simple in-memory TTL cache for 'lite' deployments without Redis.
+    Limits growth by number of keys to avoid memory leaks.
+    """
+    def __init__(self, maxsize: int = 1000) -> None:
+        self._data: dict[str, tuple[Any, float]] = {}
+        self._maxsize = maxsize
 
-    async def set(self, key: str, value: Any, ttl: int = 300) -> None:  # noqa: ANN401
-        pass
+    def get(self, key: str) -> Any | None:
+        if key not in self._data:
+            return None
+        val, expiry = self._data[key]
+        if time.time() > expiry:
+            del self._data[key]
+            return None
+        return val
 
-    async def delete(self, key: str) -> None:
-        pass
+    def set(self, key: str, value: Any, ttl: int = 300) -> None:
+        # Basic eviction if full
+        if len(self._data) >= self._maxsize:
+            # Delete first key found (not perfect LRU but fast)
+            first_key = next(iter(self._data))
+            del self._data[first_key]
+        
+        self._data[key] = (value, time.time() + ttl)
 
-    async def delete_pattern(self, pattern: str) -> None:
-        pass
+    def delete(self, key: str) -> None:
+        self._data.pop(key, None)
+
+    def delete_pattern(self, pattern: str) -> None:
+        import fnmatch
+        keys_to_del = [k for k in self._data.keys() if fnmatch.fnmatch(k, pattern)]
+        for k in keys_to_del:
+            del self._data[k]
+
+    def ping(self) -> bool:
+        return True
 
     def close(self) -> None:
-        pass
+        self._data.clear()
 
 
 class RedisCache:
@@ -126,20 +152,23 @@ class RedisCache:
 # Module-level singleton — resolved at import time
 # ---------------------------------------------------------------------------
 
-def _build_cache() -> RedisCache | _NullCache:
+def _build_cache() -> RedisCache | InMemoryCache:
     url = os.getenv("REDIS_URL", "").strip()
-    if not url:
-        logger.info("REDIS_URL not set — running without cache (NullCache)")
-        return _NullCache()  # type: ignore[return-value]
+    if not url or "localhost" in url:
+        # Fallback to in-memory if no Redis URL or just localhost (likely dev)
+        # unless user explicitly wants Redis on localhost. 
+        # But for this user, they don't want Redis billing.
+        logger.info("Using InMemoryCache (LRU-lite)")
+        return InMemoryCache()
     try:
         c = RedisCache(url)
         if c.ping():
             return c
-        logger.warning("Redis ping failed — falling back to NullCache")
-        return _NullCache()  # type: ignore[return-value]
+        logger.warning("Redis ping failed — falling back to InMemoryCache")
+        return InMemoryCache()
     except Exception as exc:
-        logger.warning("Redis unavailable (%s) — falling back to NullCache", exc)
-        return _NullCache()  # type: ignore[return-value]
+        logger.warning("Redis unavailable (%s) — falling back to InMemoryCache", exc)
+        return InMemoryCache()
 
 
-cache: RedisCache = _build_cache()  # type: ignore[assignment]
+cache = _build_cache()

@@ -2,7 +2,7 @@
 Orders API routes
 """
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Header, BackgroundTasks
 from sqlmodel import Session, select, func
 
 from app.db import get_session
@@ -103,6 +103,7 @@ async def get_order(
 @router.post("/", response_model=OrderSchema, status_code=status.HTTP_201_CREATED)
 async def create_order(
     order_data: OrderCreateSchema,
+    background_tasks: BackgroundTasks,
     current_user=Depends(get_current_active_user),
     session: Session = Depends(get_session),
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
@@ -181,9 +182,24 @@ async def create_order(
             detail="Choose a valid Ghana region for delivery.",
         )
 
-    return await create_order_from_cart(
+    order = await create_order_from_cart(
         session, current_user.id, subtotal, fee, order_data, cart_items, idempotency_key
     )
+    
+    # Send confirmation email in background
+    from app.api.v1.orders.services import send_order_confirmation_email
+    background_tasks.add_task(
+        send_order_confirmation_email,
+        session,
+        order,
+        current_user.id
+    )
+    
+    # Invalidate admin analytics cache since a new order was placed
+    from app.core.cache import cache
+    cache.delete_pattern("admin:dashboard:*")
+    
+    return order
 
 
 @router.get("/{order_id}/invoice/pdf")
