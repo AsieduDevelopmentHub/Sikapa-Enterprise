@@ -17,17 +17,13 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.routes import router as api_v1_router
 from app.core.http_errors import integrity_error_handler, request_validation_exception_handler
-from app.core.rate_limit import (
-    API_RATE_LIMIT_ENABLED,
-    api_rate_guard,
-    limiter,
-    parse_rate_limited_prefixes,
-)
+from app.core.rate_limit import limiter
 from app.core.startup_checks import (
     is_production_environment,
     validate_production_config_or_raise,
     warn_dev_secret,
 )
+from app.core.cache import cache
 from app.db import create_db_and_tables
 
 load_dotenv()
@@ -76,7 +72,8 @@ _cors_kwargs = dict(
     allow_origins=cors_origins,
     allow_credentials=cors_allow_credentials,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["*"],
+    # Explicit header allowlist — wildcard + credentials is an OWASP-flagged misconfiguration
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 if _cors_regex:
     _cors_kwargs["allow_origin_regex"] = _cors_regex
@@ -85,7 +82,6 @@ app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.add_middleware(GZipMiddleware, minimum_size=1200)
 
 _request_log = logging.getLogger("sikapa.request")
-_rate_prefixes = parse_rate_limited_prefixes()
 
 
 @app.middleware("http")
@@ -93,38 +89,28 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Applied unconditionally — clickjacking is protocol-agnostic
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self'; "
+        "frame-ancestors 'none'; "
+        "object-src 'none'"
+    )
     if _https_enabled:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["X-Frame-Options"] = "DENY"
     return response
 
 
 @app.middleware("http")
 async def log_incoming_requests(request: Request, call_next):
-    path = request.url.path
-    matched_prefix = next((prefix for prefix in _rate_prefixes if path.startswith(prefix)), None)
-    if API_RATE_LIMIT_ENABLED and matched_prefix:
-        xff = request.headers.get("x-forwarded-for", "")
-        ip = (xff.split(",")[0].strip() if xff else "") or (request.client.host if request.client else "unknown")
-        key = f"{ip}:{matched_prefix}"
-        ok, limit, remaining, retry_after = api_rate_guard.check(str(key))
-        if not ok:
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "Too many requests. Please retry shortly."},
-                headers={
-                    "Retry-After": str(max(1, int(retry_after + 0.999))),
-                    "X-RateLimit-Limit": str(limit),
-                    "X-RateLimit-Remaining": "0",
-                },
-            )
     start = time.perf_counter()
     response = await call_next(request)
     ms = (time.perf_counter() - start) * 1000
-    if API_RATE_LIMIT_ENABLED and matched_prefix:
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
-    _request_log.info("%s %s -> %s (%.2fms)", request.method, path, response.status_code, ms)
+    _request_log.info("%s %s -> %s (%.2fms)", request.method, request.url.path, response.status_code, ms)
     return response
 
 
@@ -142,6 +128,15 @@ def on_startup() -> None:
     validate_production_config_or_raise()
     warn_dev_secret()
     create_db_and_tables()
+    if cache.ping():
+        logging.getLogger("sikapa").info("Redis cache: connected and healthy")
+    else:
+        logging.getLogger("sikapa").warning("Redis cache: not available — running without cache")
+
+
+@app.on_event("shutdown")
+def on_shutdown() -> None:
+    cache.close()
 
 
 _original_openapi = app.openapi

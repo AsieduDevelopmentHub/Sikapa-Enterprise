@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -95,7 +95,6 @@ jobs:
       - name: Run frontend lint
         working-directory: frontend
         run: npm run lint
-        continue-on-error: true
 
       - name: Run frontend build
         working-directory: frontend
@@ -110,6 +109,9 @@ jobs:
   auto-pr-merge-frontend-to-main:
     name: Auto PR + Auto-merge (frontend -> main)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     # Never fail the overall CI workflow if gh/auto-merge isn’t available (missing PAT, permissions, etc.).
     continue-on-error: true
     needs: [backend, frontend]

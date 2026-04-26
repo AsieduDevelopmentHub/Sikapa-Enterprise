@@ -3,11 +3,14 @@ Authentication services - comprehensive business logic for all auth operations.
 """
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
+import logging
 import os
 import re
 from urllib.parse import quote
+
+logger = logging.getLogger(__name__)
 
 from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -22,6 +25,9 @@ from app.core.security import (
     generate_totp_secret,
     verify_totp_code,
     get_totp_qr_code,
+    encrypt_totp_secret,
+    decrypt_totp_secret,
+    decode_access_token,
 )
 from app.core.email_service import email_service
 from app.db import apply_postgres_session_user
@@ -117,20 +123,20 @@ def register_user(
             user_id=user.id,
             code=otp_code,
             purpose="email_verification",
-            expires_at=datetime.utcnow() + timedelta(hours=24)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
         )
         session.add(otp)
         session.commit()
 
-        # Send welcome email
+        # Send welcome email (dispatched to Celery worker)
         welcome_sent = email_service.send_welcome_email(user.email, user.name)
         if not welcome_sent:
-            print(f"⚠️  Warning: Failed to send welcome email to {user.email}")
+            logger.warning("Failed to queue welcome email for user_id=%s", user.id)
 
-        # Send verification email
+        # Send verification email (dispatched to Celery worker)
         email_sent = email_service.send_email_verification(user.email, otp_code, user.name)
         if not email_sent:
-            print(f"⚠️  Warning: Failed to send verification email to {user.email}")
+            logger.warning("Failed to queue verification email for user_id=%s", user.id)
 
     return user
 
@@ -202,9 +208,15 @@ def refresh_access_token(session: Session, refresh_token: str) -> dict:
 
 # ============ Logout & Token Blacklist ============
 def logout_user(session: Session, user_id: int, token: str) -> None:
-    """Add token to blacklist for logout."""
-    # Token expires in 15 minutes by default
-    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    """Add token to blacklist for logout, expiring at the token's own exp time."""
+    # Use the token's own exp claim so blacklist entries are pruned correctly
+    # even when ACCESS_TOKEN_EXPIRE_MINUTES is changed via env.
+    payload = decode_access_token(token) or {}
+    exp = payload.get("exp")
+    if exp:
+        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+    else:
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     blacklist_entry = TokenBlacklist(
         user_id=user_id,
@@ -246,7 +258,7 @@ def verify_email(session: Session, email: str, code: str) -> User:
             detail="Invalid or expired OTP code"
         )
 
-    if otp.expires_at < datetime.utcnow():
+    if otp.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP code has expired"
@@ -260,10 +272,10 @@ def verify_email(session: Session, email: str, code: str) -> User:
     session.commit()
     session.refresh(user)
 
-    # Send welcome email
+    # Send welcome email (dispatched to Celery worker)
     email_sent = email_service.send_welcome_email(user.email, user.name)
     if not email_sent:
-        print(f"⚠️  Warning: Failed to send welcome email to {user.email}")
+        logger.warning("Failed to queue post-verification welcome email for user_id=%s", user.id)
 
     return user
 
@@ -282,18 +294,15 @@ def request_password_reset(session: Session, email: str) -> None:
     password_reset = PasswordReset(
         user_id=user.id,
         token=reset_token,
-        expires_at=datetime.utcnow() + timedelta(hours=1)
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
     )
     session.add(password_reset)
     session.commit()
 
-    # Match email template: path-based link (legacy ?token= still supported on the frontend)
-    reset_link = f"{(frontend_url or '').rstrip('/')}/reset-password/{quote(reset_token, safe='')}"
-
-    # Send password reset email
+    # Send password reset email (dispatched to Celery worker)
     email_sent = email_service.send_password_reset(user.email, reset_token, user.name)
     if not email_sent:
-        print(f"⚠️  Warning: Failed to send password reset email to {user.email}")
+        logger.warning("Failed to queue password reset email for user_id=%s", user.id)
 
 
 def reset_password(session: Session, token: str, new_password: str) -> User:
@@ -306,7 +315,7 @@ def reset_password(session: Session, token: str, new_password: str) -> User:
             detail="Invalid or expired reset token"
         )
 
-    if password_reset.expires_at < datetime.utcnow():
+    if password_reset.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reset token has expired"
@@ -353,13 +362,13 @@ def _issue_email_verification_otp(session: Session, user: User) -> None:
         user_id=user.id,
         code=otp_code,
         purpose="email_verification",
-        expires_at=datetime.utcnow() + timedelta(hours=24),
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
     )
     session.add(otp)
     session.commit()
     email_sent = email_service.send_email_verification(user.email, otp_code, user.name)
     if not email_sent:
-        print(f"⚠️  Warning: Failed to send verification email to {user.email}")
+        logger.warning("Failed to queue email verification OTP for user_id=%s", user.id)
 
 
 def resend_email_verification(session: Session, user_id: int) -> None:
@@ -454,7 +463,7 @@ def update_user_profile(session: Session, user_id: int, patch: dict) -> User:
     if "shipping_contact_phone" in patch:
         user.shipping_contact_phone = patch["shipping_contact_phone"]
 
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now(timezone.utc)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -483,7 +492,7 @@ def change_password(session: Session, user_id: int, current_password: str, new_p
         )
 
     user.hashed_password = get_password_hash(new_password)
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now(timezone.utc)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -507,17 +516,18 @@ def delete_user_account(session: Session, user_id: int, password: str) -> None:
             detail="Password is incorrect"
         )
 
-    # Soft delete - just mark as inactive
+    # Soft delete — mark as inactive but keep all data
     user.is_active = False
-    user.updated_at = datetime.utcnow()
+    user.deleted_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.now(timezone.utc)
     session.add(user)
     session.commit()
 
-    # Send account deletion confirmation email
+    # Send account deletion confirmation email (dispatched to Celery worker)
     if user.email:
         email_sent = email_service.send_account_deletion(user.email, user.name)
         if not email_sent:
-            print(f"⚠️  Warning: Failed to send account deletion email to {user.email}")
+            logger.warning("Failed to queue account deletion email for user_id=%s", user.id)
 
 
 # ============ 2FA TOTP Setup ============
@@ -536,20 +546,18 @@ def setup_two_fa_totp(session: Session, user_id: int) -> dict:
             detail="2FA is already enabled"
         )
 
-    # Generate secret and backup codes
+    # Generate secret, QR code, and backup codes
     secret = generate_totp_secret()
-    backup_codes = generate_backup_codes(10)
+    plaintext_codes = generate_backup_codes(10)
 
-    # Generate QR code
+    # Generate QR code using raw (unencrypted) secret
     qr_identity = user.email or user.username
     qr_code = get_totp_qr_code(secret, qr_identity, issuer="Sikapa")
 
-    # Store temporary 2FA secret (not verified yet)
-    # For now, we'll return it and store after verification
     return {
         "secret": secret,
         "qr_code": qr_code,
-        "backup_codes": backup_codes,
+        "backup_codes": plaintext_codes,  # returned to user ONCE — never stored in plaintext
     }
 
 
@@ -562,37 +570,39 @@ def enable_two_fa_totp(session: Session, user_id: int, secret: str, backup_codes
             detail="User not found"
         )
 
-    # Verify the code
+    # Verify the code against the raw (unencrypted) secret
     if not verify_totp_code(secret, verification_code):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification code"
         )
 
-    # Store 2FA secret (encrypted in production)
-    import json
+    # Encrypt secret before storing; hash backup codes (never store plaintext)
+    import json  # noqa: PLC0415
+    encrypted_secret = encrypt_totp_secret(secret)
+    hashed_codes = [get_password_hash(c) for c in backup_codes]
+
     two_fa = TwoFactorSecret(
         user_id=user_id,
-        secret=secret,
-        backup_codes=json.dumps(backup_codes),
+        secret=encrypted_secret,
+        backup_codes=json.dumps(hashed_codes),
         verified=True,
-        verified_at=datetime.utcnow()
+        verified_at=datetime.now(timezone.utc)
     )
     session.add(two_fa)
 
-    # Update user
     user.two_fa_enabled = True
     user.two_fa_method = "totp"
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now(timezone.utc)
     session.add(user)
     session.commit()
     session.refresh(user)
 
-    # Send 2FA enabled notification email
+    # Send 2FA enabled notification email (dispatched to Celery worker)
     if user.email:
         email_sent = email_service.send_2fa_enabled(user.email, user.name)
         if not email_sent:
-            print(f"⚠️  Warning: Failed to send 2FA enabled email to {user.email}")
+            logger.warning("Failed to queue 2FA-enabled email for user_id=%s", user.id)
 
     return user
 
@@ -619,10 +629,9 @@ def disable_two_fa(session: Session, user_id: int, password: str) -> User:
     if two_fa:
         session.delete(two_fa)
 
-    # Update user
     user.two_fa_enabled = False
     user.two_fa_method = None
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now(timezone.utc)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -642,8 +651,9 @@ def verify_two_fa_code(session: Session, user_id: int, code: str) -> bool:
             detail="2FA is not enabled"
         )
 
-    # Verify TOTP code
-    return verify_totp_code(two_fa.secret, code)
+    # Decrypt secret before verification
+    raw_secret = decrypt_totp_secret(two_fa.secret)
+    return verify_totp_code(raw_secret, code)
 
 
 def get_backup_codes(session: Session, user_id: int) -> list[str]:

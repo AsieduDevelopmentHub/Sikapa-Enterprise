@@ -7,7 +7,7 @@ SQLite and non-Postgres URLs are no-ops; callers keep using normal ORM queries.
 from __future__ import annotations
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from sqlalchemy import text
@@ -273,7 +273,7 @@ def newsletter_run_unsubscribe_token(session: Session, token: str) -> None:
         ).first()
         if row and row.is_subscribed:
             row.is_subscribed = False
-            row.unsubscribed_at = datetime.utcnow()
+            row.unsubscribed_at = datetime.now(timezone.utc)
             session.add(row)
             session.commit()
         return
