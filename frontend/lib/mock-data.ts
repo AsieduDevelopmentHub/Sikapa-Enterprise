@@ -138,12 +138,12 @@ export function getProductById(id: string): MockProduct | undefined {
 /** Products for each home category rail (bestsellers = highest rated first). */
 export function productsForHomeCategory(key: string, pool: MockProduct[] = MOCK_PRODUCTS): MockProduct[] {
   if (key === "bestsellers") {
-    return [...pool].sort((a, b) => b.rating - a.rating);
+    return [...pool].sort((a, b) => b.rating - a.rating).slice(0, 8);
   }
   if (key === "all") {
-    return [...pool];
+    return [...pool].slice(0, 8);
   }
-  return pool.filter((p) => p.category === key);
+  return pool.filter((p) => p.category === key).slice(0, 8);
 }
 
 export function formatGhs(n: number): string {
