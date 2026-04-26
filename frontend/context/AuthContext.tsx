@@ -21,6 +21,27 @@ import {
 } from "@/lib/api/auth";
 import { clearAllAuthTokens, readTokens, writeTokens, type AuthBucket } from "@/lib/auth-storage";
 
+/**
+ * Heuristic: distinguish auth failures (token invalid / expired) from
+ * transient network issues (backend offline, DNS fail, CORS preflight error).
+ *
+ * On network errors we keep the stored tokens so the user isn't silently
+ * signed out when their backend is briefly unreachable.
+ */
+function looksLikeAuthFailure(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  if (
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("load failed") ||
+    msg.includes("network request failed")
+  ) {
+    return false;
+  }
+  return msg.includes("sign in") || msg.includes("401") || msg.includes("403");
+}
+
 type AuthContextValue = {
   user: UserProfile | null;
   accessToken: string | null;
@@ -88,8 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...profile,
         is_admin: Boolean(profile.is_admin),
       });
-    } catch {
-      clearTokens();
+    } catch (e) {
+      if (looksLikeAuthFailure(e)) {
+        clearTokens();
+      }
     }
   }, [clearTokens]);
 
@@ -127,8 +150,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             is_admin: Boolean(profile.is_admin),
           });
         }
-      } catch {
-        if (!cancelled) clearTokens();
+      } catch (e) {
+        if (!cancelled) {
+          if (looksLikeAuthFailure(e)) {
+            clearTokens();
+          } else {
+            // Network glitch: keep tokens so the user stays "logged in" optimistically.
+            // Pages that need data will retry their own fetches.
+            setAccessToken(token);
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
