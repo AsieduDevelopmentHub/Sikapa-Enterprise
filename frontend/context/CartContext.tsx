@@ -118,7 +118,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } else {
         const unitPrice = product.price + (opts.priceDelta ?? 0);
         setLines([
-          ...currentLines,
           {
             product,
             quantity: qty,
@@ -128,6 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             variantImage: opts.variantImage ?? null,
             lineKey: key,
           },
+          ...currentLines,
         ]);
       }
     },
@@ -137,22 +137,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addProduct = useCallback(
     (productId: string, qty = 1, opts: AddToCartOptions = {}) => {
       if (authLoading) return;
+      
+      // Always add locally first
+      addProductInternal(productId, qty, opts);
+      
       if (!user) {
-        pendingAddRef.current = { productId, qty, opts };
-        setCartAuthOpen(true);
+        // Guest mode: just show toast
+        showToast("Added to bag (log in to sync)");
         return;
       }
+
       if (!accessToken) return;
+      
       setCartActionError(null);
       if (source === "mock") {
-        addProductInternal(productId, qty, opts);
         setCartActionError(
           "We're offline — your cart is saved on this device and will sync when you're back online."
         );
         return;
       }
+
       const snapshot = linesRef.current;
-      addProductInternal(productId, qty, opts);
       const key = makeLineKey(productId, opts.variantId ?? null);
       void (async () => {
         try {
@@ -189,18 +194,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         const pending = pendingAddRef.current;
         pendingAddRef.current = null;
-        const merged = mergePendingIntoLines([], pending, getProductRef.current);
-        if (pending) setCartAuthOpen(false);
+        
+        // Merge guest lines into the server
+        const guestLines = linesRef.current.filter(l => !l.serverLineId);
+        
+        if (guestLines.length > 0 || pending) {
+          const merged = mergePendingIntoLines(guestLines, pending, getProductRef.current);
+          await Promise.allSettled(
+            merged.map((line) =>
+              cartAddItem(accessToken, {
+                product_id: Number(line.product.id),
+                quantity: line.quantity,
+                variant_id: line.variantId ?? null,
+              })
+            )
+          );
+        }
 
-        await Promise.allSettled(
-          merged.map((line) =>
-            cartAddItem(accessToken, {
-              product_id: Number(line.product.id),
-              quantity: line.quantity,
-              variant_id: line.variantId ?? null,
-            })
-          )
-        );
         if (cancelled) return;
         const server = await cartList(accessToken);
         if (cancelled) return;

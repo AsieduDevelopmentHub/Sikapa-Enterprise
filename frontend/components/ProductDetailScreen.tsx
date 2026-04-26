@@ -309,11 +309,7 @@ export function ProductDetailScreen({ product: p }: Props) {
 
   const handleBuyNow = useCallback(() => {
     if (addDisabled) return;
-    // For products with variants, require a selection before "Buy Now"
-    if (variants.length > 0 && !selectedVariant) {
-      // In a real app, we might scroll to the variants picker or show a toast
-      return;
-    }
+    if (variants.length > 0 && !selectedVariant) return;
 
     handleAddToCart();
     router.push("/checkout");
