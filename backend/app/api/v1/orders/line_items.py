@@ -45,9 +45,12 @@ def variant_detail_snapshot_from_model(variant: ProductVariant) -> str | None:
 def build_order_item_line_schema(
     session: Session, item: OrderItem, product: Product | None
 ) -> OrderItemLineSchema:
-    disp_name = (item.variant_name or "").strip() or (
-        product.name if product else f"Product #{item.product_id}"
-    )
+    base_name = product.name if product else f"Product #{item.product_id}"
+    # Professional display name:
+    # - Non-variant: parent product name
+    # - Variant: parent product name + variant label (distinct sellable unit)
+    v_label = (item.variant_name or "").strip()
+    disp_name = f"{base_name} — {v_label}" if item.variant_id and v_label else base_name
     variant_detail: str | None = (item.variant_detail_snapshot or "").strip() or None
     img: str | None = None
     variant_row: ProductVariant | None = None

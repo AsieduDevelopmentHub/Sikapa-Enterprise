@@ -97,26 +97,24 @@ export function CartPageClient() {
           <ul className="divide-y divide-sikapa-gray-soft/80 px-3 dark:divide-white/10">
             {lines.map((line) => {
               const thumb = line.variantImage || line.product.image;
+              const title = line.variantLabel
+                ? `${line.product.name} — ${line.variantLabel}`
+                : line.product.name;
               return (
                 <li key={line.lineKey} className="flex gap-4 px-2 py-5">
                   <Link
                     href={`/product/${line.product.id}`}
                     className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[10px] bg-white ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10"
                   >
-                    <Image src={thumb} alt="" fill className="object-cover" sizes="72px" unoptimized/>
+                    <Image src={thumb} alt="" fill className="object-cover" sizes="72px" unoptimized />
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <Link
                       href={`/product/${line.product.id}`}
                       className="font-semibold leading-snug text-sikapa-text-primary hover:text-sikapa-gold dark:text-zinc-100"
                     >
-                      {line.product.name}
+                      {title}
                     </Link>
-                    {line.variantLabel && (
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-500">
-                        {line.variantLabel}
-                      </p>
-                    )}
                     <p className="text-body font-semibold text-sikapa-gold">{formatGhs(line.unitPrice)}</p>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <div className="inline-flex items-center gap-4 rounded-[10px] bg-sikapa-gray-soft px-2 py-1.5 dark:bg-zinc-800">
@@ -124,7 +122,7 @@ export function CartPageClient() {
                           type="button"
                           className="sikapa-tap flex h-8 w-8 items-center justify-center rounded-lg text-lg font-medium text-sikapa-text-primary dark:text-zinc-100"
                           aria-label="Decrease quantity"
-                          onClick={() => void adjustQuantity(line.lineKey, line.product.name, line.quantity - 1)}
+                          onClick={() => void adjustQuantity(line.lineKey, title, line.quantity - 1)}
                         >
                           −
                         </button>
@@ -142,7 +140,7 @@ export function CartPageClient() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => void confirmRemoveLine(line.product.name, line.lineKey)}
+                        onClick={() => void confirmRemoveLine(title, line.lineKey)}
                         className="text-small font-semibold text-sikapa-crimson hover:underline"
                       >
                         Remove

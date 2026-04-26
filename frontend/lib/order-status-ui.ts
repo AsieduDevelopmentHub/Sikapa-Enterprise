@@ -9,7 +9,8 @@ export function orderStatusPillClass(status: string): string {
   const s = status.trim().toLowerCase();
   switch (s) {
     case "delivered":
-      return "bg-emerald-700 text-white ring-emerald-800";
+      // Ensure strong contrast on both light + dark backgrounds.
+      return "bg-emerald-600 text-white ring-emerald-200 dark:ring-emerald-900/40";
     case "shipped":
       return "bg-amber-100 text-amber-950 ring-amber-300/80";
     case "processing":

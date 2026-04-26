@@ -44,12 +44,9 @@ def line_items_for_order_email(session: Session, order_id: int) -> list[dict]:
         p = products.get(it.product_id)
         v = variants.get(it.variant_id) if it.variant_id else None
         if it.variant_id:
-            name = (
-                (it.variant_name or "").strip()
-                or (v.name if v else None)
-                or (p.name if p else None)
-                or f"Product #{it.product_id}"
-            )
+            base_name = (p.name if p else None) or f"Product #{it.product_id}"
+            v_name = (it.variant_name or "").strip() or (v.name if v else None) or "Variant"
+            name = f"{base_name} — {v_name}"
             raw_img = (it.variant_image_url or "").strip() or None
             if not raw_img and v and v.image_url:
                 raw_img = str(v.image_url).strip() or None
