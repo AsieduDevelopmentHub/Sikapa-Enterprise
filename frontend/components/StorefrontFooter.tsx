@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SikapaLogo } from "@/components/SikapaLogo";
+import { NewsletterFooterForm } from "@/components/home/NewsletterFooterForm";
 import { 
   FaFacebook, 
   FaInstagram, 
@@ -7,6 +8,15 @@ import {
   FaCreditCard, 
   FaLock 
 } from "@/components/FaIcons";
+
+const onPage = [
+  { href: "/#intro", label: "Brand" },
+  { href: "/#categories", label: "Categories" },
+  { href: "/#trust", label: "Why Sikapa" },
+  { href: "/#delivery", label: "Delivery" },
+  { href: "/#how-it-works", label: "Process" },
+  { href: "/#need-help", label: "Help" },
+] as const;
 
 export function StorefrontFooter() {
   const currentYear = new Date().getFullYear();
@@ -17,7 +27,7 @@ export function StorefrontFooter() {
         <div className="flex flex-col items-center text-center">
           <SikapaLogo className="h-10 w-auto" />
           <p className="mt-4 text-small text-sikapa-text-secondary dark:text-zinc-400 max-w-[280px]">
-            Your one-stop destination for premium wigs, professional skincare, and exquisite perfumes.
+            Premium beauty destination for authentic wigs, skincare, and fragrance in Ghana.
           </p>
           
           <div className="mt-6 flex items-center gap-6">
@@ -54,13 +64,29 @@ export function StorefrontFooter() {
           </div>
         </div>
 
+        <div className="mt-10 border-t border-sikapa-gray-soft pt-8 dark:border-white/5">
+          <h3 className="text-center text-[11px] font-bold uppercase tracking-widest text-sikapa-text-primary dark:text-zinc-200 mb-4">Quick Links</h3>
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            {onPage.map((l) => (
+              <li key={l.href}>
+                <Link href={l.href} className="text-[12px] text-sikapa-text-secondary hover:text-sikapa-gold dark:text-zinc-400">
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-10 border-t border-sikapa-gray-soft pt-10 dark:border-white/5">
+          <NewsletterFooterForm />
+        </div>
+
         <div className="mt-10 flex flex-col items-center gap-6 border-t border-sikapa-gray-soft pt-10 dark:border-white/5">
           <div className="flex items-center gap-2 text-[10px] font-medium text-sikapa-text-muted dark:text-zinc-500">
             <FaLock className="!h-3 !w-3 text-emerald-600 dark:text-emerald-500" />
             <span>Secure Checkout with Paystack</span>
           </div>
           <div className="flex items-center gap-3 grayscale opacity-60 dark:invert">
-             {/* Payment badges or credit card icons */}
              <FaCreditCard className="!h-5 !w-5" />
              <span className="text-[9px] font-bold uppercase">Visa · Mastercard · MoMo</span>
           </div>

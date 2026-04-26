@@ -2,7 +2,6 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { FeaturedProducts } from "@/components/FeaturedProducts";
 import { HomeBrowseAll } from "@/components/home/HomeBrowseAll";
 import { HomeCategoryRails } from "@/components/home/HomeCategoryRails";
-import { HomeFooter } from "@/components/home/HomeFooter";
 import { HomeHelpCta } from "@/components/home/HomeHelpCta";
 import { HomeHowItWorks } from "@/components/home/HomeHowItWorks";
 import { HomeTrustAndLogistics } from "@/components/home/HomeTrustAndLogistics";
@@ -34,7 +33,6 @@ export default function HomePage() {
       <HomeTrustAndLogistics />
       <HomeHowItWorks />
       <HomeHelpCta />
-      <HomeFooter />
     </main>
   );
 }

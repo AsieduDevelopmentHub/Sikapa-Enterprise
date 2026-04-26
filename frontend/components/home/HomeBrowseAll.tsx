@@ -11,14 +11,20 @@ import { cleanImageUrl } from "@/lib/clean-image-url";
 export function HomeBrowseAll() {
   const { categories, products } = useCatalog();
 
-  const rows = useMemo(
-    () =>
-      categories.map((cat) => ({
+  const rows = useMemo(() => {
+    return categories.map((cat) => {
+      let count = 0;
+      if (cat.key === "bestsellers") {
+        count = products.filter((p) => p.rating >= 4.5).length;
+      } else {
+        count = products.filter((p) => p.category === cat.key || p.category === cat.slug).length;
+      }
+      return {
         ...cat,
-        count: productsForHomeCategory(cat.key, products).length,
-      })),
-    [categories, products]
-  );
+        count,
+      };
+    });
+  }, [categories, products]);
 
   return (
     <section
