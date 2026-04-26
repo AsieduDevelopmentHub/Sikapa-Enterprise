@@ -11,7 +11,7 @@ class ProductBase(SQLModel):
     price: float
     image_url: Optional[str] = None
     category: Optional[str] = Field(default=None, sa_column=Column("category", String, nullable=True))
-    sku: Optional[str] = Field(default=None, max_length=10, index=True)  # Shortened to 10 chars max
+    sku: Optional[str] = Field(default=None, max_length=120, index=True) 
     weight: Optional[float] = None
     in_stock: int = 0
     is_active: bool = True
@@ -515,7 +515,7 @@ class ProductVariant(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     product_id: int = Field(foreign_key="product.id", index=True)
     name: str = Field(max_length=160)  # e.g. "Red / Small"
-    sku: Optional[str] = Field(default=None, max_length=10, index=True)  # Shortened to 10 chars max
+    sku: Optional[str] = Field(default=None, max_length=120, index=True) 
     attributes: Optional[str] = Field(default=None, max_length=2000)
     # JSON-encoded dict of attributes e.g. {"color":"red","size":"S"}
     price_delta: float = Field(default=0.0)  # signed offset from base product price
