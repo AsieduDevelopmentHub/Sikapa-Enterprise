@@ -120,6 +120,15 @@ def get_session(request: Request):
         yield session
 
 
+from contextlib import contextmanager
+
+@contextmanager
+def get_session_context():
+    """Context manager for background tasks where FastAPI dependency injection is not available."""
+    with Session(engine) as session:
+        yield session
+
+
 def create_db_and_tables() -> None:
     """Create all database tables from SQLModel definitions."""
     SQLModel.metadata.create_all(engine)
