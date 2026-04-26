@@ -26,7 +26,8 @@ else:
         print("⚠️  INFO: Emails are disabled for local development (EMAIL_ENABLED=false).")
 
 
-from app.core.tasks import send_email_task
+from fastapi import BackgroundTasks
+from app.core.tasks import send_email_task, send_email_immediate
 
 class EmailService:
     """Service for sending emails via Resend API."""
@@ -37,14 +38,24 @@ class EmailService:
         subject: str,
         html_content: str,
         from_email: str | None = None,
+        background_tasks: BackgroundTasks | None = None,
     ) -> Optional[str]:
         if from_email is None:
             from_email = default_from_email
 
+        # 1. Preferred: FastAPI BackgroundTasks (Process-native, No billing)
+        if background_tasks:
+            background_tasks.add_task(
+                send_email_immediate,
+                to_email=to_email,
+                subject=subject,
+                html_content=html_content,
+                from_email=from_email,
+            )
+            return "queued-in-background"
+
+        # 2. Fallback: Celery (if infrastructure exists)
         try:
-            # Dispatch to Celery worker (fire and forget)
-            # We return a dummy "queued" ID because the actual Resend ID
-            # won't be available until the async worker completes the job.
             send_email_task.delay(
                 to_email=to_email,
                 subject=subject,
@@ -53,12 +64,13 @@ class EmailService:
             )
             return "queued-in-celery"
         except Exception as e:
+            # 3. Last Resort: Immediate sync (blocks request)
             import logging
-            logging.getLogger(__name__).warning("Failed to queue email task: %s", e)
-            return None
+            logging.getLogger(__name__).warning("Celery failed, sending synchronously: %s", e)
+            return send_email_immediate(to_email, subject, html_content, from_email)
 
     @staticmethod
-    def send_welcome_email(email: str, first_name: str | None = None) -> bool:
+    def send_welcome_email(email: str, first_name: str | None = None, background_tasks: BackgroundTasks | None = None) -> bool:
         name = first_name or "there"
         subject = "Welcome to Sikapa Enterprise"
         inner = (
@@ -76,10 +88,10 @@ class EmailService:
             preheader="Your Sikapa account is ready.",
             inner_html=inner,
         )
-        return EmailService.send_email(email, subject, html_content) is not None
+        return EmailService.send_email(email, subject, html_content, background_tasks=background_tasks) is not None
 
     @staticmethod
-    def send_email_verification(email: str, otp_code: str, first_name: str | None = None) -> bool:
+    def send_email_verification(email: str, otp_code: str, first_name: str | None = None, background_tasks: BackgroundTasks | None = None) -> bool:
         name = first_name or "there"
         subject = "Verify your email — Sikapa"
         inner = (
@@ -93,10 +105,10 @@ class EmailService:
             preheader=f"Your code: {otp_code}",
             inner_html=inner,
         )
-        return EmailService.send_email(email, subject, html_content) is not None
+        return EmailService.send_email(email, subject, html_content, background_tasks=background_tasks) is not None
 
     @staticmethod
-    def send_password_reset(email: str, reset_token: str, first_name: str | None = None) -> bool:
+    def send_password_reset(email: str, reset_token: str, first_name: str | None = None, background_tasks: BackgroundTasks | None = None) -> bool:
         name = first_name or "there"
         reset_url = T.reset_password_url(reset_token)
         subject = "Reset your password — Sikapa"
@@ -112,7 +124,7 @@ class EmailService:
             preheader="Secure your Sikapa account with a new password.",
             inner_html=inner,
         )
-        return EmailService.send_email(email, subject, html_content) is not None
+        return EmailService.send_email(email, subject, html_content, background_tasks=background_tasks) is not None
 
     @staticmethod
     def send_2fa_enabled(email: str, first_name: str | None = None) -> bool:
@@ -134,7 +146,7 @@ class EmailService:
         return EmailService.send_email(email, subject, html_content) is not None
 
     @staticmethod
-    def send_account_deletion(email: str, first_name: str | None = None) -> bool:
+    def send_account_deletion(email: str, first_name: str | None = None, background_tasks: BackgroundTasks | None = None) -> bool:
         name = first_name or "there"
         subject = "Account deleted — Sikapa"
         inner = (
@@ -147,7 +159,7 @@ class EmailService:
             preheader="Your Sikapa account has been removed.",
             inner_html=inner,
         )
-        return EmailService.send_email(email, subject, html_content) is not None
+        return EmailService.send_email(email, subject, html_content, background_tasks=background_tasks) is not None
 
     @staticmethod
     def send_subscription_confirmation(email: str, verification_token: str) -> bool:
@@ -206,6 +218,7 @@ class EmailService:
         *,
         currency: str = "GHS",
         line_items: list[dict] | None = None,
+        background_tasks: BackgroundTasks | None = None,
     ) -> bool:
         name = first_name or "Customer"
         cur = (currency or "GHS").strip().upper()
@@ -233,7 +246,7 @@ class EmailService:
             preheader=f"Thank you — {cur} {order_total:,.2f} total.",
             inner_html=inner,
         )
-        return EmailService.send_email(email, subject, html_content) is not None
+        return EmailService.send_email(email, subject, html_content, background_tasks=background_tasks) is not None
 
     @staticmethod
     def send_order_shipped(

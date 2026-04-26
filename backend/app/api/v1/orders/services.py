@@ -5,7 +5,7 @@ import os
 import uuid
 from datetime import datetime
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, BackgroundTasks
 from sqlmodel import Session, select
 
 from app.models import Order, OrderItem, CartItem, Product, ProductVariant, Invoice, User
@@ -211,7 +211,8 @@ async def create_invoice_for_order(
 async def send_order_confirmation_email(
     session: Session,
     order: Order,
-    user_id: int
+    user_id: int,
+    background_tasks: BackgroundTasks | None = None
 ) -> None:
     """Send order confirmation email to the user."""
     user = session.exec(select(User).where(User.id == user_id)).first()
@@ -227,6 +228,7 @@ async def send_order_confirmation_email(
         user.name or user.username or user.email,
         currency=currency,
         line_items=lines,
+        background_tasks=background_tasks
     )
 
 

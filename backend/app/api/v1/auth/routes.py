@@ -4,7 +4,7 @@ Authentication API routes - all endpoints for user auth flows.
 import os
 from urllib.parse import quote, urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session
 
@@ -86,6 +86,7 @@ router = APIRouter()
 def register_endpoint(
     request: Request,
     payload: RegisterRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
 ):
     """Register a new user account."""
@@ -95,6 +96,7 @@ def register_endpoint(
         name=payload.name,
         email=payload.email,
         password=payload.password,
+        background_tasks=background_tasks,
     )
     return user
 
@@ -256,10 +258,11 @@ def logout_endpoint(
 def verify_email_endpoint(
     request: Request,
     payload: VerifyEmailRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
 ):
     """Verify email address using OTP code."""
-    user = verify_email(session, payload.email, payload.code)
+    user = verify_email(session, payload.email, payload.code, background_tasks=background_tasks)
     return {
         "message": "Email verified successfully",
         "email": user.email,
@@ -274,10 +277,11 @@ def verify_email_endpoint(
 def request_password_reset_endpoint(
     request: Request,
     payload: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
 ):
     """Request password reset - send token to email."""
-    request_password_reset(session, payload.email)
+    request_password_reset(session, payload.email, background_tasks=background_tasks)
     # Always return success for security (don't leak email existence)
     return {"message": "If email exists, reset link has been sent"}
 
@@ -324,12 +328,13 @@ def get_profile_endpoint(
 @router.put("/profile", response_model=UserProfileResponse)
 def update_profile_endpoint(
     request: UserProfileUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session)
 ):
     """Update user profile information."""
     patch = request.model_dump(exclude_unset=True)
-    updated_user = update_user_profile(session, current_user.id, patch)
+    updated_user = update_user_profile(session, current_user.id, patch, background_tasks=background_tasks)
     return UserProfileResponse.model_validate(updated_user)
 
 
@@ -337,11 +342,12 @@ def update_profile_endpoint(
 @auth_limiter
 def resend_email_verification_endpoint(
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
 ):
     """Send a new email verification code to the address on file."""
-    resend_email_verification(session, current_user.id)
+    resend_email_verification(session, current_user.id, background_tasks=background_tasks)
     return {"message": "Verification code sent"}
 
 
@@ -429,9 +435,10 @@ def get_backup_codes_endpoint(
 @router.post("/account/delete")
 def delete_account_endpoint(
     request: DeleteAccountRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session)
 ):
     """Delete user account (irreversible)."""
-    delete_user_account(session, current_user.id, request.password)
+    delete_user_account(session, current_user.id, request.password, background_tasks=background_tasks)
     return {"message": "Account deleted successfully"}

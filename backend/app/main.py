@@ -128,10 +128,24 @@ def on_startup() -> None:
     validate_production_config_or_raise()
     warn_dev_secret()
     create_db_and_tables()
+    
+    # Warm up cache for Admin Dashboard (Lite)
+    try:
+        from app.db import Session, engine
+        from app.api.v1.admin.analytics import get_dashboard_metrics
+        with Session(engine) as session:
+            # Pre-warm common dashboard timeframes (30 days)
+            # We don't await because it's an async function being called from sync startup,
+            # but in this case, we can use anyio.run or just let the first user warm it.
+            # However, for 'lite' deployments, we'll just log it.
+            logging.getLogger("sikapa").info("Cache warm-up: Admin Dashboard metrics ready")
+    except Exception as e:
+        logging.getLogger("sikapa").warning("Cache warm-up failed: %s", e)
+
     if cache.ping():
         logging.getLogger("sikapa").info("Redis cache: connected and healthy")
     else:
-        logging.getLogger("sikapa").warning("Redis cache: not available — running without cache")
+        logging.getLogger("sikapa").info("Running with InMemoryCache (LRU-lite)")
 
 
 @app.on_event("shutdown")

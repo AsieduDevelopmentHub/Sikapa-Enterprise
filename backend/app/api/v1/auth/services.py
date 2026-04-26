@@ -1,7 +1,7 @@
 """
 Authentication services - comprehensive business logic for all auth operations.
 """
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, BackgroundTasks
 from sqlmodel import Session, select
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
@@ -77,6 +77,7 @@ def register_user(
     name: str,
     password: str,
     email: str | None = None,
+    background_tasks: BackgroundTasks | None = None,
 ) -> User:
     """Register a new user."""
     username = _normalize_username(username)
@@ -128,15 +129,11 @@ def register_user(
         session.add(otp)
         session.commit()
 
-        # Send welcome email (dispatched to Celery worker)
-        welcome_sent = email_service.send_welcome_email(user.email, user.name)
-        if not welcome_sent:
-            logger.warning("Failed to queue welcome email for user_id=%s", user.id)
+        # Send welcome email (via BackgroundTasks or fallback)
+        email_service.send_welcome_email(user.email, user.name, background_tasks=background_tasks)
 
-        # Send verification email (dispatched to Celery worker)
-        email_sent = email_service.send_email_verification(user.email, otp_code, user.name)
-        if not email_sent:
-            logger.warning("Failed to queue verification email for user_id=%s", user.id)
+        # Send verification email (via BackgroundTasks or fallback)
+        email_service.send_email_verification(user.email, otp_code, user.name, background_tasks=background_tasks)
 
     return user
 
@@ -228,7 +225,7 @@ def logout_user(session: Session, user_id: int, token: str) -> None:
 
 
 # ============ Email Verification ============
-def verify_email(session: Session, email: str, code: str) -> User:
+def verify_email(session: Session, email: str, code: str, background_tasks: BackgroundTasks | None = None) -> User:
     """Verify email using OTP code."""
     user = fetch_user_for_login(session, email.strip().lower())
     if not user:
@@ -272,16 +269,14 @@ def verify_email(session: Session, email: str, code: str) -> User:
     session.commit()
     session.refresh(user)
 
-    # Send welcome email (dispatched to Celery worker)
-    email_sent = email_service.send_welcome_email(user.email, user.name)
-    if not email_sent:
-        logger.warning("Failed to queue post-verification welcome email for user_id=%s", user.id)
+    # Send welcome email (via BackgroundTasks or fallback)
+    email_service.send_welcome_email(user.email, user.name, background_tasks=background_tasks)
 
     return user
 
 
 # ============ Password Reset ============
-def request_password_reset(session: Session, email: str) -> None:
+def request_password_reset(session: Session, email: str, background_tasks: BackgroundTasks | None = None) -> None:
     """Request password reset - generate token and send email."""
     user = fetch_user_for_login(session, email.strip().lower())
     if not user:
@@ -299,10 +294,8 @@ def request_password_reset(session: Session, email: str) -> None:
     session.add(password_reset)
     session.commit()
 
-    # Send password reset email (dispatched to Celery worker)
-    email_sent = email_service.send_password_reset(user.email, reset_token, user.name)
-    if not email_sent:
-        logger.warning("Failed to queue password reset email for user_id=%s", user.id)
+    # Send password reset email (via BackgroundTasks or fallback)
+    email_service.send_password_reset(user.email, reset_token, user.name, background_tasks=background_tasks)
 
 
 def reset_password(session: Session, token: str, new_password: str) -> User:
@@ -349,7 +342,7 @@ def _invalidate_email_verification_otps(session: Session, user_id: int) -> None:
         session.add(otp)
 
 
-def _issue_email_verification_otp(session: Session, user: User) -> None:
+def _issue_email_verification_otp(session: Session, user: User, background_tasks: BackgroundTasks | None = None) -> None:
     """Create a new email verification OTP and send mail. User row must already include the target email."""
     if not user.email:
         return
@@ -366,12 +359,10 @@ def _issue_email_verification_otp(session: Session, user: User) -> None:
     )
     session.add(otp)
     session.commit()
-    email_sent = email_service.send_email_verification(user.email, otp_code, user.name)
-    if not email_sent:
-        logger.warning("Failed to queue email verification OTP for user_id=%s", user.id)
+    email_service.send_email_verification(user.email, otp_code, user.name, background_tasks=background_tasks)
 
 
-def resend_email_verification(session: Session, user_id: int) -> None:
+def resend_email_verification(session: Session, user_id: int, background_tasks: BackgroundTasks | None = None) -> None:
     """Resend verification code for the email currently on file (must be unverified)."""
     user = session.get(User, user_id)
     if not user:
@@ -395,7 +386,7 @@ def resend_email_verification(session: Session, user_id: int) -> None:
     _issue_email_verification_otp(session, user)
 
 
-def update_user_profile(session: Session, user_id: int, patch: dict) -> User:
+def update_user_profile(session: Session, user_id: int, patch: dict, background_tasks: BackgroundTasks | None = None) -> User:
     """Apply partial profile updates. Only keys present in `patch` are updated."""
     user = session.get(User, user_id)
     if not user:
@@ -501,7 +492,7 @@ def change_password(session: Session, user_id: int, current_password: str, new_p
 
 
 # ============ Account Deletion ============
-def delete_user_account(session: Session, user_id: int, password: str) -> None:
+def delete_user_account(session: Session, user_id: int, password: str, background_tasks: BackgroundTasks | None = None) -> None:
     """Delete user account (soft delete)."""
     user = session.get(User, user_id)
     if not user:
