@@ -133,6 +133,20 @@ export function ProductDetailScreen({ product: p }: Props) {
     [variants, selectedVariantId]
   );
 
+  // Swipe logic for hero image
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
   useEffect(() => {
     trackProductView(p.id);
   }, [p.id]);
@@ -289,6 +303,28 @@ export function ProductDetailScreen({ product: p }: Props) {
     []
   );
 
+  const handleTouchEnd = useCallback(() => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe || isRightSwipe) {
+      const currentIndex = thumbnails.findIndex((t) => t.src === activeImage);
+      if (currentIndex === -1) return;
+
+      if (isLeftSwipe) {
+        // Next image
+        const nextIndex = (currentIndex + 1) % thumbnails.length;
+        onThumbnailPick(thumbnails[nextIndex]);
+      } else {
+        // Prev image
+        const prevIndex = (currentIndex - 1 + thumbnails.length) % thumbnails.length;
+        onThumbnailPick(thumbnails[prevIndex]);
+      }
+    }
+  }, [touchStart, touchEnd, activeImage, thumbnails, onThumbnailPick]);
+
   // The "add to cart" action must carry the variant context so the server
   // books the right SKU and the cart page shows "Colour / Size · +GHS X".
   const handleAddToCart = useCallback(
@@ -333,7 +369,12 @@ export function ProductDetailScreen({ product: p }: Props) {
   return (
     <div className="bg-sikapa-cream px-4 pb-24 pt-4 dark:bg-zinc-950">
       <div className="mx-auto max-w-mobile">
-        <div className="relative aspect-square w-full overflow-hidden rounded-[12px] bg-sikapa-gray-soft shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-800 dark:ring-white/10">
+        <div 
+          className="relative aspect-square w-full overflow-hidden rounded-[12px] bg-sikapa-gray-soft shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-800 dark:ring-white/10"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="absolute inset-2 z-[1] sm:inset-3">
             <div className="relative h-full w-full">
               <Image
