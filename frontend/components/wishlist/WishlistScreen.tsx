@@ -13,10 +13,12 @@ export function WishlistScreen() {
   const { products, loading: catalogLoading } = useCatalog();
   const { effectiveWishIds, wishErr, clearWishErr } = useWishlist();
 
-  const saved = useMemo(
-    () => products.filter((p) => effectiveWishIds.has(p.id)),
-    [products, effectiveWishIds],
-  );
+  const saved = useMemo(() => {
+    const ids = Array.from(effectiveWishIds);
+    return ids
+      .map((id) => products.find((p) => p.id === id))
+      .filter((p): p is (typeof products)[0] => !!p);
+  }, [products, effectiveWishIds]);
 
   return (
     <div className="sikapa-storefront-max mx-auto bg-sikapa-cream px-4 pb-8 pt-4 dark:bg-zinc-950">

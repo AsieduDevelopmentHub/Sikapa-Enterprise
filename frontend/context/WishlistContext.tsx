@@ -69,17 +69,18 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       setWishErr(null);
 
       if (!accessToken) {
+        const wasWishlisted = guestWishIds.has(productId);
         setGuestWishIds((prev) => {
-          const next = new Set(prev);
-          if (next.has(productId)) {
+          if (wasWishlisted) {
+            const next = new Set(prev);
             next.delete(productId);
-            showToast("Removed from wishlist");
+            return next;
           } else {
-            next.add(productId);
-            showToast("Saved to wishlist");
+            // Prepend new ID to ensure "latest at top"
+            return new Set([productId, ...Array.from(prev)]);
           }
-          return next;
         });
+        showToast(wasWishlisted ? "Removed from wishlist" : "Saved to wishlist");
         return;
       }
 
