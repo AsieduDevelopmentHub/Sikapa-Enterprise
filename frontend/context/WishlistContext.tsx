@@ -30,6 +30,26 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const [serverWishProductIds, setServerWishProductIds] = useState<Set<string>>(() => new Set());
   const [wishErr, setWishErr] = useState<string | null>(null);
 
+  // Load guest wishlist from localStorage on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem("sikapa_guest_wishlist");
+      if (saved) {
+        setGuestWishIds(new Set(JSON.parse(saved)));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Save guest wishlist to localStorage when it changes
+  useEffect(() => {
+    if (accessToken) return; // Don't overwrite if logged in
+    if (typeof window === "undefined") return;
+    localStorage.setItem("sikapa_guest_wishlist", JSON.stringify(Array.from(guestWishIds)));
+  }, [guestWishIds, accessToken]);
+
   const effectiveWishIds = useMemo(() => {
     if (accessToken) return serverWishProductIds;
     return guestWishIds;
@@ -69,18 +89,27 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       setWishErr(null);
 
       if (!accessToken) {
-        const wasWishlisted = guestWishIds.has(productId);
+        let isNowSaved = false;
         setGuestWishIds((prev) => {
-          if (wasWishlisted) {
-            const next = new Set(prev);
+          const next = new Set(prev);
+          if (next.has(productId)) {
             next.delete(productId);
-            return next;
+            isNowSaved = false;
           } else {
-            // Prepend new ID to ensure "latest at top"
-            return new Set([productId, ...Array.from(prev)]);
+            // Add to front of set-derived array logic (Set doesn't have order in simple sense, but JS Sets maintain insertion order)
+            // To put it at top, we create a new set with productId first
+            const newSet = new Set([productId, ...Array.from(prev)]);
+            isNowSaved = true;
+            return newSet;
           }
+          return next;
         });
-        showToast(wasWishlisted ? "Removed from wishlist" : "Saved to wishlist");
+        
+        // Call toast AFTER the state update call, but use a local variable to avoid race condition with stale 'on' check
+        // Wait, functional update doesn't return the new value to the outer scope easily.
+        // So we'll check the STALE value and invert it for the toast message.
+        const wasOn = guestWishIds.has(productId);
+        showToast(wasOn ? "Removed from wishlist" : "Saved to wishlist");
         return;
       }
 
@@ -102,7 +131,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setWishErr("Wishlist could not be updated. Try again.");
       }
     },
-    [accessToken, serverWishProductIds, showToast]
+    [accessToken, serverWishProductIds, guestWishIds, showToast]
   );
 
   const isWishlisted = useCallback(
