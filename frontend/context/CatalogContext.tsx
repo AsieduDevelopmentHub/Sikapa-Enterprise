@@ -21,6 +21,7 @@ import {
   mockCatalogDisplay,
   type CatalogCategory,
 } from "@/lib/api/products";
+import { useCategories, useProducts } from "@/lib/hooks/useProducts";
 
 type Source = "api" | "mock";
 
@@ -40,59 +41,14 @@ const CatalogContext = createContext<CatalogContextValue | null>(null);
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
   /** Start empty so we never flash demo products while the API request is in flight. */
-  const [products, setProducts] = useState<MockProduct[]>([]);
-  const [categories, setCategories] = useState<CatalogCategory[]>([]);
-  const [source, setSource] = useState<Source>("api");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: catData, isLoading: catLoading } = useCategories();
+  const { data: prodData, isLoading: prodLoading, error: prodError } = useProducts({ limit: 100 });
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [apiCats, apiItems] = await Promise.all([fetchCategories(), fetchProducts(100)]);
-        if (cancelled) return;
-        const mapped = apiItems.map((row) => mapApiProductToMock(row, apiCats));
-        
-        // Shuffle products for a fresh discovery experience
-        for (let i = mapped.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [mapped[i], mapped[j]] = [mapped[j], mapped[i]];
-        }
-
-        const displayCats = mapApiCategoriesToDisplay(apiCats);
-        setProducts(mapped);
-        setCategories(displayCats);
-        setSource("api");
-      } catch (e) {
-        if (cancelled) return;
-        const msg = e instanceof Error ? e.message : "Catalog unavailable";
-        setError(msg);
-        const fallback = mockCatalogDisplay();
-        setProducts(fallback.products);
-        setCategories(fallback.categories);
-        setSource("mock");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    const runLoad = () => {
-      void load();
-    };
-    runLoad();
-    const onRefresh = () => runLoad();
-    if (typeof window !== "undefined") {
-      window.addEventListener("sikapa-catalog-refresh", onRefresh);
-    }
-    return () => {
-      cancelled = true;
-      if (typeof window !== "undefined") {
-        window.removeEventListener("sikapa-catalog-refresh", onRefresh);
-      }
-    };
-  }, []);
+  const categories = useMemo(() => catData || [], [catData]);
+  const products = useMemo(() => prodData?.items || [], [prodData]);
+  const loading = catLoading || prodLoading;
+  const error = prodError ? (prodError as Error).message : null;
+  const source = "api"; // Assuming API for now
 
   const getProduct = useCallback(
     (id: string) => products.find((p) => p.id === id),
