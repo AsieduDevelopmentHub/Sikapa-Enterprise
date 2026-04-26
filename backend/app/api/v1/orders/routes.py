@@ -2,7 +2,7 @@
 Orders API routes
 """
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Header
 from sqlmodel import Session, select, func
 
 from app.db import get_session
