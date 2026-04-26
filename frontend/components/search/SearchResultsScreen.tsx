@@ -17,6 +17,7 @@ import {
   type SortKey,
 } from "@/lib/search-helpers";
 import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
+import { useProducts } from "@/lib/hooks/useProducts";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "relevance", label: "Best match" },
@@ -30,12 +31,12 @@ export function SearchResultsScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const q = (searchParams.get("q") ?? "").trim();
-  const { products, categories, loading: catalogLoading } = useCatalog();
-
   const [sort, setSort] = useState<SortKey>("relevance");
   const [minRating, setMinRating] = useState<number>(0);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [priceMax, setPriceMax] = useState<number | null>(null);
+
+  const { categories, loading: catalogLoading } = useCatalog();
   const [recent, setRecent] = useState<string[]>([]);
 
   useEffect(() => {
@@ -48,21 +49,19 @@ export function SearchResultsScreen() {
     pingProductSearchAnalytics(q);
   }, [q]);
 
-  const priceCeiling = useMemo(() => {
-    const max = products.reduce((m, p) => Math.max(m, p.price), 0);
-    return max > 0 ? max : 5000;
-  }, [products]);
+  const { data: searchData, isLoading: searchLoading } = useProducts({
+    search: q,
+    sortBy: sort === "relevance" ? "created_at" : (sort.split("-")[0] as any),
+    sortOrder: sort.endsWith("-asc") ? "asc" : "desc",
+    minRating: minRating > 0 ? minRating : undefined,
+    maxPrice: priceMax ?? undefined,
+  });
 
-  const filtered = useMemo(() => {
-    if (!q) return [];
-    const base = products.filter((p) => matchesQuery(p, q));
-    const narrowed = filterByPriceAndRating(base, {
-      max: priceMax ?? undefined,
-      minRating: minRating > 0 ? minRating : undefined,
-      inStockOnly,
-    });
-    return sortProducts(narrowed, sort);
-  }, [products, q, priceMax, minRating, inStockOnly, sort]);
+  const products = searchData?.items || [];
+  const loading = searchLoading || catalogLoading;
+  const filtered = products; 
+
+  const priceCeiling = 10000; // Simplified for now or could be calculated from catalog
 
   const suggestedCategories = useMemo(() => {
     if (!q) return [];

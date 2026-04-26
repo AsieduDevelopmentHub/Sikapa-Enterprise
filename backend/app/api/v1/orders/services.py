@@ -25,7 +25,8 @@ async def create_order_from_cart(
     subtotal: float,
     delivery_fee: float,
     order_data: OrderCreateSchema,
-    cart_items: list[CartItem]
+    cart_items: list[CartItem],
+    idempotency_key: str | None = None
 ) -> Order:
     """Create order from cart items."""
     total_price = round(float(subtotal) + float(delivery_fee), 2)
@@ -51,7 +52,8 @@ async def create_order_from_cart(
         shipping_provider=provider,
         shipping_contact_name=order_data.shipping_contact_name,
         shipping_contact_phone=order_data.shipping_contact_phone,
-        notes=order_data.notes
+        notes=order_data.notes,
+        idempotency_key=idempotency_key
     )
     session.add(order)
     session.flush()

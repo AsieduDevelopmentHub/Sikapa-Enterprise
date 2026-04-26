@@ -104,9 +104,20 @@ async def get_order(
 async def create_order(
     order_data: OrderCreateSchema,
     current_user=Depends(get_current_active_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
 ):
-    """Create order from cart."""
+    """Create order from cart with idempotency check."""
+    if idempotency_key:
+        existing = session.exec(
+            select(Order).where(
+                Order.user_id == current_user.id,
+                Order.idempotency_key == idempotency_key
+            )
+        ).first()
+        if existing:
+            return existing
+
     # Get cart items
     cart_items = session.exec(
         select(CartItem).where(CartItem.user_id == current_user.id)
@@ -171,7 +182,7 @@ async def create_order(
         )
 
     return await create_order_from_cart(
-        session, current_user.id, subtotal, fee, order_data, cart_items
+        session, current_user.id, subtotal, fee, order_data, cart_items, idempotency_key
     )
 
 

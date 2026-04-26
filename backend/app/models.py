@@ -215,6 +215,7 @@ class Order(SQLModel, table=True):
         default="pending"
     )  # pending | paid | failed | abandoned | refunded | partially_refunded
     confirmation_email_sent_at: Optional[datetime] = None
+    idempotency_key: Optional[str] = Field(default=None, max_length=128, index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

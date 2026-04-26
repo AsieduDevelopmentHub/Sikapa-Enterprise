@@ -92,12 +92,17 @@ async def search_products(
         return cached
 
     search_term = f"%{search_query}%"
+    search_words = [w.strip() for w in search_query.split() if len(w.strip()) > 1]
 
     match_any = or_(
         Product.name.ilike(search_term),
         Product.description.ilike(search_term),
         and_(Product.sku.isnot(None), Product.sku.ilike(search_term)),
     )
+
+    if search_words:
+        word_filters = [Product.name.ilike(f"%{w}%") for w in search_words]
+        match_any = or_(match_any, *word_filters)
     where_clause = and_(Product.is_active == True, match_any)
     total = session.exec(select(func.count(Product.id)).where(where_clause)).one()
 
