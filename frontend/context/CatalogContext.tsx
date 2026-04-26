@@ -1,12 +1,11 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
 import type { MockProduct } from "@/lib/mock-data";
@@ -40,6 +39,7 @@ type CatalogContextValue = {
 const CatalogContext = createContext<CatalogContextValue | null>(null);
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   /** Start empty so we never flash demo products while the API request is in flight. */
   const { data: catData, isLoading: catLoading } = useCategories();
   const { data: prodData, isLoading: prodLoading, error: prodError } = useProducts({ limit: 100 });
@@ -68,19 +68,16 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         const row = await fetchProductById(num);
         const cats = await fetchCategories();
         const p = mapApiProductToMock(row, cats);
-        setProducts((prev) => {
-          const i = prev.findIndex((x) => x.id === p.id);
-          if (i < 0) return [...prev, p];
-          const next = [...prev];
-          next[i] = p;
-          return next;
-        });
+        
+        // Update the query cache
+        await queryClient.invalidateQueries({ queryKey: ["products"] });
+        
         return p;
       } catch {
         return null;
       }
     },
-    []
+    [queryClient]
   );
 
   const homeRailCategoryKeys = useMemo(

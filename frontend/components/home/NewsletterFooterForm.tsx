@@ -12,12 +12,12 @@ export function NewsletterFooterForm() {
   const [msg, setMsg] = useState<string | null>(null);
 
   return (
-    <div className="mt-8 border-t border-white/10 pt-6">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-gold/90">Newsletter</p>
-      <p className="mt-1 text-[11px] leading-relaxed text-white/55">
+    <div className="mt-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-sikapa-gold">Newsletter</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">
         Occasional drops, restocks, product launches, and price-drop alerts. Unsubscribe anytime.
       </p>
-      <p className="mt-1 text-[11px] text-white/60">
+      <p className="mt-1 text-[11px] text-sikapa-text-muted dark:text-zinc-500">
         Already subscribed?{" "}
         <Link href="/newsletter/unsubscribe" className="font-semibold text-sikapa-gold hover:underline">
           Unsubscribe here
@@ -60,22 +60,22 @@ export function NewsletterFooterForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Your email"
-            className="min-w-0 flex-1 rounded-[10px] border-0 bg-white/10 py-2.5 px-3 text-small text-white placeholder:text-white/40 ring-1 ring-white/15 focus:ring-2 focus:ring-sikapa-gold/50"
+            className="min-w-0 flex-1 rounded-[10px] border-0 bg-sikapa-gray-soft py-2.5 px-3 text-small text-sikapa-text-primary placeholder:text-sikapa-text-muted ring-1 ring-black/[0.06] focus:ring-2 focus:ring-sikapa-gold/50 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:ring-white/10"
           />
           <button
             type="submit"
             disabled={busy}
-            className="shrink-0 rounded-[10px] bg-sikapa-gold px-4 py-2.5 text-small font-semibold text-white disabled:opacity-50"
+            className="shrink-0 rounded-[10px] bg-sikapa-gold px-4 py-2.5 text-small font-semibold text-white disabled:opacity-50 hover:bg-sikapa-gold-hover transition-colors"
           >
             {busy ? "…" : "Subscribe"}
           </button>
         </div>
-        <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-white/70">
+        <label className="flex cursor-pointer items-start gap-2 text-[11px] leading-snug text-sikapa-text-secondary dark:text-zinc-400">
           <input
             type="checkbox"
             checked={marketingOk}
             onChange={(e) => setMarketingOk(e.target.checked)}
-            className="mt-0.5 shrink-0 rounded border-white/30"
+            className="mt-0.5 shrink-0 rounded border-sikapa-gray-soft text-sikapa-gold focus:ring-sikapa-gold/50"
           />
           <span>
             I agree to receive marketing emails about products, offers, and updates. See our{" "}
@@ -86,7 +86,7 @@ export function NewsletterFooterForm() {
           </span>
         </label>
       </form>
-      {msg ? <p className="mt-2 text-[11px] text-white/70">{msg}</p> : null}
+      {msg ? <p className="mt-2 text-[11px] text-sikapa-gold font-medium">{msg}</p> : null}
     </div>
   );
 }
