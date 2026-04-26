@@ -44,11 +44,20 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const { data: catData, isLoading: catLoading } = useCategories();
   const { data: prodData, isLoading: prodLoading, error: prodError } = useProducts({ limit: 100 });
 
-  const categories = useMemo(() => catData || [], [catData]);
-  const products = useMemo(() => prodData?.items || [], [prodData]);
+  const categories = useMemo(() => {
+    if (!catData) return [];
+    return mapApiCategoriesToDisplay(catData);
+  }, [catData]);
+
+  const products = useMemo(() => {
+    if (!prodData?.items) return [];
+    // We pass catData or empty array to the product mapper so it can resolve category labels
+    return prodData.items.map((row) => mapApiProductToMock(row, catData || []));
+  }, [prodData, catData]);
+
   const loading = catLoading || prodLoading;
   const error = prodError ? (prodError as Error).message : null;
-  const source = "api"; // Assuming API for now
+  const source = "api"; 
 
   const getProduct = useCallback(
     (id: string) => products.find((p) => p.id === id),
