@@ -40,7 +40,7 @@ Thank you.`;
 export function WhatsAppFloat(props: WhatsAppFloatProps) {
   if (!props.productName && !props.productPrice && !props.productUrl) {
     return null;
-  }  console.log("WhatsApp Props:", props);
+  }
 
   const message = formatProductMessage(props);
   const chatUrl = getWhatsAppChatUrl(message);

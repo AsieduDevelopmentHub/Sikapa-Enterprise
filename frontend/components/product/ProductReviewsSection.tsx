@@ -76,9 +76,9 @@ function ReviewMediaGallery({
                 aria-label="View photo full size"
                 onClick={() => setLightboxUrl(url)}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <>
                   {!loaded[m.id] && <span aria-hidden className="block h-full w-full animate-pulse bg-sikapa-gray-soft dark:bg-zinc-700" />}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={url}
                     alt=""

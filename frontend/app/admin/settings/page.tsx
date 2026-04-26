@@ -24,27 +24,49 @@ const DEFAULT_MATRIX: ShippingMatrix = {
   ],
 };
 
+function asString(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function asNumber(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function parseMatrix(rows: BusinessSettingRow[]): ShippingMatrix {
   const raw = rows.find((r) => r.key === SHIPPING_KEY)?.value ?? "";
   if (!raw.trim()) return DEFAULT_MATRIX;
   try {
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return DEFAULT_MATRIX;
-    const regions = Array.isArray(parsed.regions) ? parsed.regions : [];
-    const couriers = Array.isArray(parsed.couriers) ? parsed.couriers : [];
+    const obj = parsed as { regions?: unknown; couriers?: unknown };
+    const regions: unknown[] = Array.isArray(obj.regions) ? obj.regions : [];
+    const couriers: unknown[] = Array.isArray(obj.couriers) ? obj.couriers : [];
     return {
-      regions: regions.map((r: any) => ({
-        slug: String(r.slug ?? "").trim(),
-        label: String(r.label ?? "").trim() || String(r.slug ?? "").trim(),
-        base_fee: Number(r.base_fee ?? 0),
-        cities: Array.isArray(r.cities)
-          ? r.cities.map((c: any) => ({ name: String(c.name ?? "").trim(), fee: Number(c.fee ?? 0) }))
-          : [],
-      })),
-      couriers: couriers.map((c: any) => ({
-        name: String(c.name ?? "").trim(),
-        fee_delta: Number(c.fee_delta ?? 0),
-      })),
+      regions: regions.map((r) => {
+        const region = (r ?? {}) as {
+          slug?: unknown;
+          label?: unknown;
+          base_fee?: unknown;
+          cities?: unknown;
+        };
+        const slug = asString(region.slug);
+        const label = asString(region.label) || slug;
+        const cities = Array.isArray(region.cities) ? region.cities : [];
+        return {
+          slug,
+          label,
+          base_fee: asNumber(region.base_fee),
+          cities: cities.map((c) => {
+            const city = (c ?? {}) as { name?: unknown; fee?: unknown };
+            return { name: asString(city.name), fee: asNumber(city.fee) };
+          }),
+        };
+      }),
+      couriers: couriers.map((c) => {
+        const courier = (c ?? {}) as { name?: unknown; fee_delta?: unknown };
+        return { name: asString(courier.name), fee_delta: asNumber(courier.fee_delta) };
+      }),
     };
   } catch {
     return DEFAULT_MATRIX;

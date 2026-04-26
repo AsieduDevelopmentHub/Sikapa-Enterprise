@@ -14,6 +14,7 @@ import {
   type RevenueStat,
   type StockAlertItem,
 } from "@/lib/api/admin";
+import { pingBackendHealth } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
 import { RevenueTrendChart } from "@/components/admin/charts/RevenueTrendChart";
 import { OrderStatusDonut } from "@/components/admin/charts/OrderStatusDonut";
@@ -71,14 +72,21 @@ export function AdminDashboardContent() {
       const failures = [dRes, revRes, ordersRes, alertsRes].filter(
         (r): r is PromiseRejectedResult => r.status === "rejected"
       );
+      const allFailed = failures.length === 4;
       if (failures.length > 0) {
         const first = failures[0].reason;
         const msg = first instanceof Error ? first.message : String(first);
-        setErr(
-          msg.includes("403")
-            ? "Some sections are hidden for your account."
-            : "Some sections couldn't load. Try again."
-        );
+        const looksNetwork =
+          msg.toLowerCase().includes("failed to fetch") ||
+          msg.toLowerCase().includes("networkerror") ||
+          msg.toLowerCase().includes("load failed");
+        if (looksNetwork && allFailed) {
+          setErr("Couldn't reach the server. Check your connection and try again.");
+        } else if (msg.includes("403")) {
+          setErr("Some sections are hidden for your account.");
+        } else {
+          setErr("Some sections couldn't load. Try again.");
+        }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not load dashboard";
@@ -89,6 +97,10 @@ export function AdminDashboardContent() {
       setLoaded(true);
     }
   }, [accessToken, days]);
+
+  useEffect(() => {
+    pingBackendHealth();
+  }, []);
 
   useEffect(() => {
     void load();
@@ -122,7 +134,17 @@ export function AdminDashboardContent() {
       </div>
 
       {err && (
-        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-small text-red-800 ring-1 ring-red-100">{err}</p>
+        <div className="mt-4 flex flex-col gap-2 rounded-xl bg-red-50 px-4 py-3 text-small text-red-800 ring-1 ring-red-100 sm:flex-row sm:items-center sm:justify-between">
+          <p>{err}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="self-start rounded-full border border-red-200 bg-white px-3 py-1 text-[12px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 sm:self-auto"
+          >
+            {loading ? "Retrying…" : "Retry"}
+          </button>
+        </div>
       )}
 
       <p className="mt-4 text-small text-sikapa-text-muted">
@@ -160,7 +182,7 @@ export function AdminDashboardContent() {
 
       {accessToken && (
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <section className="min-w-0 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
               Revenue trend
             </h2>
@@ -180,7 +202,7 @@ export function AdminDashboardContent() {
             </div>
           </section>
 
-          <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+          <section className="min-w-0 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
               Orders by status
             </h2>
@@ -201,7 +223,7 @@ export function AdminDashboardContent() {
       )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <section className="min-w-0 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
           <div className="flex items-center justify-between">
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
               Recent orders
@@ -213,7 +235,7 @@ export function AdminDashboardContent() {
           {loading && !loaded && recent.length === 0 ? (
             <div className="mt-3">
               <div className="hidden overflow-x-auto sm:block">
-                <table className="w-full min-w-[460px] text-left text-small">
+                <table className="w-full min-w-[360px] text-left text-small">
                   <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
                     <tr>
                       <th className="py-2 pr-2">Order</th>
@@ -277,7 +299,7 @@ export function AdminDashboardContent() {
                     ))}
                   </ul>
                   <div className="hidden overflow-x-auto sm:block">
-                    <table className="w-full min-w-[460px] text-left text-small">
+                    <table className="w-full min-w-[360px] text-left text-small">
                     <thead className="border-b border-black/[0.06] text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted">
                       <tr>
                         <th className="py-2 pr-2">Order</th>
@@ -306,7 +328,7 @@ export function AdminDashboardContent() {
               )}
             </section>
 
-        <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
+        <section className="min-w-0 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06]">
           <div className="flex items-center justify-between">
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
               Low stock
@@ -334,11 +356,11 @@ export function AdminDashboardContent() {
                   return (
                     <li
                       key={key}
-                      className="flex flex-col gap-1 py-3 text-small sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-1 py-3 text-small sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                     >
                       <Link
                         href={`/system/products/${p.product_id}`}
-                        className="truncate font-medium text-sikapa-text-primary hover:underline sm:max-w-[75%]"
+                        className="block min-w-0 max-w-full truncate font-medium text-sikapa-text-primary hover:underline sm:flex-1"
                         title={title}
                       >
                         {p.kind === "variant" ? (
@@ -350,7 +372,7 @@ export function AdminDashboardContent() {
                           p.name
                         )}
                       </Link>
-                      <span className="w-fit rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-sikapa-crimson">
+                      <span className="w-fit shrink-0 whitespace-nowrap rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-sikapa-crimson">
                         {p.in_stock} left
                       </span>
                     </li>

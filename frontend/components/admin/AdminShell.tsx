@@ -26,6 +26,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/context/AuthContext";
+import { pingBackendHealth } from "@/lib/api/client";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 
 export type AdminNavItem = {
@@ -84,14 +85,25 @@ function AdminSidebarLink({
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user, accessToken, loading, logout } = useAuth();
+  const { user, accessToken, loading, logout, refreshProfile } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   useEffect(() => {
     closeMobile();
   }, [pathname, closeMobile]);
+
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    try {
+      pingBackendHealth();
+      await refreshProfile();
+    } finally {
+      setRetrying(false);
+    }
+  }, [refreshProfile]);
 
   if (loading) {
     return (
@@ -111,6 +123,35 @@ export function AdminShell({ children }: { children: ReactNode }) {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // We have a token but couldn't load the profile (likely a network blip / cold backend).
+  // Offer a retry instead of bouncing the admin to the sign-in screen.
+  if (!user && accessToken) {
+    return (
+      <div className="min-h-screen bg-sikapa-cream px-6 py-16 font-sans text-center">
+        <p className="text-body text-sikapa-text-secondary">
+          We couldn&apos;t reach the server. Please check your connection.
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleRetry()}
+            disabled={retrying}
+            className="inline-flex items-center gap-2 rounded-full bg-sikapa-crimson px-5 py-2.5 text-small font-semibold text-white disabled:opacity-60"
+          >
+            {retrying ? "Retrying…" : "Retry"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="inline-flex items-center gap-2 rounded-full border border-sikapa-gray-soft bg-white px-5 py-2.5 text-small font-semibold text-sikapa-text-primary hover:bg-sikapa-cream"
+          >
+            Sign out
+          </button>
         </div>
       </div>
     );
