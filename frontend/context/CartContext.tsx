@@ -210,14 +210,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const merged = mergePendingIntoLines([], pending, getProductRef.current);
         if (pending) setCartAuthOpen(false);
 
-        for (const line of merged) {
-          if (cancelled) return;
-          await cartAddItem(accessToken, {
-            product_id: Number(line.product.id),
-            quantity: line.quantity,
-            variant_id: line.variantId ?? null,
-          });
-        }
+        // Parallelize sync to avoid sequential request waterfall (common source of slow loads).
+        await Promise.allSettled(
+          merged.map((line) =>
+            cartAddItem(accessToken, {
+              product_id: Number(line.product.id),
+              quantity: line.quantity,
+              variant_id: line.variantId ?? null,
+            })
+          )
+        );
         if (cancelled) return;
         const server = await cartList(accessToken);
         if (cancelled) return;
