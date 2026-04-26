@@ -55,6 +55,13 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         const [apiCats, apiItems] = await Promise.all([fetchCategories(), fetchProducts(100)]);
         if (cancelled) return;
         const mapped = apiItems.map((row) => mapApiProductToMock(row, apiCats));
+        
+        // Shuffle products for a fresh discovery experience
+        for (let i = mapped.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [mapped[i], mapped[j]] = [mapped[j], mapped[i]];
+        }
+
         const displayCats = mapApiCategoriesToDisplay(apiCats);
         setProducts(mapped);
         setCategories(displayCats);

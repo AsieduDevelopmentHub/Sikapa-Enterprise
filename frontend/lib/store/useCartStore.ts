@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { formatGhs, type MockProduct } from "@/lib/mock-data";
 
 export type CartLine = {
@@ -44,23 +45,33 @@ interface CartState {
   formatTotal: () => string;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
-  lines: [],
-  cartSyncing: false,
-  cartActionError: null,
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
+      lines: [],
+      cartSyncing: false,
+      cartActionError: null,
 
-  setLines: (lines) => set({ lines }),
-  setCartSyncing: (cartSyncing) => set({ cartSyncing }),
-  setCartActionError: (cartActionError) => set({ cartActionError }),
-  clearCartActionError: () => set({ cartActionError: null }),
+      setLines: (lines) => set({ lines }),
+      setCartSyncing: (cartSyncing) => set({ cartSyncing }),
+      setCartActionError: (cartActionError) => set({ cartActionError }),
+      clearCartActionError: () => set({ cartActionError: null }),
 
-  getSubtotal: () => {
-    return get().lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
-  },
-  getTotal: () => {
-    return get().getSubtotal();
-  },
-  formatTotal: () => {
-    return formatGhs(get().getTotal());
-  },
-}));
+      getSubtotal: () => {
+        return get().lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
+      },
+      getTotal: () => {
+        return get().getSubtotal();
+      },
+      formatTotal: () => {
+        return formatGhs(get().getTotal());
+      },
+    }),
+    {
+      name: "sikapa-cart-storage",
+      storage: createJSONStorage(() => localStorage),
+      // Only persist the lines; other state like syncing/errors should be fresh.
+      partialize: (state) => ({ lines: state.lines }),
+    }
+  )
+);

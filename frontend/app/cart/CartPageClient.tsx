@@ -176,7 +176,7 @@ export function CartPageClient() {
                 <Link href="/account" className="font-semibold text-sikapa-gold">
                   Sign in
                 </Link>{" "}
-                to pay with Paystack.
+                to continue order.
               </p>
             )}
             <Link
