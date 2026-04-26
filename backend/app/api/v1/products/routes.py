@@ -73,7 +73,7 @@ async def list_products(
     min_price: Optional[float] = Query(None, ge=0),
     max_price: Optional[float] = Query(None, ge=0),
     min_rating: Optional[float] = Query(None, ge=0, le=5),
-    sort_by: str = Query("created_at", pattern="^(name|price|rating|created_at|sales)$"),
+    sort_by: str = Query("created_at", pattern="^(name|price|rating|created_at|sales|random)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
