@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NavSidebarPanel } from "@/components/NavSidebarPanel";
 import { AppShell } from "@/components/AppShell";
 import { AuthProvider } from "@/context/AuthContext";
@@ -20,9 +21,19 @@ export function Providers({
   children: ReactNode;
   showCookieConsent?: boolean;
 }) {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000, // 1 minute
+        retry: 1,
+      },
+    },
+  }));
+
   return (
-    <ThemeProvider>
-      <NavDrawerProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <NavDrawerProvider>
         <AuthProvider>
           <ToastProvider>
             <DialogProvider>
@@ -40,5 +51,6 @@ export function Providers({
         </AuthProvider>
       </NavDrawerProvider>
     </ThemeProvider>
+    </QueryClientProvider>
   );
 }

@@ -1,4 +1,3 @@
-import "@/lib/fontawesome-config";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
