@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { BottomNav } from "@/components/BottomNav";
@@ -8,10 +9,13 @@ import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 import { StorefrontFooter } from "@/components/StorefrontFooter";
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/admin");
+
   return (
     <>
       <SplashScreen />
-      <div className="sikapa-storefront-max min-h-screen bg-sikapa-cream pb-[calc(4.5rem+var(--safe-bottom))] dark:bg-zinc-950 dark:text-zinc-100">
+      <div className={`sikapa-storefront-max min-h-screen bg-sikapa-cream dark:bg-zinc-950 dark:text-zinc-100 ${isAdmin ? "" : "pb-[calc(4.5rem+var(--safe-bottom))]"}`}>
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -21,11 +25,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex-1">
             {children}
           </div>
-          <StorefrontFooter />
+          {!isAdmin && <StorefrontFooter />}
         </motion.div>
       </div>
-      <BottomNav />
-      <WhatsAppFloat />
+      {!isAdmin && <BottomNav />}
+      {!isAdmin && <WhatsAppFloat />}
     </>
   );
 }

@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../KofKaN-Store"
 		}
 	],
 	"settings": {}
