@@ -21,32 +21,7 @@ import {
   cartUpdateItem,
 } from "@/lib/api/cartApi";
 import { formatGhs, type MockProduct } from "@/lib/mock-data";
-
-export type CartLine = {
-  product: MockProduct;
-  quantity: number;
-  /** Effective unit price in GHS. Includes variant price delta when picked. */
-  unitPrice: number;
-  /** Optional variant bound to this line. */
-  variantId?: number | null;
-  variantLabel?: string | null;
-  variantImage?: string | null;
-  /**
-   * Stable local key that distinguishes the same product with different
-   * variants, e.g. `"42|7"` = product 42 + variant 7, `"42|"` = base product.
-   */
-  lineKey: string;
-  /** Set when this row is synced with `GET /cart` or `POST /cart/items`. */
-  serverLineId?: number;
-};
-
-export type AddToCartOptions = {
-  variantId?: number | null;
-  variantLabel?: string | null;
-  variantImage?: string | null;
-  /** price = product.price + priceDelta. */
-  priceDelta?: number | null;
-};
+import { useCartStore, type CartLine, type AddToCartOptions } from "@/lib/store/useCartStore";
 
 type PendingAdd = {
   productId: string;
@@ -108,9 +83,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { user, accessToken, loading: authLoading } = useAuth();
   const { getProduct, source } = useCatalog();
   const { showToast } = useToast();
-  const [lines, setLines] = useState<CartLine[]>([]);
-  const [cartSyncing, setCartSyncing] = useState(false);
-  const [cartActionError, setCartActionError] = useState<string | null>(null);
+  
+  // Zustand State
+  const lines = useCartStore((s) => s.lines);
+  const setLines = useCartStore((s) => s.setLines);
+  const cartSyncing = useCartStore((s) => s.cartSyncing);
+  const setCartSyncing = useCartStore((s) => s.setCartSyncing);
+  const cartActionError = useCartStore((s) => s.cartActionError);
+  const setCartActionError = useCartStore((s) => s.setCartActionError);
+  const clearCartActionError = useCartStore((s) => s.clearCartActionError);
+  const getSubtotal = useCartStore((s) => s.getSubtotal);
+
   const [cartAuthOpen, setCartAuthOpen] = useState(false);
   const pendingAddRef = useRef<PendingAdd | null>(null);
   const prevHadUserRef = useRef(false);
@@ -125,16 +108,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const product = getProduct(productId);
       if (!product) return;
       const key = makeLineKey(productId, opts.variantId ?? null);
-      setLines((prev) => {
-        const i = prev.findIndex((l) => l.lineKey === key);
-        if (i >= 0) {
-          const next = [...prev];
-          next[i] = { ...next[i], quantity: next[i].quantity + qty };
-          return next;
-        }
+      const currentLines = linesRef.current;
+      const i = currentLines.findIndex((l) => l.lineKey === key);
+      
+      if (i >= 0) {
+        const next = [...currentLines];
+        next[i] = { ...next[i], quantity: next[i].quantity + qty };
+        setLines(next);
+      } else {
         const unitPrice = product.price + (opts.priceDelta ?? 0);
-        return [
-          ...prev,
+        setLines([
+          ...currentLines,
           {
             product,
             quantity: qty,
@@ -144,13 +128,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
             variantImage: opts.variantImage ?? null,
             lineKey: key,
           },
-        ];
-      });
+        ]);
+      }
     },
-    [getProduct]
+    [getProduct, setLines]
   );
-
-  const clearCartActionError = useCallback(() => setCartActionError(null), []);
 
   const addProduct = useCallback(
     (productId: string, qty = 1, opts: AddToCartOptions = {}) => {
@@ -179,8 +161,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
             quantity: qty,
             variant_id: opts.variantId ?? null,
           });
-          setLines((prev) =>
-            prev.map((l) =>
+          setLines(
+            linesRef.current.map((l) =>
               l.lineKey === key ? { ...l, serverLineId: row.id } : l
             )
           );
@@ -191,7 +173,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
       })();
     },
-    [user, accessToken, authLoading, addProductInternal, source, showToast]
+    [user, accessToken, authLoading, addProductInternal, source, showToast, setLines, setCartActionError]
   );
 
   useEffect(() => {
@@ -210,7 +192,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const merged = mergePendingIntoLines([], pending, getProductRef.current);
         if (pending) setCartAuthOpen(false);
 
-        // Parallelize sync to avoid sequential request waterfall (common source of slow loads).
         await Promise.allSettled(
           merged.map((line) =>
             cartAddItem(accessToken, {
@@ -251,7 +232,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, accessToken, authLoading]);
+  }, [user, accessToken, authLoading, setCartSyncing, setLines]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -262,7 +243,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       syncedUserIdRef.current = null;
     }
     prevHadUserRef.current = !!user;
-  }, [user, authLoading]);
+  }, [user, authLoading, setLines]);
 
   const dismissCartAuth = useCallback(() => {
     pendingAddRef.current = null;
@@ -283,7 +264,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             console.warn("[Sikapa] cart delete line failed", e)
           );
         }
-        setLines((prev) => prev.filter((l) => l.lineKey !== lineKey));
+        setLines(linesRef.current.filter((l) => l.lineKey !== lineKey));
         return;
       }
       if (cur.serverLineId && accessToken) {
@@ -291,11 +272,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
           console.warn("[Sikapa] cart update failed", e)
         );
       }
-      setLines((prev) =>
-        prev.map((l) => (l.lineKey === lineKey ? { ...l, quantity } : l))
+      setLines(
+        linesRef.current.map((l) => (l.lineKey === lineKey ? { ...l, quantity } : l))
       );
     },
-    [accessToken]
+    [accessToken, setLines]
   );
 
   const removeLine = useCallback(
@@ -307,17 +288,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
           console.warn("[Sikapa] cart delete line failed", e)
         );
       }
-      setLines((prev) => prev.filter((l) => l.lineKey !== lineKey));
+      setLines(linesRef.current.filter((l) => l.lineKey !== lineKey));
     },
-    [accessToken]
+    [accessToken, setLines]
   );
 
-  const subtotal = useMemo(
-    () => lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0),
-    [lines]
-  );
-
-  const shipping = 0;
+  const subtotal = getSubtotal();
   const total = subtotal;
 
   const value = useMemo<CartContextValue>(
@@ -327,7 +303,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setQuantity,
       removeLine,
       subtotal,
-      shipping,
+      shipping: 0,
       total,
       formatTotal: () => formatGhs(total),
       cartSyncing,
@@ -340,7 +316,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setQuantity,
       removeLine,
       subtotal,
-      shipping,
       total,
       cartSyncing,
       cartActionError,

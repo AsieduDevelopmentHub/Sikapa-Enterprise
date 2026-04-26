@@ -6,10 +6,13 @@ export type WishlistItemRead = {
   user_id: number;
   product_id: number;
   created_at: string;
-  product_name?: string | null;
-  product_slug?: string | null;
-  price?: number | null;
-  image_url?: string | null;
+  product: {
+    id: number;
+    name: string;
+    slug: string;
+    price: number;
+    image_url?: string | null;
+  };
 };
 
 export async function wishlistList(accessToken: string): Promise<WishlistItemRead[]> {
@@ -26,6 +29,12 @@ export async function wishlistAdd(accessToken: string, productId: number): Promi
 
 export async function wishlistRemove(accessToken: string, itemId: number): Promise<void> {
   await apiFetchJsonAuth<undefined>(accessToken, V1.wishlist.remove(itemId), {
+    method: "DELETE",
+  });
+}
+
+export async function wishlistRemoveByProduct(accessToken: string, productId: number): Promise<void> {
+  await apiFetchJsonAuth<undefined>(accessToken, V1.wishlist.byProduct(productId), {
     method: "DELETE",
   });
 }

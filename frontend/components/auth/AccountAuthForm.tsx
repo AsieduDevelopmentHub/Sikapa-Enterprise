@@ -2,17 +2,41 @@
 
 import Link from "next/link";
 import { useId, useState } from "react";
+import { useForm, type UseFormRegisterReturn } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { TwoFactorRequiredError } from "@/lib/api/auth";
 import { useAuth } from "@/context/AuthContext";
 import { getGoogleOAuthStartUrl, isGoogleOAuthButtonEnabled } from "@/lib/oauth";
 import { privacyUrl, termsUrl } from "@/lib/site";
-import {
-  sanitizeDigits,
-  sanitizePlainText,
-  validateEmail,
-  validateOtpCode,
-  validatePassword,
-} from "@/lib/validation/input";
+import { Eye, EyeOff } from "lucide-react";
+
+const loginSchema = z.object({
+  identifier: z.string().min(1, "Enter your email or username."),
+  password: z.string().min(1, "Enter your password."),
+  rememberMe: z.boolean(),
+  totpCode: z.string().optional(),
+});
+
+const registerSchema = z.object({
+  name: z.string().min(1, "Enter your name."),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters.")
+    .max(50, "Username is too long.")
+    .regex(/^[a-z0-9._-]*$/, "Letters, numbers, dots, underscores, or hyphens only."),
+  email: z.string().email("Enter a valid email.").optional().or(z.literal("")),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  passwordConfirm: z.string(),
+  acceptedLegal: z.boolean().refine((val) => val === true, "Accept the terms to continue."),
+  rememberMe: z.boolean(),
+}).refine((data) => data.password === data.passwordConfirm, {
+  message: "Passwords do not match.",
+  path: ["passwordConfirm"],
+});
+
+type LoginValues = z.infer<typeof loginSchema>;
+type RegisterValues = z.infer<typeof registerSchema>;
 
 type Props = {
   defaultMode?: "signin" | "register";
@@ -24,56 +48,42 @@ type Props = {
 
 function PasswordInputWithToggle({
   id,
-  value,
-  onChange,
   autoComplete,
-  minLength,
-  required,
+  error,
+  register,
 }: {
   id: string;
-  value: string;
-  onChange: (v: string) => void;
   autoComplete?: string;
-  minLength?: number;
-  required?: boolean;
+  error?: string;
+  register: UseFormRegisterReturn;
 }) {
   const [visible, setVisible] = useState(false);
 
   return (
-    <div className="relative mt-1">
-      <input
-        id={id}
-        type={visible ? "text" : "password"}
-        required={required}
-        minLength={minLength}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        autoComplete={autoComplete}
-        className="w-full rounded-[10px] border-0 bg-white py-3 pl-3 pr-12 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-      />
-      <button
-        type="button"
-        className="sikapa-tap-static absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-sikapa-text-muted hover:bg-black/[0.04] hover:text-sikapa-text-primary active:bg-black/[0.06] dark:text-zinc-500 dark:hover:bg-white/10 dark:hover:text-zinc-200 dark:active:bg-white/15"
-        aria-label={visible ? "Hide password" : "Show password"}
-        onClick={() => setVisible((v) => !v)}
-      >
-        {visible ? <EyeOffIcon /> : <EyeIcon />}
-      </button>
+    <div className="mt-1">
+      <div className="relative">
+        <input
+          id={id}
+          type={visible ? "text" : "password"}
+          {...register}
+          autoComplete={autoComplete}
+          className={`w-full rounded-[10px] border-0 bg-white py-3 pl-3 pr-12 text-body ring-1 transition-shadow focus:ring-2 dark:bg-zinc-800 dark:text-zinc-100 ${
+            error
+              ? "ring-red-500 focus:ring-red-500/40"
+              : "ring-sikapa-gray-soft focus:ring-sikapa-gold/40 dark:ring-white/10"
+          }`}
+        />
+        <button
+          type="button"
+          className="sikapa-tap-static absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-sikapa-text-muted hover:bg-black/[0.04] hover:text-sikapa-text-primary active:bg-black/[0.06] dark:text-zinc-500 dark:hover:bg-white/10 dark:hover:text-zinc-200 dark:active:bg-white/15"
+          aria-label={visible ? "Hide password" : "Show password"}
+          onClick={() => setVisible((v) => !v)}
+        >
+          {visible ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+      {error && <p className="mt-1 text-[0.75rem] text-red-500">{error}</p>}
     </div>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.75" />
-    </svg>
   );
 }
 
@@ -116,21 +126,6 @@ function GoogleMark() {
   );
 }
 
-function EyeOffIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 10-4.24-4.24"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M1 1l22 22" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function AccountAuthForm({
   defaultMode = "signin",
   onSignInSuccess,
@@ -142,111 +137,62 @@ export function AccountAuthForm({
   const { authError, clearAuthError, login, loginWithTotp, register } = useAuth();
   const [mode, setMode] = useState<"signin" | "register">(defaultMode);
   const [signinStep, setSigninStep] = useState<"password" | "totp">("password");
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [totpCode, setTotpCode] = useState("");
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [acceptedLegal, setAcceptedLegal] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const loginForm = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { rememberMe: true },
+  });
+
+  const registerForm = useForm<RegisterValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { rememberMe: true, acceptedLegal: false },
+  });
+
+  const onLoginSubmit = async (data: LoginValues) => {
     clearAuthError();
-    setLocalError(null);
-    const idVal = sanitizePlainText(identifier, 255);
-    if (mode === "signin") {
-      if (!idVal) return setLocalError("Enter your email or username.");
-      if (idVal.includes("@")) {
-        const emailErr = validateEmail(idVal);
-        if (emailErr) return setLocalError(emailErr);
-      }
-    }
-    if (mode === "signin" && signinStep === "password" && !password) {
-      setLocalError("Enter your password.");
-      return;
-    }
-    if (mode === "register") {
-      const u = sanitizePlainText(username, 50)?.toLowerCase() || "";
-      if (!/^[a-z0-9._-]{3,50}$/.test(u)) {
-        setLocalError("Username must be 3-50 chars using letters, numbers, dot, underscore, or hyphen.");
-        return;
-      }
-      if (!sanitizePlainText(name, 120)) {
-        setLocalError("Enter your name.");
-        return;
-      }
-      const registerEmail = email.trim();
-      if (registerEmail) {
-        const emailErr = validateEmail(registerEmail);
-        if (emailErr) {
-          setLocalError(emailErr);
-          return;
-        }
-      }
-      const pwErr = validatePassword(password, 8);
-      if (pwErr) {
-        setLocalError(pwErr);
-        return;
-      }
-      if (password !== passwordConfirm) {
-        setLocalError("Passwords do not match.");
-        return;
-      }
-      if (!acceptedLegal) {
-        setLocalError("Please accept the Terms of Service and Privacy Policy.");
-        return;
-      }
-    }
-    if (mode === "signin" && signinStep === "totp") {
-      const code = sanitizeDigits(totpCode, 6);
-      const codeErr = validateOtpCode(code, 6);
-      if (codeErr) {
-        setLocalError(codeErr);
-        return;
-      }
-    }
     setBusy(true);
     try {
-      if (mode === "signin") {
-        if (signinStep === "totp") {
-          await loginWithTotp(idVal, password, sanitizeDigits(totpCode, 6), rememberMe);
-          setSigninStep("password");
-          setTotpCode("");
-          onSignInSuccess?.();
-        } else {
-          try {
-            await login(idVal, password, rememberMe);
-            onSignInSuccess?.();
-          } catch (err) {
-            if (err instanceof TwoFactorRequiredError) {
-              setSigninStep("totp");
-              setTotpCode("");
-              return;
-            }
-            throw err;
-          }
-        }
+      if (signinStep === "totp") {
+        await loginWithTotp(data.identifier, data.password, data.totpCode || "", data.rememberMe);
+        onSignInSuccess?.();
       } else {
-        await register(
-          sanitizePlainText(username, 50)?.toLowerCase() || "",
-          sanitizePlainText(name, 120) || "",
-          password,
-          email.trim() || undefined,
-          rememberMe
-        );
-        onRegisterSuccess?.();
+        try {
+          await login(data.identifier, data.password, data.rememberMe);
+          onSignInSuccess?.();
+        } catch (err) {
+          if (err instanceof TwoFactorRequiredError) {
+            setSigninStep("totp");
+            return;
+          }
+          throw err;
+        }
       }
     } catch {
-      /* authError from context */
+      // Auth error handled by context
     } finally {
       setBusy(false);
     }
-  }
+  };
+
+  const onRegisterSubmit = async (data: RegisterValues) => {
+    clearAuthError();
+    setBusy(true);
+    try {
+      await register(
+        data.username.toLowerCase(),
+        data.name,
+        data.password,
+        data.email || undefined,
+        data.rememberMe
+      );
+      onRegisterSuccess?.();
+    } catch {
+      // Auth error handled by context
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <>
@@ -261,12 +207,9 @@ export function AccountAuthForm({
           onClick={() => {
             setMode("signin");
             setSigninStep("password");
-            setTotpCode("");
-            setPasswordConfirm("");
-            setAcceptedLegal(false);
-            setLocalError(null);
             clearAuthError();
             onClearMessages?.();
+            loginForm.reset();
           }}
         >
           Sign in
@@ -280,13 +223,9 @@ export function AccountAuthForm({
           }`}
           onClick={() => {
             setMode("register");
-            setSigninStep("password");
-            setTotpCode("");
-            setPasswordConfirm("");
-            setAcceptedLegal(false);
-            setLocalError(null);
             clearAuthError();
             onClearMessages?.();
+            registerForm.reset();
           }}
         >
           Register
@@ -317,198 +256,215 @@ export function AccountAuthForm({
         </>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        {mode === "register" && (
-          <>
-            <div>
-              <label htmlFor={`${id}-name`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                Name
-              </label>
-              <input
-                id={`${id}-name`}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-                className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-              />
-            </div>
-            <div>
-              <label htmlFor={`${id}-username`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                Username
-              </label>
-              <input
-                id={`${id}-username`}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-              />
-            </div>
-            <div>
-              <label htmlFor={`${id}-register-email`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                Email (optional)
-              </label>
-              <input
-                id={`${id}-register-email`}
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-              />
-            </div>
-          </>
-        )}
-        {mode === "signin" && (
+      {mode === "signin" ? (
+        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
           <div>
             <label htmlFor={`${id}-identifier`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
               Email or username
             </label>
             <input
               id={`${id}-identifier`}
-              type="text"
-              required
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              autoComplete="username"
-              disabled={signinStep === "totp"}
-              className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 disabled:opacity-60 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+              {...loginForm.register("identifier")}
+              disabled={busy || signinStep === "totp"}
+              className={`mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 transition-shadow focus:ring-2 dark:bg-zinc-800 dark:text-zinc-100 ${
+                loginForm.formState.errors.identifier
+                  ? "ring-red-500 focus:ring-red-500/40"
+                  : "ring-sikapa-gray-soft focus:ring-sikapa-gold/40 dark:ring-white/10"
+              }`}
             />
+            {loginForm.formState.errors.identifier && (
+              <p className="mt-1 text-[0.75rem] text-red-500">{loginForm.formState.errors.identifier.message}</p>
+            )}
           </div>
-        )}
-        {!(mode === "signin" && signinStep === "totp") && (
-          <>
-            <div>
-              <label htmlFor={`${id}-password`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                Password{" "}
-                {mode === "register" && (
-                  <span className="font-normal text-sikapa-text-muted dark:text-zinc-500">(min. 8 characters)</span>
-                )}
-              </label>
-              <PasswordInputWithToggle
-                id={`${id}-password`}
-                value={password}
-                onChange={setPassword}
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                minLength={mode === "register" ? 8 : undefined}
-                required
-              />
-              {mode === "signin" && onForgotPassword ? (
-                <div className="mt-2 text-right">
-                  <button
-                    type="button"
-                    className="text-small font-semibold text-sikapa-gold hover:underline"
-                    onClick={() => {
-                      onClearMessages?.();
-                      onForgotPassword();
-                    }}
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            {mode === "register" && (
+
+          {signinStep === "password" ? (
+            <>
               <div>
-                <label htmlFor={`${id}-password-confirm`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                  Confirm password
+                <label htmlFor={`${id}-password`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                  Password
                 </label>
                 <PasswordInputWithToggle
-                  id={`${id}-password-confirm`}
-                  value={passwordConfirm}
-                  onChange={setPasswordConfirm}
-                  autoComplete="new-password"
-                  minLength={8}
-                  required
+                  id={`${id}-password`}
+                  autoComplete="current-password"
+                  error={loginForm.formState.errors.password?.message}
+                  register={loginForm.register("password")}
                 />
+                {onForgotPassword && (
+                  <div className="mt-2 text-right">
+                    <button
+                      type="button"
+                      className="text-small font-semibold text-sikapa-gold hover:underline"
+                      onClick={onForgotPassword}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-            {mode === "register" && (
               <label className="flex cursor-pointer items-start gap-3 text-small text-sikapa-text-primary dark:text-zinc-200">
                 <input
                   type="checkbox"
-                  checked={acceptedLegal}
-                  onChange={(e) => setAcceptedLegal(e.target.checked)}
-                  className="mt-1 h-4 w-4 shrink-0 accent-sikapa-gold"
-                />
-                <span className="leading-relaxed">
-                  I agree to the{" "}
-                  <LegalInlineLink href={termsUrl()}>Terms of Service</LegalInlineLink>
-                  {" "}and{" "}
-                  <LegalInlineLink href={privacyUrl()}>Privacy Policy</LegalInlineLink>.
-                </span>
-              </label>
-            )}
-            {(mode === "signin" || mode === "register") && !(mode === "signin" && signinStep === "totp") && (
-              <label className="flex cursor-pointer items-start gap-3 text-small text-sikapa-text-primary dark:text-zinc-200">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  {...loginForm.register("rememberMe")}
                   className="mt-1 h-4 w-4 shrink-0 accent-sikapa-gold"
                 />
                 <span className="leading-relaxed">Keep me signed in on this device.</span>
               </label>
-            )}
-          </>
-        )}
-        {mode === "signin" && signinStep === "totp" && (
+            </>
+          ) : (
+            <div>
+              <p className="mb-2 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                Enter the 6-digit code from your authenticator app.
+              </p>
+              <label htmlFor={`${id}-totp`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                Authentication code
+              </label>
+              <input
+                id={`${id}-totp`}
+                {...loginForm.register("totpCode")}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body tracking-widest ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                placeholder="000000"
+              />
+              <button
+                type="button"
+                className="mt-2 text-small font-semibold text-sikapa-gold"
+                onClick={() => setSigninStep("password")}
+              >
+                Back to password
+              </button>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="sikapa-btn-gold sikapa-tap w-full rounded-[10px] py-3 text-small font-semibold text-white disabled:opacity-60"
+          >
+            {busy ? (signinStep === "totp" ? "Verifying…" : "Signing in…") : (signinStep === "totp" ? "Verify and sign in" : "Sign in")}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
           <div>
-            <p className="mb-2 text-small text-sikapa-text-secondary dark:text-zinc-400">
-              Enter the 6-digit code from your authenticator app.
-            </p>
-            <label htmlFor={`${id}-totp`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-              Authentication code
+            <label htmlFor={`${id}-name`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+              Name
             </label>
             <input
-              id={`${id}-totp`}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              value={totpCode}
-              onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              className="mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body tracking-widest ring-1 ring-sikapa-gray-soft focus:ring-2 focus:ring-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-              placeholder="000000"
+              id={`${id}-name`}
+              {...registerForm.register("name")}
+              className={`mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 transition-shadow focus:ring-2 dark:bg-zinc-800 dark:text-zinc-100 ${
+                registerForm.formState.errors.name
+                  ? "ring-red-500 focus:ring-red-500/40"
+                  : "ring-sikapa-gray-soft focus:ring-sikapa-gold/40 dark:ring-white/10"
+              }`}
             />
-            <button
-              type="button"
-              className="mt-2 text-small font-semibold text-sikapa-gold"
-              onClick={() => {
-                setSigninStep("password");
-                setTotpCode("");
-                clearAuthError();
-              }}
-            >
-              Back to password
-            </button>
+            {registerForm.formState.errors.name && (
+              <p className="mt-1 text-[0.75rem] text-red-500">{registerForm.formState.errors.name.message}</p>
+            )}
           </div>
-        )}
-        <button
-          type="submit"
-          disabled={busy}
-          className="sikapa-btn-gold sikapa-tap w-full rounded-[10px] py-3 text-small font-semibold text-white disabled:opacity-60"
-        >
-          {busy
-            ? mode === "register"
-              ? "Creating account…"
-              : signinStep === "totp"
-                ? "Verifying…"
-                : "Signing in…"
-            : mode === "register"
-              ? "Create account"
-              : signinStep === "totp"
-                ? "Verify and sign in"
-                : "Sign in"}
-        </button>
-        {(localError || authError) && (
-          <p
-            className="rounded-[10px] bg-red-50 px-3 py-2 text-small text-red-800 ring-1 ring-red-100 dark:bg-red-950/40 dark:text-red-100"
-            role="alert"
+
+          <div>
+            <label htmlFor={`${id}-username`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+              Username
+            </label>
+            <input
+              id={`${id}-username`}
+              {...registerForm.register("username")}
+              className={`mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 transition-shadow focus:ring-2 dark:bg-zinc-800 dark:text-zinc-100 ${
+                registerForm.formState.errors.username
+                  ? "ring-red-500 focus:ring-red-500/40"
+                  : "ring-sikapa-gray-soft focus:ring-sikapa-gold/40 dark:ring-white/10"
+              }`}
+            />
+            {registerForm.formState.errors.username && (
+              <p className="mt-1 text-[0.75rem] text-red-500">{registerForm.formState.errors.username.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor={`${id}-register-email`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+              Email (optional)
+            </label>
+            <input
+              id={`${id}-register-email`}
+              type="email"
+              {...registerForm.register("email")}
+              className={`mt-1 w-full rounded-[10px] border-0 bg-white py-3 px-3 text-body ring-1 transition-shadow focus:ring-2 dark:bg-zinc-800 dark:text-zinc-100 ${
+                registerForm.formState.errors.email
+                  ? "ring-red-500 focus:ring-red-500/40"
+                  : "ring-sikapa-gray-soft focus:ring-sikapa-gold/40 dark:ring-white/10"
+              }`}
+            />
+            {registerForm.formState.errors.email && (
+              <p className="mt-1 text-[0.75rem] text-red-500">{registerForm.formState.errors.email.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor={`${id}-password-reg`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+              Password <span className="font-normal text-sikapa-text-muted dark:text-zinc-500">(min. 8 characters)</span>
+            </label>
+            <PasswordInputWithToggle
+              id={`${id}-password-reg`}
+              autoComplete="new-password"
+              error={registerForm.formState.errors.password?.message}
+              register={registerForm.register("password")}
+            />
+          </div>
+
+          <div>
+            <label htmlFor={`${id}-password-confirm`} className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+              Confirm password
+            </label>
+            <PasswordInputWithToggle
+              id={`${id}-password-confirm`}
+              autoComplete="new-password"
+              error={registerForm.formState.errors.passwordConfirm?.message}
+              register={registerForm.register("passwordConfirm")}
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 text-small text-sikapa-text-primary dark:text-zinc-200">
+            <input
+              type="checkbox"
+              {...registerForm.register("acceptedLegal")}
+              className="mt-1 h-4 w-4 shrink-0 accent-sikapa-gold"
+            />
+            <span className="leading-relaxed">
+              I agree to the{" "}
+              <LegalInlineLink href={termsUrl()}>Terms of Service</LegalInlineLink> and{" "}
+              <LegalInlineLink href={privacyUrl()}>Privacy Policy</LegalInlineLink>.
+            </span>
+          </label>
+          {registerForm.formState.errors.acceptedLegal && (
+            <p className="mt-[-12px] text-[0.75rem] text-red-500">{registerForm.formState.errors.acceptedLegal.message}</p>
+          )}
+
+          <label className="flex cursor-pointer items-start gap-3 text-small text-sikapa-text-primary dark:text-zinc-200">
+            <input
+              type="checkbox"
+              {...registerForm.register("rememberMe")}
+              className="mt-1 h-4 w-4 shrink-0 accent-sikapa-gold"
+            />
+            <span className="leading-relaxed">Keep me signed in on this device.</span>
+          </label>
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="sikapa-btn-gold sikapa-tap w-full rounded-[10px] py-3 text-small font-semibold text-white disabled:opacity-60"
           >
-            {localError ?? authError}
-          </p>
-        )}
-      </form>
+            {busy ? "Creating account…" : "Create account"}
+          </button>
+        </form>
+      )}
+
+      {authError && (
+        <p className="mt-4 rounded-[10px] bg-red-50 px-3 py-2 text-small text-red-800 ring-1 ring-red-100 dark:bg-red-950/40 dark:text-red-100" role="alert">
+          {authError}
+        </p>
+      )}
     </>
   );
 }

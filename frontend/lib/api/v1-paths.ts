@@ -71,6 +71,7 @@ export const V1 = {
     list: "/wishlist/",
     add: "/wishlist/items",
     remove: (itemId: number) => `/wishlist/items/${itemId}`,
+    byProduct: (productId: number) => `/wishlist/by-product/${productId}`,
   },
   payments: {
     paystackInitialize: "/payments/paystack/initialize",

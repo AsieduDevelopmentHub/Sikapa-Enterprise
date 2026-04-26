@@ -60,6 +60,10 @@ export function ProductVariantsDisplay({
   const [internalVariants, setInternalVariants] = useState<ProductVariantPublic[]>([]);
   const [loading, setLoading] = useState(!variantsProp);
   const [internalSelectedId, setInternalSelectedId] = useState<number | null>(null);
+
+  // Dedicated state for attribute selection to decouple from the "current variant"
+  const [selectedAttrs, setSelectedAttrs] = useState<AttrMap>({});
+
   const selectedId = isControlled ? controlledSelectedId : internalSelectedId;
   const setSelectedId = (id: number | null) => {
     if (isControlled) onSelectedIdChange?.(id);
@@ -98,9 +102,19 @@ export function ProductVariantsDisplay({
     [variants, selectedId]
   );
 
-  // Avoid re-firing onVariantChange when the *same* variant stays selected
-  // across unrelated re-renders; this was causing the hero image to snap back
-  // to the base picture when the parent re-rendered for other reasons.
+  // Sync selectedAttrs when selectedId changes (e.g. from parent/thumbnail)
+  useEffect(() => {
+    if (selected) {
+      const m: AttrMap = {};
+      const keys = collectAttrKeys(variants);
+      for (const k of keys) {
+        const v = attrValue(selected, k);
+        if (v) m[k] = v;
+      }
+      setSelectedAttrs(m);
+    }
+  }, [selected, variants]);
+
   const lastFiredId = useRef<number | "unset">("unset");
   useEffect(() => {
     const id = selected ? selected.id : null;
@@ -111,25 +125,16 @@ export function ProductVariantsDisplay({
 
   const attrKeys = useMemo(() => collectAttrKeys(variants), [variants]);
 
-  // Current attribute selection mirrors `selected` when one is picked, so
-  // clicking a variant pill or a thumbnail (parent-driven) also highlights
-  // the right chips in the attribute rows.
-  const currentAttrs: AttrMap = useMemo(() => {
-    const m: AttrMap = {};
-    if (!selected) return m;
-    for (const k of attrKeys) {
-      const v = attrValue(selected, k);
-      if (v) m[k] = v;
-    }
-    return m;
-  }, [selected, attrKeys]);
-
-  // Resolve a variant from a partial attribute map — useful when the shopper
-  // has picked e.g. size but not colour yet. Returns null until all present
-  // attribute keys are covered.
+  // Find the variant that matches all current attribute selections
   const resolveVariant = (attrs: AttrMap): ProductVariantPublic | null => {
-    const full = attrKeys.every((k) => attrs[k]);
-    if (!full) return null;
+    const keysPresent = Object.keys(attrs);
+    if (keysPresent.length === 0) return null;
+
+    // A match is only valid if it satisfies ALL currently selected attributes
+    // AND covers ALL possible attribute dimensions for this product.
+    const allKeysCovered = attrKeys.every((k) => attrs[k]);
+    if (!allKeysCovered) return null;
+
     return (
       variants.find((v) =>
         attrKeys.every((k) => attrValue(v, k) === attrs[k])
@@ -138,21 +143,47 @@ export function ProductVariantsDisplay({
   };
 
   const pickAttr = (key: string, value: string) => {
-    const next: AttrMap = { ...currentAttrs };
-    if (next[key] === value) delete next[key];
-    else next[key] = value;
-    const v = resolveVariant(next);
-    setSelectedId(v ? v.id : null);
+    setSelectedAttrs((prev) => {
+      const next = { ...prev };
+      if (next[key] === value) {
+        delete next[key];
+      } else {
+        next[key] = value;
+      }
+
+      // Auto-selection logic: if this new selection uniquely identifies a variant,
+      // select it immediately.
+      const v = resolveVariant(next);
+      setSelectedId(v ? v.id : null);
+
+      return next;
+    });
   };
 
-  // Helper — is this attribute value sold out given current selection?
-  const isValueSoldOut = (key: string, value: string): boolean => {
-    const probe: AttrMap = { ...currentAttrs, [key]: value };
-    const matching = variants.filter((v) =>
-      Object.entries(probe).every(([k, val]) => attrValue(v, k) === val)
-    );
-    if (matching.length === 0) return true;
-    return matching.every((v) => v.in_stock <= 0);
+  /**
+   * Professional cross-filtering: is this specific value "possible" given the
+   * *other* attributes already selected?
+   */
+  const isOptionDisabled = (key: string, value: string): boolean => {
+    // If we were to pick this value, would ANY variant match the remaining selections?
+    const testAttrs = { ...selectedAttrs, [key]: value };
+
+    return !variants.some((v) => {
+      // Must match every selection EXCEPT the one we are currently testing (which is handled by testAttrs)
+      return Object.entries(testAttrs).every(([k, val]) => {
+        const vVal = attrValue(v, k);
+        return vVal === val;
+      });
+    });
+  };
+
+  const isOptionOutOfStock = (key: string, value: string): boolean => {
+    const testAttrs = { ...selectedAttrs, [key]: value };
+    const matches = variants.filter((v) => {
+      return Object.entries(testAttrs).every(([k, val]) => attrValue(v, k) === val);
+    });
+    if (matches.length === 0) return true;
+    return matches.every((v) => v.in_stock <= 0);
   };
 
   if (loading || variants.length === 0) {
@@ -175,7 +206,7 @@ export function ProductVariantsDisplay({
       </div>
 
       {hasAttributes ? (
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-4">
           {attrKeys.map((key) => {
             const values = Array.from(
               new Set(
@@ -189,27 +220,31 @@ export function ProductVariantsDisplay({
               <div key={key}>
                 <p className="text-[11px] font-semibold text-sikapa-text-secondary dark:text-zinc-400">
                   {prettyKey(key)}
-                  {currentAttrs[key] && (
+                  {selectedAttrs[key] && (
                     <span className="ml-1 text-sikapa-text-muted dark:text-zinc-500">
-                      · <span className="text-sikapa-text-primary dark:text-zinc-100">{currentAttrs[key]}</span>
+                      · <span className="text-sikapa-text-primary dark:text-zinc-100">{selectedAttrs[key]}</span>
                     </span>
                   )}
                 </p>
-                <div className="mt-1.5 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {values.map((val) => {
-                    const isSelected = currentAttrs[key] === val;
-                    const soldOut = isValueSoldOut(key, val);
+                    const isSelected = selectedAttrs[key] === val;
+                    const isDisabled = isOptionDisabled(key, val);
+                    const isSoldOut = !isDisabled && isOptionOutOfStock(key, val);
+
                     return (
                       <button
                         key={val}
                         type="button"
-                        disabled={soldOut}
+                        disabled={isDisabled}
                         onClick={() => pickAttr(key, val)}
-                        className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                        className={`min-w-[44px] rounded-lg border px-3 py-2 text-[11px] font-semibold transition-all ${
                           isSelected
-                            ? "border-sikapa-gold bg-sikapa-gold/10 text-sikapa-text-primary dark:text-zinc-100"
-                            : "border-sikapa-gray-soft bg-white text-sikapa-text-primary hover:bg-sikapa-cream dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
-                        } ${soldOut ? "opacity-50 line-through" : ""}`}
+                            ? "border-sikapa-gold bg-sikapa-gold/10 text-sikapa-text-primary ring-1 ring-sikapa-gold dark:text-zinc-100"
+                            : isDisabled
+                            ? "cursor-not-allowed border-dashed border-sikapa-gray-soft bg-transparent text-sikapa-text-muted opacity-40 dark:border-white/5"
+                            : "border-sikapa-gray-soft bg-white text-sikapa-text-primary hover:border-sikapa-gold/50 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-200"
+                        } ${isSoldOut ? "relative overflow-hidden opacity-60 after:absolute after:inset-0 after:bg-[linear-gradient(45deg,transparent_45%,#ccc_50%,transparent_55%)] after:content-['']" : ""}`}
                         aria-pressed={isSelected}
                       >
                         {val}
@@ -222,7 +257,7 @@ export function ProductVariantsDisplay({
           })}
         </div>
       ) : (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {variants.map((v) => {
             const isSelected = v.id === selectedId;
             const outOfStock = v.in_stock <= 0;
@@ -232,16 +267,16 @@ export function ProductVariantsDisplay({
                 type="button"
                 disabled={outOfStock}
                 onClick={() => setSelectedId(isSelected ? null : v.id)}
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-4 py-2 text-[11px] font-semibold transition ${
                   isSelected
-                    ? "border-sikapa-gold bg-sikapa-gold/10 text-sikapa-text-primary dark:text-zinc-100"
-                    : "border-sikapa-gray-soft bg-white text-sikapa-text-primary hover:bg-sikapa-cream dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+                    ? "border-sikapa-gold bg-sikapa-gold/10 text-sikapa-text-primary ring-1 ring-sikapa-gold dark:text-zinc-100"
+                    : "border-sikapa-gray-soft bg-white text-sikapa-text-primary hover:border-sikapa-gold/50 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-200"
                 } ${outOfStock ? "opacity-50 line-through" : ""}`}
                 aria-pressed={isSelected}
               >
                 {variantValueSummary(v)}
                 {v.price_delta !== 0 && (
-                  <span className="ml-1 text-sikapa-gold">
+                  <span className="ml-1.5 font-bold text-sikapa-gold">
                     {v.price_delta > 0 ? "+" : ""}
                     {formatGhs(Math.abs(v.price_delta))}
                   </span>
@@ -253,18 +288,14 @@ export function ProductVariantsDisplay({
       )}
 
       {selected && (
-        <p className="mt-3 text-small text-sikapa-text-secondary dark:text-zinc-400">
-          {variantValueSummary(selected)} ·{" "}
-          <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">
+        <div className="mt-4 border-t border-sikapa-gray-soft pt-3 dark:border-white/10">
+          <p className="text-[11px] text-sikapa-text-secondary dark:text-zinc-400">
+            Selected: <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">{variantValueSummary(selected)}</span>
+          </p>
+          <p className="mt-0.5 text-small font-bold text-sikapa-gold">
             {formatGhs(basePrice + (selected.price_delta ?? 0))}
-          </span>
-          {selected.price_delta !== 0 && (
-            <span className="ml-1 text-[11px] text-sikapa-text-muted">
-              (base {formatGhs(basePrice)} {selected.price_delta > 0 ? "+" : "-"}{" "}
-              {formatGhs(Math.abs(selected.price_delta))})
-            </span>
-          )}
-        </p>
+          </p>
+        </div>
       )}
     </section>
   );

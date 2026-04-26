@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FaBag, FaCart } from "@/components/FaIcons";
 import { ProductCarouselRail } from "@/components/product/ProductCarouselRail";
@@ -105,6 +106,7 @@ function RelatedProductCard({
 }
 
 export function ProductDetailScreen({ product: p }: Props) {
+  const router = useRouter();
   const { addProduct } = useCart();
   const { products } = useCatalog();
   const recentlyViewed = useRecentlyViewedProducts(p.id);
@@ -305,6 +307,18 @@ export function ProductDetailScreen({ product: p }: Props) {
     [addProduct, addDisabled, p.id, selectedVariant]
   );
 
+  const handleBuyNow = useCallback(() => {
+    if (addDisabled) return;
+    // For products with variants, require a selection before "Buy Now"
+    if (variants.length > 0 && !selectedVariant) {
+      // In a real app, we might scroll to the variants picker or show a toast
+      return;
+    }
+
+    handleAddToCart();
+    router.push("/checkout");
+  }, [addDisabled, variants.length, selectedVariant, handleAddToCart, router]);
+
   /** Floating add-to-cart when the main CTA scrolls off-screen (sits above bottom nav like WhatsApp). */
   useLayoutEffect(() => {
     const el = addToCartAnchorRef.current;
@@ -449,12 +463,14 @@ export function ProductDetailScreen({ product: p }: Props) {
             <FaCart className="!h-4 !w-4 shrink-0" />
             {addLabel}
           </button>
-          <Link
-            href="/shop"
-            className="sikapa-tap mt-2 flex w-full items-center justify-center rounded-[10px] border border-sikapa-gray-soft bg-white py-2.5 text-center text-small font-semibold text-sikapa-text-primary dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
+          <button
+            type="button"
+            className="sikapa-tap mt-2 flex w-full items-center justify-center rounded-[10px] border border-sikapa-gray-soft bg-white py-2.5 text-center text-small font-semibold text-sikapa-text-primary transition hover:bg-sikapa-cream dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-white/5"
+            onClick={handleBuyNow}
+            disabled={addDisabled || (variants.length > 0 && !selectedVariant)}
           >
-            Continue shopping
-          </Link>
+            Buy now
+          </button>
         </div>
 
         {hasNumericId && (

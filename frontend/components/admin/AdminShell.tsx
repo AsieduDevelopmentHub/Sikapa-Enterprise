@@ -4,27 +4,27 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowRightFromBracket,
-  faArrowRotateLeft,
-  faBars,
-  faBox,
-  faChartLine,
-  faClipboardList,
-  faFolderTree,
-  faGear,
-  faHouse,
-  faMagnifyingGlassChart,
-  faShieldHalved,
-  faStar,
-  faStore,
-  faTicket,
-  faUsers,
-  faWallet,
-  faWarehouse,
-  faXmark,
-} from "@fortawesome/free-solid-svg-icons";
+  LogOut,
+  RotateCcw,
+  Menu,
+  Box,
+  LineChart,
+  ClipboardList,
+  FolderTree,
+  Settings,
+  Home,
+  Search,
+  Shield,
+  Star,
+  Store,
+  Ticket,
+  Users,
+  Wallet,
+  Warehouse,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { pingBackendHealth } from "@/lib/api/client";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
@@ -32,24 +32,24 @@ import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 export type AdminNavItem = {
   href: string;
   label: string;
-  icon: typeof faHouse;
+  icon: LucideIcon;
 };
 
 const NAV_MAIN: AdminNavItem[] = [
-  { href: "/system", label: "Overview", icon: faHouse },
-  { href: "/system/products", label: "Products", icon: faBox },
-  { href: "/system/categories", label: "Categories", icon: faFolderTree },
-  { href: "/system/orders", label: "Orders", icon: faClipboardList },
-  { href: "/system/returns", label: "Returns", icon: faArrowRotateLeft },
-  { href: "/system/customers", label: "Customers", icon: faUsers },
-  { href: "/system/inventory", label: "Inventory", icon: faWarehouse },
-  { href: "/system/coupons", label: "Coupons", icon: faTicket },
-  { href: "/system/reviews", label: "Reviews", icon: faStar },
-  { href: "/system/analytics", label: "Analytics", icon: faChartLine },
-  { href: "/system/search-analytics", label: "Search", icon: faMagnifyingGlassChart },
-  { href: "/system/payments", label: "Payments", icon: faWallet },
-  { href: "/system/staff", label: "Staff", icon: faShieldHalved },
-  { href: "/system/settings", label: "Settings", icon: faGear },
+  { href: "/system", label: "Overview", icon: Home },
+  { href: "/system/products", label: "Products", icon: Box },
+  { href: "/system/categories", label: "Categories", icon: FolderTree },
+  { href: "/system/orders", label: "Orders", icon: ClipboardList },
+  { href: "/system/returns", label: "Returns", icon: RotateCcw },
+  { href: "/system/customers", label: "Customers", icon: Users },
+  { href: "/system/inventory", label: "Inventory", icon: Warehouse },
+  { href: "/system/coupons", label: "Coupons", icon: Ticket },
+  { href: "/system/reviews", label: "Reviews", icon: Star },
+  { href: "/system/analytics", label: "Analytics", icon: LineChart },
+  { href: "/system/search-analytics", label: "Search", icon: Search },
+  { href: "/system/payments", label: "Payments", icon: Wallet },
+  { href: "/system/staff", label: "Staff", icon: Shield },
+  { href: "/system/settings", label: "Settings", icon: Settings },
 ];
 
 function navActive(pathname: string, href: string): boolean {
@@ -77,7 +77,7 @@ function AdminSidebarLink({
           : "text-sikapa-hero-subtext/90 hover:bg-white/5 hover:text-white"
       }`}
     >
-      <FontAwesomeIcon icon={item.icon} className="h-4 w-4 shrink-0 opacity-90" />
+      <item.icon className="h-4 w-4 shrink-0 opacity-90" strokeWidth={2} />
       {item.label}
     </Link>
   );
@@ -214,7 +214,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           onClick={closeMobile}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-small text-sikapa-hero-subtext/85 hover:bg-white/5 hover:text-white"
         >
-          <FontAwesomeIcon icon={faStore} className="h-4 w-4" />
+          <Store className="h-4 w-4" strokeWidth={2} />
           Storefront
         </Link>
         <button
@@ -222,7 +222,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           onClick={() => void logout()}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-small text-sikapa-hero-subtext/85 hover:bg-white/5 hover:text-white"
         >
-          <FontAwesomeIcon icon={faArrowRightFromBracket} className="h-4 w-4" />
+          <LogOut className="h-4 w-4" strokeWidth={2} />
           Sign out
         </button>
       </div>
@@ -239,7 +239,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           className="rounded-lg p-2 hover:bg-white/10"
           onClick={() => setMobileOpen(true)}
         >
-          <FontAwesomeIcon icon={faBars} className="h-5 w-5" />
+          <Menu className="h-5 w-5" strokeWidth={2} />
         </button>
         <span className="font-serif text-section-title font-semibold">Admin</span>
         <span className="w-9" />
@@ -261,7 +261,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 aria-label="Close"
                 onClick={closeMobile}
               >
-                <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
+                <X className="h-5 w-5" strokeWidth={2} />
               </button>
             </div>
             {sidebar}
