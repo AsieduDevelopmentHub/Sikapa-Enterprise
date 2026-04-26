@@ -53,10 +53,14 @@ async def get_products_with_filters(
         sort_col = Product.sales_count
     elif sort_by == "name":
         sort_col = Product.name
+    elif sort_by == "random":
+        sort_col = func.random()
     else:
         sort_col = Product.created_at
 
-    if sort_order.lower() == "asc":
+    if sort_by == "random":
+        query = query.order_by(sort_col)
+    elif sort_order.lower() == "asc":
         query = query.order_by(sort_col.asc())
     else:
         query = query.order_by(sort_col.desc())

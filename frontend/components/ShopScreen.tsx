@@ -24,7 +24,7 @@ import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
 const SHOP_VIEW_STORAGE_KEY = "sikapa-shop-view-mode";
 
 type ViewMode = "list" | "grid";
-type SortKey = "default" | "price-asc" | "price-desc" | "name";
+type SortKey = "default" | "price-asc" | "price-desc" | "name" | "random";
 
 function ViewToggle({
   value,
@@ -147,6 +147,12 @@ export function ShopScreen() {
     if (sortKey === "price-asc") next.sort((a, b) => a.price - b.price);
     else if (sortKey === "price-desc") next.sort((a, b) => b.price - a.price);
     else if (sortKey === "name") next.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortKey === "random") {
+      for (let i = next.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [next[i], next[j]] = [next[j], next[i]];
+      }
+    }
     return next;
   }, [tab, query, products, inStockOnly, sortKey]);
 
@@ -177,7 +183,18 @@ export function ShopScreen() {
   }
 
   return (
-    <div className="bg-sikapa-cream pb-6 pt-3 dark:bg-zinc-950">
+    <div className="bg-sikapa-cream pb-12 dark:bg-zinc-950">
+      <div className="bg-sikapa-gold/5 py-8 mb-4 border-b border-sikapa-gray-soft/50 dark:bg-white/[0.02] dark:border-white/5">
+        <div className="sikapa-storefront-max mx-auto px-4">
+          <h1 className="font-serif text-[1.6rem] font-semibold text-sikapa-text-primary dark:text-zinc-100">
+            {tab === "all" ? "Discover Products" : tabKeys.find(t => t.key === tab)?.label}
+          </h1>
+          <p className="mt-1 text-small text-sikapa-text-secondary dark:text-zinc-400">
+             Premium selection curated for you
+          </p>
+        </div>
+      </div>
+
       <div className="sikapa-storefront-max mx-auto px-4">
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -227,6 +244,7 @@ export function ShopScreen() {
               <option value="price-asc">Price: low to high</option>
               <option value="price-desc">Price: high to low</option>
               <option value="name">Name A–Z</option>
+              <option value="random">Discover (Random)</option>
             </select>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-body text-sikapa-text-primary dark:text-zinc-200">

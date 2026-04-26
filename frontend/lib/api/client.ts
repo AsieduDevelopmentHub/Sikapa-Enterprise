@@ -3,14 +3,14 @@ import { V1 } from "@/lib/api/v1-paths";
 import { getActiveBucket, readTokens, writeTokens } from "@/lib/auth-storage";
 
 export function getApiV1Base(): string {
-  const raw = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000/api/v1";
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8001/api/v1";
   return raw.replace(/\/$/, "");
 }
 
 export function getBackendOrigin(): string {
   const base = getApiV1Base();
   const stripped = base.replace(/\/api\/v1\/?$/i, "");
-  return stripped || "http://localhost:8000";
+  return stripped || "http://localhost:8001";
 }
 
 /**
@@ -25,7 +25,7 @@ export function pingBackendHealth(): void {
     cache: "no-store",
     mode: "cors",
     keepalive: true,
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 let refreshPromise: Promise<string | null> | null = null;

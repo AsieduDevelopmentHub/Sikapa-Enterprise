@@ -25,11 +25,11 @@ const nextConfig = {
     /* Allow optimizer to fetch `http://localhost:8000/uploads/...` (resolves to 127.0.0.1 / ::1). Dev-only — do not enable in public production deploys. */
     ...(isDev
       ? {
-          dangerouslyAllowLocalIP: true,
-          /* Re-optimize local `public/` logos quickly when you overwrite PNGs (avoids stale `/_next/image` cache in dev). */
-          minimumCacheTTL: 0,
-          ...(devImageUnoptimized ? { unoptimized: true } : {}),
-        }
+        dangerouslyAllowLocalIP: true,
+        /* Re-optimize local `public/` logos quickly when you overwrite PNGs (avoids stale `/_next/image` cache in dev). */
+        minimumCacheTTL: 0,
+        ...(devImageUnoptimized ? { unoptimized: true } : {}),
+      }
       : {}),
     remotePatterns: [
       {
@@ -51,13 +51,13 @@ const nextConfig = {
       {
         protocol: "http",
         hostname: "localhost",
-        port: "8000",
+        port: "8001",
         pathname: "/**",
       },
       {
         protocol: "http",
         hostname: "127.0.0.1",
-        port: "8000",
+        port: "8001",
         pathname: "/**",
       },
       /* Product media and any future static paths from the Render API host */

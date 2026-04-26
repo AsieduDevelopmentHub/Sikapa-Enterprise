@@ -17,6 +17,9 @@ import {
   CheckCircle,
   MapPin,
   Headset,
+  Users,
+  Star,
+  Wallet,
 } from "lucide-react";
 
 const sz = "h-[1.125rem] w-[1.125rem]";
@@ -91,4 +94,24 @@ export function FaLocationPin({ className = "" }: IconProps) {
 
 export function FaHeadset({ className = "" }: IconProps) {
   return <Headset className={`${md} ${className}`} strokeWidth={2} />;
+}
+
+export function FaFacebook({ className = "" }: IconProps) {
+  return <Users className={`${md} ${className}`} strokeWidth={2} />;
+}
+
+export function FaInstagram({ className = "" }: IconProps) {
+  return <Star className={`${md} ${className}`} strokeWidth={2} />;
+}
+
+export function FaTwitter({ className = "" }: IconProps) {
+  return <Search className={`${md} ${className}`} strokeWidth={2} />;
+}
+
+export function FaCreditCard({ className = "" }: IconProps) {
+  return <Wallet className={`${md} ${className}`} strokeWidth={2} />;
+}
+
+export function FaLock({ className = "" }: IconProps) {
+  return <Lock className={`${md} ${className}`} strokeWidth={2} />;
 }
