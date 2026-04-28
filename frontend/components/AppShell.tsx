@@ -10,7 +10,9 @@ import { StorefrontFooter } from "@/components/StorefrontFooter";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith("/admin");
+  // Treat both /admin/* and /system/* as admin surfaces so we never show the
+  // storefront chrome (bottom nav, footer, WhatsApp float) on admin pages.
+  const isAdmin = pathname?.startsWith("/admin") || pathname?.startsWith("/system");
 
   return (
     <>
