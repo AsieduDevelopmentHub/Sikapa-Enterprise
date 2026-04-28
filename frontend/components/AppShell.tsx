@@ -13,6 +13,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Treat both /admin/* and /system/* as admin surfaces so we never show the
   // storefront chrome (bottom nav, footer, WhatsApp float) on admin pages.
   const isAdmin = pathname?.startsWith("/admin") || pathname?.startsWith("/system");
+  const isAccount = pathname?.startsWith("/account");
 
   return (
     <>
@@ -27,7 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex-1">
             {children}
           </div>
-          {!isAdmin && <StorefrontFooter />}
+          {!isAdmin && !isAccount && <StorefrontFooter />}
         </motion.div>
       </div>
       {!isAdmin && <BottomNav />}
