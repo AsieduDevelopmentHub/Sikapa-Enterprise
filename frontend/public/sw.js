@@ -1,4 +1,4 @@
-const VERSION = "v5";
+const VERSION = "v1";
 const STATIC_CACHE = `sikapa-static-${VERSION}`;
 const RUNTIME_CACHE = `sikapa-runtime-${VERSION}`;
 const API_CACHE = `sikapa-api-${VERSION}`;
