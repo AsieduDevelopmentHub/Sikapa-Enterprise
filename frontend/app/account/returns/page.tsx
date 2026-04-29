@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 import { useAuth } from "@/context/AuthContext";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { fetchMyReturns, type OrderReturn } from "@/lib/api/returns";
+import { returnsList, type OrderReturn } from "@/lib/api/returns";
 
 function formatWhen(iso: string): string {
   try {
@@ -34,7 +34,7 @@ function ReturnsContent() {
 
     const load = async () => {
       try {
-        const list = await fetchMyReturns(accessToken);
+        const list = await returnsList(accessToken);
         setReturns(list);
       } catch {
         setReturns([]);
@@ -56,7 +56,7 @@ function ReturnsContent() {
       return;
     }
     setMessage("");
-    setReturns(await fetchMyReturns(accessToken).catch(() => []));
+    setReturns(await returnsList(accessToken).catch(() => []));
     router.push(`/orders/${id}/return`);
   };
 
