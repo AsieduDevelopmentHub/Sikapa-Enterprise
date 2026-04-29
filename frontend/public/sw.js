@@ -80,7 +80,9 @@ async function cacheWithTtl(cacheName, request, response) {
   const cache = await caches.open(cacheName);
   const headers = new Headers(response.headers);
   headers.set("sw-cache-time", String(Date.now()));
-  const wrapped = new Response(await response.clone().blob(), {
+  // Important: the passed `response` might be a clone (see callers).
+  // Do not clone again here; that can throw if the body was already consumed.
+  const wrapped = new Response(await response.blob(), {
     status: response.status,
     statusText: response.statusText,
     headers,
@@ -160,7 +162,7 @@ self.addEventListener("fetch", (event) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
           if (!res || res.status !== 200) return res;
-          void cacheWithTtl(RUNTIME_CACHE, request, res);
+          void cacheWithTtl(RUNTIME_CACHE, request, res.clone());
           return res;
         });
       })
@@ -176,7 +178,7 @@ self.addEventListener("fetch", (event) => {
         const fetchPromise = fetch(request)
           .then((res) => {
             if (!res || res.status !== 200) return res;
-            void cacheWithTtl(RUNTIME_CACHE, request, res);
+            void cacheWithTtl(RUNTIME_CACHE, request, res.clone());
             return res;
           })
           .catch(() => null);
@@ -194,7 +196,7 @@ self.addEventListener("fetch", (event) => {
         const fetchPromise = fetch(request)
           .then((res) => {
             if (!res || res.status !== 200) return res;
-            void cacheWithTtl(API_CACHE, request, res);
+            void cacheWithTtl(API_CACHE, request, res.clone());
             return res;
           })
           .catch(() => null);
@@ -225,7 +227,7 @@ self.addEventListener("fetch", (event) => {
       try {
         const res = await fetch(request);
         if (!res || res.status !== 200 || (res.type !== "basic" && res.type !== "cors")) return res;
-        void cacheWithTtl(STATIC_CACHE, request, res);
+        void cacheWithTtl(STATIC_CACHE, request, res.clone());
         return res;
       } catch {
         return (await caches.match(request)) || Response.error();
