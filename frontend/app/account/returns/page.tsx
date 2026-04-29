@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 import { useAuth } from "@/context/AuthContext";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { createReturn, fetchMyReturns, type OrderReturn } from "@/lib/api/returns";
+import { fetchMyReturns, type OrderReturn } from "@/lib/api/returns";
 
 function formatWhen(iso: string): string {
   try {
@@ -18,14 +18,13 @@ function formatWhen(iso: string): string {
 
 function ReturnsContent() {
   const { accessToken, loading: authLoading } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const presetOrder = searchParams.get("order");
 
   const [returns, setReturns] = useState<OrderReturn[]>([]);
   const [orderId, setOrderId] = useState(presetOrder ?? "");
-  const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!accessToken) {
@@ -56,24 +55,9 @@ function ReturnsContent() {
       setMessage("Enter a valid order number.");
       return;
     }
-
-    if (reason.trim().length < 3) {
-      setMessage("Describe the reason (at least 3 characters).");
-      return;
-    }
-
-    setBusy(true);
     setMessage("");
-    try {
-      await createReturn(accessToken, id, reason.trim());
-      setReason("");
-      setMessage("Return request submitted.");
-      setReturns(await fetchMyReturns(accessToken));
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Request failed");
-    } finally {
-      setBusy(false);
-    }
+    setReturns(await fetchMyReturns(accessToken).catch(() => []));
+    router.push(`/orders/${id}/return`);
   };
 
   if (authLoading && !accessToken) {
@@ -127,26 +111,19 @@ function ReturnsContent() {
                 />
               </label>
 
-              <label className="block text-small font-medium text-sikapa-text-secondary">
-                Reason
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="mt-1 min-h-[100px] w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-body dark:border-white/10 dark:bg-zinc-900"
-                  placeholder="Wrong item, defective, etc."
-                />
-              </label>
+              <p className="text-small text-sikapa-text-secondary">
+                We&apos;ll collect the reason on the next screen (item selection + details).
+              </p>
             </div>
 
             {message ? <p className="mt-4 text-small text-sikapa-text-secondary">{message}</p> : null}
 
             <button
               type="button"
-              disabled={busy}
               onClick={() => void submit()}
               className="sikapa-btn-gold sikapa-tap mt-4 w-full rounded-[10px] py-2.5 text-small font-semibold text-white disabled:opacity-60"
             >
-              {busy ? "Submitting…" : "Submit request"}
+              Continue to request
             </button>
           </section>
 
