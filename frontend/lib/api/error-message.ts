@@ -1,3 +1,44 @@
+export const MAINTENANCE_EVENT = "sikapa-maintenance";
+
+export interface MaintenanceDetail {
+  message: string;
+  retryAfter?: number;
+}
+
+/**
+ * Detect a 503 maintenance response from the API and notify the app via a
+ * window event. Returns the maintenance detail so callers can also surface the
+ * message inline. Safe to call from any fetch helper.
+ */
+export function detectMaintenanceResponse(
+  status: number,
+  bodyText: string,
+  headers?: Headers,
+): MaintenanceDetail | null {
+  if (status !== 503) return null;
+  let parsed: { maintenance?: unknown; message?: unknown } | null = null;
+  try {
+    parsed = JSON.parse(bodyText.trim()) as typeof parsed;
+  } catch {
+    return null;
+  }
+  if (!parsed || parsed.maintenance !== true) return null;
+  const message =
+    typeof parsed.message === "string" && parsed.message.trim()
+      ? parsed.message.trim()
+      : "Sikapa is undergoing scheduled maintenance.";
+  const retryHeader = headers?.get("retry-after");
+  const retryAfter = retryHeader ? Number(retryHeader) : undefined;
+  const detail: MaintenanceDetail = {
+    message,
+    retryAfter: Number.isFinite(retryAfter) ? retryAfter : undefined,
+  };
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent<MaintenanceDetail>(MAINTENANCE_EVENT, { detail }));
+  }
+  return detail;
+}
+
 export function friendlyHttpStatus(status: number): string {
   switch (status) {
     case 400:

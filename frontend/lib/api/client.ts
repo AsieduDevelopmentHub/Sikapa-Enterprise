@@ -1,6 +1,16 @@
-import { parseApiErrorBody } from "@/lib/api/error-message";
+import { detectMaintenanceResponse, parseApiErrorBody } from "@/lib/api/error-message";
 import { V1 } from "@/lib/api/v1-paths";
 import { getActiveBucket, readTokens, writeTokens } from "@/lib/auth-storage";
+
+async function readErrorBody(res: Response): Promise<string> {
+  return res.text().catch(() => "");
+}
+
+function buildResponseError(res: Response, text: string): Error {
+  const detail = detectMaintenanceResponse(res.status, text, res.headers);
+  if (detail) return new Error(detail.message);
+  return new Error(parseApiErrorBody(res.status, text));
+}
 
 export function getApiV1Base(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000/api/v1";
@@ -96,8 +106,8 @@ export async function apiFetchJson<T>(path: string, init?: RequestInit): Promise
     },
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(parseApiErrorBody(res.status, text));
+    const text = await readErrorBody(res);
+    throw buildResponseError(res, text);
   }
   return parseJsonResponse<T>(res);
 }
@@ -129,8 +139,8 @@ export async function apiFetchBlobAuth(
     if (next) res = await doFetch(next);
   }
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(parseApiErrorBody(res.status, text));
+    const text = await readErrorBody(res);
+    throw buildResponseError(res, text);
   }
   return res.blob();
 }
@@ -162,8 +172,8 @@ export async function apiFetchJsonAuth<T>(
     if (next) res = await doFetch(next);
   }
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(parseApiErrorBody(res.status, text));
+    const text = await readErrorBody(res);
+    throw buildResponseError(res, text);
   }
   return parseJsonResponse<T>(res);
 }
@@ -196,8 +206,8 @@ export async function apiFetchFormAuth<T>(
     if (next) res = await doFetch(next);
   }
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(parseApiErrorBody(res.status, text));
+    const text = await readErrorBody(res);
+    throw buildResponseError(res, text);
   }
   return parseJsonResponse<T>(res);
 }
@@ -231,8 +241,8 @@ export async function apiFetchJsonAuthMethod<T>(
     if (next) res = await doFetch(next);
   }
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(parseApiErrorBody(res.status, text));
+    const text = await readErrorBody(res);
+    throw buildResponseError(res, text);
   }
   return parseJsonResponse<T>(res);
 }
