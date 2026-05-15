@@ -39,8 +39,8 @@ class ProductCard extends ConsumerWidget {
                   CachedNetworkImage(
                     imageUrl: product.displayImage,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: SikapaColors.graySoft),
-                    errorWidget: (_, __, ___) => Container(
+                    placeholder: (_, _) => Container(color: SikapaColors.graySoft),
+                    errorWidget: (_, _, _) => Container(
                       color: SikapaColors.graySoft,
                       child: const Icon(Icons.image_not_supported, color: SikapaColors.textMuted),
                     ),
