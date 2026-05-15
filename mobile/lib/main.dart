@@ -23,7 +23,7 @@ class SikapaApp extends ConsumerWidget {
     // Eagerly wake the backend (Render free tier cold start). Fire-and-forget.
     ref.listen<int>(
       Provider<int>((_) => 0),
-      (_, __) {},
+      (_, _) {},
     );
     Future.microtask(() => ref.read(apiClientProvider).pingHealth());
 
