@@ -1,0 +1,48 @@
+name: sikapa_storefront
+description: "Sikapa Enterprise mobile storefront (Flutter) — shares the FastAPI backend with the Next.js web app."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Networking
+  dio: ^5.7.0
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Routing
+  go_router: ^14.6.2
+
+  # Persistence
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.3
+
+  # Images
+  cached_network_image: ^3.4.1
+
+  # Typography (Cormorant Garamond + DM Sans matching the web)
+  google_fonts: ^6.2.1
+
+  # WebView for Paystack-hosted checkout + Google OAuth callback
+  webview_flutter: ^4.10.0
+
+  # Misc helpers
+  intl: ^0.20.1
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
