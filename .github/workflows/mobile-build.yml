@@ -1,0 +1,226 @@
+name: Mobile Build
+
+# Builds the Flutter app under ./mobile for Android and iOS.
+#
+# - Every push to main/mobile-touching files and every workflow_dispatch run
+#   uploads the built binaries as workflow artifacts (downloadable from the
+#   "Actions" tab → run summary → "Artifacts").
+# - Pushing a tag matching `mobile-v*` (e.g. `mobile-v1.0.0`) additionally
+#   publishes a GitHub Release with all artifacts attached.
+#
+# Optional repo configuration (Settings → Secrets and variables → Actions):
+#   - vars.MOBILE_API_BASE   e.g. https://api.example.com/api/v1
+#   - vars.MOBILE_GOOGLE_OAUTH_ENABLED   "true" or "false"
+# Both can also be supplied per-run via the workflow_dispatch inputs below.
+#
+# iOS builds are produced unsigned (no Apple Developer secrets required).
+# The resulting `.ipa` is only useful for distribution after re-signing, but it
+# proves the build pipeline is healthy. Wire in fastlane / signing later.
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: "Override SIKAPA_API_BASE (e.g. https://api.example.com/api/v1). Leave blank to use repo defaults."
+        required: false
+        default: ""
+      google_oauth_enabled:
+        description: "SIKAPA_GOOGLE_OAUTH_ENABLED (true/false). Leave blank to use repo defaults."
+        required: false
+        default: ""
+  push:
+    tags:
+      - "mobile-v*"
+    branches: [main, mobile]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-build.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_CHANNEL: stable
+  WORKING_DIR: mobile
+
+jobs:
+  android:
+    name: Android (APK + AAB)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: Resolve build-time defines
+        id: vars
+        shell: bash
+        run: |
+          API_BASE="${{ github.event.inputs.api_base }}"
+          if [ -z "$API_BASE" ]; then API_BASE="${{ vars.MOBILE_API_BASE }}"; fi
+          OAUTH="${{ github.event.inputs.google_oauth_enabled }}"
+          if [ -z "$OAUTH" ]; then OAUTH="${{ vars.MOBILE_GOOGLE_OAUTH_ENABLED }}"; fi
+          echo "api_base=$API_BASE" >> "$GITHUB_OUTPUT"
+          echo "oauth=$OAUTH" >> "$GITHUB_OUTPUT"
+
+      - name: Flutter version
+        working-directory: ${{ env.WORKING_DIR }}
+        run: flutter --version
+
+      - name: Install Flutter dependencies
+        working-directory: ${{ env.WORKING_DIR }}
+        run: flutter pub get
+
+      - name: Static analysis
+        working-directory: ${{ env.WORKING_DIR }}
+        run: flutter analyze --no-pub
+
+      - name: Build Android (APK universal + per-ABI + AAB)
+        working-directory: ${{ env.WORKING_DIR }}
+        env:
+          API_BASE: ${{ steps.vars.outputs.api_base }}
+          OAUTH: ${{ steps.vars.outputs.oauth }}
+        run: |
+          set -euo pipefail
+          DEFINES=()
+          if [ -n "${API_BASE}" ]; then DEFINES+=("--dart-define=SIKAPA_API_BASE=${API_BASE}"); fi
+          if [ -n "${OAUTH}" ];     then DEFINES+=("--dart-define=SIKAPA_GOOGLE_OAUTH_ENABLED=${OAUTH}"); fi
+          flutter build apk --release "${DEFINES[@]}"
+          flutter build apk --release --split-per-abi "${DEFINES[@]}"
+          flutter build appbundle --release "${DEFINES[@]}"
+
+      - name: Stage Android artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/android
+          cp -v mobile/build/app/outputs/flutter-apk/*.apk        artifacts/android/
+          cp -v mobile/build/app/outputs/bundle/release/*.aab     artifacts/android/
+          ls -la artifacts/android
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ github.run_number }}
+          path: artifacts/android/**
+          if-no-files-found: error
+          retention-days: 30
+
+  ios:
+    name: iOS (unsigned IPA)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: Resolve build-time defines
+        id: vars
+        shell: bash
+        run: |
+          API_BASE="${{ github.event.inputs.api_base }}"
+          if [ -z "$API_BASE" ]; then API_BASE="${{ vars.MOBILE_API_BASE }}"; fi
+          OAUTH="${{ github.event.inputs.google_oauth_enabled }}"
+          if [ -z "$OAUTH" ]; then OAUTH="${{ vars.MOBILE_GOOGLE_OAUTH_ENABLED }}"; fi
+          echo "api_base=$API_BASE" >> "$GITHUB_OUTPUT"
+          echo "oauth=$OAUTH" >> "$GITHUB_OUTPUT"
+
+      - name: Flutter version
+        working-directory: ${{ env.WORKING_DIR }}
+        run: flutter --version
+
+      - name: Install Flutter dependencies
+        working-directory: ${{ env.WORKING_DIR }}
+        run: flutter pub get
+
+      - name: Build iOS (release, unsigned)
+        working-directory: ${{ env.WORKING_DIR }}
+        env:
+          API_BASE: ${{ steps.vars.outputs.api_base }}
+          OAUTH: ${{ steps.vars.outputs.oauth }}
+        run: |
+          set -euo pipefail
+          DEFINES=()
+          if [ -n "${API_BASE}" ]; then DEFINES+=("--dart-define=SIKAPA_API_BASE=${API_BASE}"); fi
+          if [ -n "${OAUTH}" ];     then DEFINES+=("--dart-define=SIKAPA_GOOGLE_OAUTH_ENABLED=${OAUTH}"); fi
+          flutter build ios --release --no-codesign "${DEFINES[@]}"
+
+      - name: Package unsigned IPA
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          set -euo pipefail
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Runner.app not found at $APP_PATH" >&2
+            exit 1
+          fi
+          rm -rf Payload
+          mkdir Payload
+          cp -R "$APP_PATH" Payload/
+          mkdir -p ../artifacts/ios
+          /usr/bin/zip -qr "../artifacts/ios/sikapa-storefront-unsigned.ipa" Payload
+          ls -la ../artifacts/ios
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-${{ github.run_number }}
+          path: artifacts/ios/**
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish GitHub Release
+    needs: [android, ios]
+    if: startsWith(github.ref, 'refs/tags/mobile-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-${{ github.run_number }}
+          path: dist/android
+
+      - name: Download iOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-${{ github.run_number }}
+          path: dist/ios
+
+      - name: List release files
+        run: ls -la dist/android dist/ios
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Sikapa Mobile ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/android/*
+            dist/ios/*
