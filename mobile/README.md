@@ -111,6 +111,34 @@ flutter build ipa \
 
 You can store the production base URL in CI as a single secret and pass it the same way.
 
+### CI builds & releases
+
+The repo ships a [`Mobile Build`](../.github/workflows/mobile-build.yml) workflow that produces
+Android and iOS binaries on every push that touches `mobile/**` (or via manual dispatch from the
+**Actions** tab). All artifacts are uploaded to the run summary and downloadable for 30 days:
+
+- `android-<run>` — universal APK, per-ABI APKs (`arm64-v8a`, `armeabi-v7a`, `x86_64`), and the
+  Play-Store-ready `.aab`
+- `ios-<run>` — `sikapa-storefront-unsigned.ipa` (built with `--no-codesign`; re-sign before
+  distributing through TestFlight or sideloading)
+
+To cut a versioned **GitHub Release** with all binaries attached, push a tag matching `mobile-v*`:
+
+```bash
+git tag mobile-v1.0.0
+git push origin mobile-v1.0.0
+```
+
+The workflow honours optional repository configuration under
+**Settings → Secrets and variables → Actions → Variables**:
+
+| Name | Purpose |
+|------|---------|
+| `MOBILE_API_BASE` | Default `SIKAPA_API_BASE` baked into release builds |
+| `MOBILE_GOOGLE_OAUTH_ENABLED` | Default `SIKAPA_GOOGLE_OAUTH_ENABLED` flag |
+
+Either can be overridden per-run via the workflow_dispatch inputs.
+
 ## Backend wiring
 
 The mobile client uses the **same** `/api/v1/*` endpoints the Next.js web app does (see
