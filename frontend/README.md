@@ -19,12 +19,12 @@ Open [http://localhost:3000](http://localhost:3000). The API should be running s
 ## Configuration
 
 1. Copy `.env.example` to `.env.local`.
-2. Set **`NEXT_PUBLIC_API_URL`** to your API base **including `/api`**, no trailing slash:
+2. Set **`NEXT_PUBLIC_API_URL`** to the **full v1 API base** (must include `/api/v1`), no trailing slash:
 
-   - Local: `http://localhost:8000/api`
-   - Production: `https://your-backend-host.com/api`
+   - Local: `http://localhost:8000/api/v1`
+   - Production: `https://your-backend-host.com/api/v1`
 
-   The app builds paths like `/v1/auth/...`, so the full login URL becomes `http://localhost:8000/api/v1/auth/login`.
+   The app appends paths like `/auth/login` from `lib/api/v1-paths.ts`, so the full login URL is `http://localhost:8000/api/v1/auth/login`.
 
 3. Use **only one** `NEXT_PUBLIC_API_URL` line in `.env.local` (duplicate keys: last wins).
 4. To embed the store map on `/help/contact`, set:
