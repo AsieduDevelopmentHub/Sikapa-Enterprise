@@ -17,6 +17,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.routes import router as api_v1_router
 from app.core.http_errors import integrity_error_handler, request_validation_exception_handler
+from app.core.maintenance import MaintenanceMiddleware, is_maintenance_enabled
 from app.core.rate_limit import limiter
 from app.core.startup_checks import (
     is_production_environment,
@@ -80,6 +81,11 @@ if _cors_regex:
 
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.add_middleware(GZipMiddleware, minimum_size=1200)
+
+# Outermost gate: when MAINTENANCE_MODE=true, return 503 for non-allowlisted
+# requests. Allowlist always includes /health and the Paystack webhook so
+# probes and payment confirmations keep working. See app/core/maintenance.py.
+app.add_middleware(MaintenanceMiddleware)
 
 _request_log = logging.getLogger("sikapa.request")
 
@@ -146,6 +152,11 @@ def on_startup() -> None:
         logging.getLogger("sikapa").info("Redis cache: connected and healthy")
     else:
         logging.getLogger("sikapa").info("Running with InMemoryCache (LRU-lite)")
+
+    if is_maintenance_enabled():
+        logging.getLogger("sikapa").warning(
+            "MAINTENANCE_MODE=true — non-allowlisted requests will return 503."
+        )
 
 
 @app.on_event("shutdown")

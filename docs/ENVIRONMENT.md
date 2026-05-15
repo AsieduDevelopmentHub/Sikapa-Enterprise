@@ -35,7 +35,7 @@ Use this as the single checklist for **local**, **staging**, and **production**.
 
 | Variable | Purpose |
 |----------|---------|
-| `NEXT_PUBLIC_API_URL` | Base URL for API calls **including `/api` and version**. Canonical form: `http://localhost:8000/api` locally; production: `https://<your-backend-host>/api` (no trailing slash). Client code joins paths such as `/v1/auth/...` → full URL `.../api/v1/auth/...`. **Use only one line**—duplicate keys make the last one win. |
+| `NEXT_PUBLIC_API_URL` | **Full v1 base URL** (must end with `/api/v1`, no trailing slash). Example local: `http://localhost:8000/api/v1`. The client appends route paths such as `/auth/login`, `/products/` (see `frontend/lib/api/v1-paths.ts`). Using only `.../api` breaks every call (wrong path). **Use only one line**—duplicate keys make the last one win. |
 | `NEXT_PUBLIC_SUPABASE_*` | If the storefront uses Supabase client-side. |
 | `NEXT_PUBLIC_WHATSAPP_*` | Optional help / contact links. |
 
@@ -47,7 +47,7 @@ Public env vars are embedded at build time on Vercel; change them and **redeploy
 
 - [ ] `SECRET_KEY` set and **stable** across deploys unless you intend to invalidate all sessions.
 - [ ] `CORS_ORIGINS` includes your **exact** frontend origin (`https://...`).
-- [ ] `NEXT_PUBLIC_API_URL` points to the **same** API users reach in the browser (correct host, `https`, `/api` base as documented above).
+- [ ] `NEXT_PUBLIC_API_URL` points to the **same** API users reach in the browser (correct host, `https`, **`/api/v1` suffix** as documented above).
 - [ ] Backend health: `GET /health` or `GET /health/` returns `200` (see [OPERATIONS.md](./OPERATIONS.md)).
 - [ ] Auth clients send `identifier` (username or email) for login and keep `username` + `name` required on registration.
 

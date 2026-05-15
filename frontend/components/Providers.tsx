@@ -13,6 +13,7 @@ import { DialogProvider } from "@/context/DialogContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { CookieConsentBanner } from "@/components/legal/CookieConsentBanner";
+import { MaintenanceWatcher } from "@/components/MaintenanceWatcher";
 
 export function Providers({
   children,
@@ -43,6 +44,7 @@ export function Providers({
                     <AppShell>{children}</AppShell>
                     <NavSidebarPanel />
                     <CookieConsentBanner required={showCookieConsent} />
+                    <MaintenanceWatcher />
                   </CartProvider>
                 </WishlistProvider>
               </CatalogProvider>

@@ -20,7 +20,7 @@ This document explains how to deploy the frontend to Vercel using the `frontend`
 
 Add these environment variables in Vercel:
 
-- `NEXT_PUBLIC_API_URL` = `https://your-backend-url.com/api`
+- `NEXT_PUBLIC_API_URL` = `https://your-backend-url.com/api/v1` (must match the FastAPI mount; see `frontend/.env.example`)
 
 If you use Supabase or other external services, also add:
 
@@ -31,7 +31,7 @@ If you use Supabase or other external services, also add:
 
 ## Local and preview behavior
 
-- `npm run dev` will use `http://localhost:8000/api` from `.env.local`
+- `npm run dev` should use `http://localhost:8000/api/v1` in `.env.local` (same as `frontend/.env.example`)
 - Preview deployments will use the `NEXT_PUBLIC_API_URL` value configured in Vercel
 - Production deployments will also use the same env var value, or a separate production value
 

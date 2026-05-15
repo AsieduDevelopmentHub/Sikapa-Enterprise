@@ -106,6 +106,57 @@ See [ENVIRONMENT.md](./ENVIRONMENT.md).
 - **`EMAIL_LOGO_URL`:** public `https://` URL to your logo. Used in transactional HTML emails and in the PDF invoice header (same variable as invoice generator).
 - **`EMAIL_IMAGE_BASE_URL`:** if product `image_url` values are paths like `/uploads/...`, set this to your **public API base** (e.g. `https://api.example.com`) so confirmation and shipped emails can embed **HTTPS** thumbnails. Many clients block `http://` images.
 
+## Maintenance mode
+
+Two independent gates can be flipped via env vars without code changes.
+
+| Layer | Variable | Effect |
+|-------|----------|--------|
+| Backend (FastAPI) | `MAINTENANCE_MODE=true` | Returns **503** with JSON `{"maintenance": true, "message": "..."}` for every route except the built-in allowlist. |
+| Frontend (Next.js) | `NEXT_PUBLIC_MAINTENANCE_MODE=true` | Edge middleware rewrites every page to `/maintenance` (a static `noindex` page) and adds `Retry-After`. |
+
+### Built-in backend allowlist (always responds, even with maintenance on)
+
+- `GET /` and `GET /health` (`/health/`) — load-balancer probes and the storefront's cold-start ping.
+- `POST /api/v1/payments/paystack/webhook` — must keep working so payments stay in sync; replaying webhooks from the Paystack dashboard is a manual recovery, not a default.
+- All `OPTIONS` requests — keeps CORS preflight working so browsers see the proper 503 instead of a generic CORS failure.
+
+Add more paths via `MAINTENANCE_ALLOW_PATHS` (comma-separated prefixes), e.g. `/api/v1/auth/google/callback,/api/v1/admin` if you want operators to log in or browse admin during the window.
+
+### Operator bypass
+
+- Send header `X-Maintenance-Bypass: <MAINTENANCE_BYPASS_TOKEN>` from a trusted client (curl, Postman, an internal admin tool).
+- Or list trusted egress IPs in `MAINTENANCE_IP_ALLOWLIST` (honours `X-Forwarded-For` / `X-Real-IP` on Render/nginx).
+- For the storefront UI: visit `https://<site>/?bypass=<MAINTENANCE_BYPASS_TOKEN>` once. The middleware sets a short-lived `sikapa_mx_bypass` cookie (8 hours) and lets that browser through until the cookie expires.
+
+### Recommended flip order
+
+1. **Announce** the window (status page, banner) and stop new admin writes.
+2. **Backend on:** set `MAINTENANCE_MODE=true` on Render. Existing requests drain; new ones return 503 with `Retry-After`.
+3. **Frontend on:** set `NEXT_PUBLIC_MAINTENANCE_MODE=true` on Vercel **and trigger a redeploy** — `NEXT_PUBLIC_*` values are baked at build time, so a simple env change is not enough.
+4. Run migrations, deploy, smoke-test using the bypass header against `/api/v1/*` and the bypass cookie against the storefront.
+5. **Reverse the order** to lift maintenance: flip the frontend off (redeploy), then the backend.
+
+### Caveats
+
+- **Frontend-only mode** keeps the API live, so SDKs and mobile clients keep working — useful for purely visual downtime, less safe during DB migrations.
+- **PWA / service worker:** `frontend/public/sw.js` may serve a cached app shell to returning visitors during maintenance. To force users onto the maintenance page, bump the SW version or unregister it (see `PWARegister`). The maintenance page itself is rewritten at the edge so first visits always see it.
+- **SEO:** the maintenance page sets `robots: noindex, nofollow` and the rewrite response includes `X-Robots-Tag: noindex, nofollow` and `Retry-After`. Edge rewrites still emit a `200` to crawlers; if you need a true `503` for SEO, run a separate static maintenance page at the CDN/edge layer in front of Vercel.
+- **Background workers:** Celery beat and workers are not gated by HTTP middleware. Pause them separately when migrations require it (see `backend/app/core/celery_app.py`).
+- **Storefront UX:** when the API returns 503 maintenance JSON, the API client dispatches a `sikapa-maintenance` window event and `MaintenanceWatcher` (mounted in `Providers`) navigates the user to `/maintenance` — so even if you only flipped the backend, in-app users land on a friendly screen.
+
+### Quick test (local)
+
+```bash
+# Backend
+MAINTENANCE_MODE=true MAINTENANCE_BYPASS_TOKEN=dev-token uvicorn app.main:app --reload
+curl -i http://localhost:8000/api/v1/products/                        # expect 503
+curl -i -H 'X-Maintenance-Bypass: dev-token' http://localhost:8000/api/v1/products/  # expect 200
+curl -i http://localhost:8000/health                                  # expect 200
+```
+
+---
+
 ## GitHub Actions: auto PR `frontend` → `main`
 
 The auto-PR job exports `GH_TOKEN` for the `gh` CLI in the shell: it uses **`GH_ACTIONS_PR_TOKEN`** when that secret is non-empty, otherwise **`github.token`** (avoids empty `GH_TOKEN` and avoids fragile `secrets || token` expressions in YAML).
