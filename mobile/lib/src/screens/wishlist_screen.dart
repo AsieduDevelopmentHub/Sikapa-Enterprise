@@ -71,7 +71,7 @@ class WishlistScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           );
         },
       ),

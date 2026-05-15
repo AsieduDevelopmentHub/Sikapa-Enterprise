@@ -63,12 +63,12 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             height: 44,
             child: categoriesAsync.when(
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
               data: (cats) => ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: cats.length + 1,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   if (i == 0) {
                     final selected = _categoryId == null;
