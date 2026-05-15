@@ -43,6 +43,26 @@ Public env vars are embedded at build time on Vercel; change them and **redeploy
 
 ---
 
+## Mobile (`mobile/`, Flutter)
+
+The Flutter app reads its API base from `--dart-define` at build/run time — there is no `.env` file. Pass the same convention as the web (full v1 URL ending in `/api/v1`).
+
+| Variable | Purpose |
+|----------|---------|
+| `SIKAPA_API_BASE` | Full v1 base URL (default `http://10.0.2.2:8000/api/v1` for the Android emulator). iOS simulator: `http://127.0.0.1:8000/api/v1`. Real devices: your LAN IP. Production: `https://<api-host>/api/v1`. |
+| `SIKAPA_GOOGLE_OAUTH_ENABLED` | `true` to show the “Continue with Google” button when the backend is configured (currently surfaced for v2). |
+
+Build/run examples:
+
+```bash
+flutter run --dart-define=SIKAPA_API_BASE=http://10.0.2.2:8000/api/v1
+flutter build apk --release --dart-define=SIKAPA_API_BASE=https://api.your-domain.com/api/v1
+```
+
+When changing the API host, **rebuild** — `--dart-define` values are baked into the binary. See [`../mobile/README.md`](../mobile/README.md) for full setup.
+
+---
+
 ## Cross-service checklist (production)
 
 - [ ] `SECRET_KEY` set and **stable** across deploys unless you intend to invalidate all sessions.
