@@ -52,7 +52,7 @@ class ProductDetailScreen extends ConsumerWidget {
                   background: CachedNetworkImage(
                     imageUrl: p.displayImage,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(color: SikapaColors.graySoft),
+                    errorWidget: (_, _, _) => Container(color: SikapaColors.graySoft),
                   ),
                 ),
               ),
