@@ -5,6 +5,12 @@ export interface MaintenanceDetail {
   retryAfter?: number;
 }
 
+/** Parsed JSON shape for API maintenance 503 bodies (see backend maintenance middleware). */
+type MaintenanceJsonBody = {
+  maintenance?: unknown;
+  message?: unknown;
+};
+
 /**
  * Detect a 503 maintenance response from the API and notify the app via a
  * window event. Returns the maintenance detail so callers can also surface the
@@ -16,13 +22,15 @@ export function detectMaintenanceResponse(
   headers?: Headers,
 ): MaintenanceDetail | null {
   if (status !== 503) return null;
-  let parsed: { maintenance?: unknown; message?: unknown } | null = null;
+  let parsed: MaintenanceJsonBody;
   try {
-    parsed = JSON.parse(bodyText.trim()) as typeof parsed;
+    const raw: unknown = JSON.parse(bodyText.trim());
+    if (!raw || typeof raw !== "object") return null;
+    parsed = raw as MaintenanceJsonBody;
   } catch {
     return null;
   }
-  if (!parsed || parsed.maintenance !== true) return null;
+  if (parsed.maintenance !== true) return null;
   const message =
     typeof parsed.message === "string" && parsed.message.trim()
       ? parsed.message.trim()
