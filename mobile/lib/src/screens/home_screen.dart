@@ -41,12 +41,12 @@ class HomeScreen extends ConsumerWidget {
                 height: 110,
                 child: categoriesAsync.when(
                   loading: () => const _CategorySkeleton(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
                   data: (cats) => ListView.separated(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: cats.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    separatorBuilder: (_, _) => const SizedBox(width: 12),
                     itemBuilder: (_, i) => _CategoryChip(category: cats[i]),
                   ),
                 ),
@@ -186,7 +186,7 @@ class _CategoryChip extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: category.displayImage,
                 fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => const Icon(Icons.category, color: SikapaColors.textMuted),
+                errorWidget: (_, _, _) => const Icon(Icons.category, color: SikapaColors.textMuted),
               ),
             ),
             const SizedBox(height: 8),
@@ -211,8 +211,8 @@ class _CategorySkeleton extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: 6,
-      separatorBuilder: (_, __) => const SizedBox(width: 12),
-      itemBuilder: (_, __) => Column(
+      separatorBuilder: (_, _) => const SizedBox(width: 12),
+      itemBuilder: (_, _) => Column(
         children: [
           Container(
             width: 64,
