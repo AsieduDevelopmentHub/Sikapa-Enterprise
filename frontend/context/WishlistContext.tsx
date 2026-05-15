@@ -71,8 +71,18 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         }
         setServerWishProductIds(ids);
         setWishErr(null);
-      } catch {
-        if (!cancelled) setWishErr("Could not load your wishlist.");
+      } catch (err) {
+        // Passive prefetch — never surface a banner the user did not trigger.
+        // Cold backend, brief network blip, or just-expired token would all
+        // otherwise render "Could not load your wishlist" on the products
+        // page. Leave the server wishlist empty; user-initiated toggles still
+        // report errors via the toggle path below.
+        if (!cancelled) {
+          setServerWishProductIds(new Set());
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[WishlistProvider] silent prefetch failure", err);
+          }
+        }
       }
     })();
     return () => {
