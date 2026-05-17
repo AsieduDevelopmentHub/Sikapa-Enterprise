@@ -37,7 +37,25 @@ export function useProducts(filters: ProductFilters = {}) {
   const skip = (page - 1) * limit;
 
   return useQuery<ProductsResponse>({
-    queryKey: ["products", filters],
+    // Build a stable, primitive-only query key so the React Query cache lookup
+    // does not depend on the caller passing the same object reference each render.
+    // Previously the raw `filters` object went into the key — JSON-stringify happens
+    // internally so it still deduped correctly, but spelling the key out makes the
+    // intent obvious and avoids accidental misses if a caller renames a field.
+    queryKey: [
+      "products",
+      {
+        category: category ?? null,
+        minPrice: minPrice ?? null,
+        maxPrice: maxPrice ?? null,
+        minRating: minRating ?? null,
+        sortBy,
+        sortOrder,
+        page,
+        limit,
+        search: search?.trim() || null,
+      },
+    ],
     queryFn: async () => {
       const baseUrl = getApiV1Base();
       const params = new URLSearchParams();

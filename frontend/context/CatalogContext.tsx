@@ -38,11 +38,15 @@ type CatalogContextValue = {
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
 
+/** Stable filter reference shared across renders — see `useProducts` for why this matters. */
+const STOREFRONT_PRODUCTS_FILTERS = { limit: 100 } as const;
+
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   /** Start empty so we never flash demo products while the API request is in flight. */
   const { data: catData, isLoading: catLoading } = useCategories();
-  const { data: prodData, isLoading: prodLoading, error: prodError } = useProducts({ limit: 100 });
+  const { data: prodData, isLoading: prodLoading, error: prodError } =
+    useProducts(STOREFRONT_PRODUCTS_FILTERS);
 
   const categories = useMemo(() => {
     if (!catData) return [];

@@ -67,21 +67,43 @@ class AccountScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.bodySmall),
           ),
           const Divider(),
-          _Tile(icon: Icons.local_shipping_outlined, title: 'Shipping address', onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Address editing coming in v2.')),
-            );
-          }),
-          _Tile(icon: Icons.lock_outline, title: 'Change password', onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Password change coming in v2.')),
-            );
-          }),
-          _Tile(icon: Icons.help_outline, title: 'Help & support', onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Help center available on the web for now.')),
-            );
-          }),
+          _Tile(
+            icon: Icons.receipt_long_outlined,
+            title: 'My orders',
+            onTap: () => context.push('/orders'),
+          ),
+          _Tile(
+            icon: Icons.local_shipping_outlined,
+            title: 'Shipping address',
+            onTap: () => context.push('/account/shipping-address'),
+          ),
+          _Tile(
+            icon: Icons.favorite_outline,
+            title: 'Wishlist',
+            onTap: () => context.go('/wishlist'),
+          ),
+          _Tile(
+            icon: Icons.lock_outline,
+            title: 'Change password',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text(
+                        'Use “Forgot password?” on the sign-in screen to receive a reset email.')),
+              );
+            },
+          ),
+          _Tile(
+            icon: Icons.help_outline,
+            title: 'Help & support',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content:
+                        Text('Help center available on the web for now.')),
+              );
+            },
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: SikapaColors.crimson),

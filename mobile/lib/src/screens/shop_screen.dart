@@ -4,11 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme.dart';
+import '../features/catalog/models.dart';
 import '../providers.dart';
 import '../widgets/product_card.dart';
 
 class ShopScreen extends ConsumerStatefulWidget {
-  const ShopScreen({super.key});
+  const ShopScreen({super.key, this.initialCategorySlug});
+
+  /// When set, the shop opens with this category preselected. Comes from the
+  /// `?cat=<slug>` query parameter that the home screen pushes through.
+  final String? initialCategorySlug;
 
   @override
   ConsumerState<ShopScreen> createState() => _ShopScreenState();
@@ -19,6 +24,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   Timer? _debounce;
   String _search = '';
   int? _categoryId;
+  String _sortBy = 'created_at';
+  String _sortOrder = 'desc';
+  bool _resolvedInitialCategory = false;
 
   @override
   void dispose() {
@@ -30,8 +38,31 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
       setState(() => _search = value.trim());
     });
+  }
+
+  void _resolveInitialCategoryFromSlug(List<Category> cats) {
+    if (_resolvedInitialCategory) return;
+    final slug = widget.initialCategorySlug?.trim();
+    if (slug == null || slug.isEmpty) {
+      _resolvedInitialCategory = true;
+      return;
+    }
+    final match = cats.where((c) => c.slug.toLowerCase() == slug.toLowerCase());
+    if (match.isNotEmpty) {
+      // Schedule for after build so we don't setState during build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _categoryId = match.first.id;
+          _resolvedInitialCategory = true;
+        });
+      });
+    } else {
+      _resolvedInitialCategory = true;
+    }
   }
 
   @override
@@ -40,12 +71,50 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       categoryId: _categoryId,
       search: _search.isEmpty ? null : _search,
       limit: 30,
+      sortBy: _sortBy,
+      sortOrder: _sortOrder,
     );
     final productsAsync = ref.watch(productsProvider(query));
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Shop')),
+      appBar: AppBar(
+        title: const Text('Shop'),
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Sort',
+            icon: const Icon(Icons.sort, color: SikapaColors.textPrimary),
+            onSelected: (value) {
+              setState(() {
+                switch (value) {
+                  case 'newest':
+                    _sortBy = 'created_at';
+                    _sortOrder = 'desc';
+                    break;
+                  case 'price_asc':
+                    _sortBy = 'price';
+                    _sortOrder = 'asc';
+                    break;
+                  case 'price_desc':
+                    _sortBy = 'price';
+                    _sortOrder = 'desc';
+                    break;
+                  case 'name':
+                    _sortBy = 'name';
+                    _sortOrder = 'asc';
+                    break;
+                }
+              });
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'newest', child: Text('Newest first')),
+              PopupMenuItem(value: 'price_asc', child: Text('Price: low to high')),
+              PopupMenuItem(value: 'price_desc', child: Text('Price: high to low')),
+              PopupMenuItem(value: 'name', child: Text('Name (A–Z)')),
+            ],
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -64,29 +133,33 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             child: categoriesAsync.when(
               loading: () => const SizedBox.shrink(),
               error: (_, _) => const SizedBox.shrink(),
-              data: (cats) => ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: cats.length + 1,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  if (i == 0) {
-                    final selected = _categoryId == null;
+              data: (cats) {
+                _resolveInitialCategoryFromSlug(cats);
+                return ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: cats.length + 1,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    if (i == 0) {
+                      final selected = _categoryId == null;
+                      return ChoiceChip(
+                        label: const Text('All'),
+                        selected: selected,
+                        onSelected: (_) => setState(() => _categoryId = null),
+                      );
+                    }
+                    final c = cats[i - 1];
+                    final selected = _categoryId == c.id;
                     return ChoiceChip(
-                      label: const Text('All'),
+                      label: Text(c.name),
                       selected: selected,
-                      onSelected: (_) => setState(() => _categoryId = null),
+                      onSelected: (_) =>
+                          setState(() => _categoryId = selected ? null : c.id),
                     );
-                  }
-                  final c = cats[i - 1];
-                  final selected = _categoryId == c.id;
-                  return ChoiceChip(
-                    label: Text(c.name),
-                    selected: selected,
-                    onSelected: (_) => setState(() => _categoryId = selected ? null : c.id),
-                  );
-                },
-              ),
+                  },
+                );
+              },
             ),
           ),
           Expanded(
