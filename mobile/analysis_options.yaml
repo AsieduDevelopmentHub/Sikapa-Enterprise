@@ -1,28 +1,87 @@
-# This file configures the analyzer, which statically analyzes Dart code to
-# check for errors, warnings, and lints.
+# -----------------------------------------------------------------------------
+# Dart & Flutter Analyzer Configuration
+# -----------------------------------------------------------------------------
 #
-# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
-# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
-# invoked from the command line by running `flutter analyze`.
-
-# The following line activates a set of recommended lints for Flutter apps,
-# packages, and plugins designed to encourage good coding practices.
+# This file defines the static analysis and linting rules used throughout
+# the project. The analyzer helps maintain clean, consistent, and reliable
+# code by detecting errors, bad practices, and style issues early in
+# development.
+#
+# Analyzer results are displayed directly in supported IDEs such as:
+#   - VS Code
+#   - Android Studio
+#   - IntelliJ IDEA
+#
+# You can also run the analyzer manually with:
+#
+#   flutter analyze
+#
+# -----------------------------------------------------------------------------
+# Base Lint Rules
+# -----------------------------------------------------------------------------
+#
+# The Flutter lint package provides a solid set of recommended rules for
+# Flutter applications, plugins, and packages. These rules encourage:
+#
+#   • Readable and maintainable code
+#   • Consistent project structure
+#   • Better performance practices
+#   • Safer and cleaner development patterns
+#
 include: package:flutter_lints/flutter.yaml
 
+# -----------------------------------------------------------------------------
+# Custom Lint Configuration
+# -----------------------------------------------------------------------------
+#
+# Additional lint rules can be enabled or disabled below depending on the
+# project's coding standards and team preferences.
+#
+# Full lint documentation:
+# https://dart.dev/lints
+#
+# Individual lint rules can also be ignored locally using:
+#
+#   // ignore: rule_name
+#
+# or for an entire file:
+#
+#   // ignore_for_file: rule_name
+#
 linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at https://dart.dev/lints.
-  #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    # -------------------------------------------------------------------------
+    # Style Preferences
+    # -------------------------------------------------------------------------
 
-# Additional information about this file can be found at
+    # Encourages the use of single quotes for strings where possible.
+    # prefer_single_quotes: true
+
+    # Disables warnings for print statements during development.
+    # Recommended to keep enabled in production-ready projects.
+    # avoid_print: false
+
+    # -------------------------------------------------------------------------
+    # Recommended Additional Rules
+    # -------------------------------------------------------------------------
+
+    # Encourages proper typing instead of using dynamic unnecessarily.
+    # always_declare_return_types: true
+
+    # Helps maintain cleaner imports.
+    # directives_ordering: true
+
+    # Encourages final variables where reassignment is unnecessary.
+    # prefer_final_locals: true
+
+# -----------------------------------------------------------------------------
+# Additional Resources
+# -----------------------------------------------------------------------------
+#
+# Dart Analyzer Documentation:
 # https://dart.dev/guides/language/analysis-options
+#
+# Flutter Lint Rules:
+# https://dart.dev/lints
+#
+# -----------------------------------------------------------------------------
