@@ -148,7 +148,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           FilledButton(
-            onPressed: () => Navigator.of(context).maybePop().then((_) {}),
+            onPressed: () => context.go('/shop'),
             child: const Text('Browse the shop'),
           ),
         ],
@@ -164,13 +164,7 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // Tabs are siblings — push shop with category preselected.
-        // We use plain GoRouter push so the shop screen gets the param.
-        // Mobile shop screen reads ?category= from URL.
-        // ignore: discarded_futures
-        // We don't have a category route here; for MVP we just go to /shop.
-      },
+      onTap: () => context.go('/shop?cat=${Uri.encodeComponent(category.slug)}'),
       child: SizedBox(
         width: 84,
         child: Column(
@@ -178,7 +172,7 @@ class _CategoryChip extends StatelessWidget {
             Container(
               width: 64,
               height: 64,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: SikapaColors.graySoft,
               ),
@@ -186,7 +180,8 @@ class _CategoryChip extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: category.displayImage,
                 fit: BoxFit.cover,
-                errorWidget: (_, _, _) => const Icon(Icons.category, color: SikapaColors.textMuted),
+                errorWidget: (_, _, _) =>
+                    const Icon(Icons.category, color: SikapaColors.textMuted),
               ),
             ),
             const SizedBox(height: 8),

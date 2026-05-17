@@ -20,14 +20,26 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
-    int currentIndex = 0;
+    // Default to "no tab" so that routes that are not in the bottom-nav
+    // (currently `/orders`) don't visually claim the Home tab. We still bias
+    // to Home for the literal `/` root, and treat `/product/*` as Shop.
+    int currentIndex = -1;
     for (var i = 0; i < _tabs.length; i++) {
-      if (location == _tabs[i].path ||
-          (i != 0 && location.startsWith(_tabs[i].path)) ||
-          (_tabs[i].path == '/shop' && location.startsWith('/product'))) {
+      final tab = _tabs[i];
+      if (location == tab.path) {
+        currentIndex = i;
+      } else if (i != 0 && location.startsWith('${tab.path}/')) {
+        currentIndex = i;
+      } else if (tab.path == '/shop' && location.startsWith('/product')) {
         currentIndex = i;
       }
     }
+    // Account is the closest semantic match for the orders list when reached
+    // through the account screen → keep that tab highlighted.
+    if (currentIndex == -1 && location.startsWith('/orders')) {
+      currentIndex = _tabs.indexWhere((t) => t.path == '/account');
+    }
+    if (currentIndex == -1) currentIndex = 0;
 
     final cartCount = ref.watch(cartProvider).value?.totalQuantity ?? 0;
 

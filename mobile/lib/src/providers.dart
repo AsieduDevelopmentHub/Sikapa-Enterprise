@@ -103,6 +103,24 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  /// Complete the second factor of a sign-in. Called from the 2FA prompt
+  /// screen after the initial password attempt returned `two_factor_required`.
+  Future<void> loginWith2fa(
+      String identifier, String password, String code) async {
+    state = state.copyWith(loading: true);
+    try {
+      await _ref
+          .read(authServiceProvider)
+          .loginWith2fa(identifier, password, code);
+      final user = await _ref.read(authServiceProvider).profile();
+      state = AuthState(user: user, bootstrapping: false);
+      _ref.invalidate(cartProvider);
+      _ref.invalidate(wishlistProvider);
+    } finally {
+      if (mounted) state = state.copyWith(loading: false);
+    }
+  }
+
   Future<void> register({
     required String username,
     required String name,

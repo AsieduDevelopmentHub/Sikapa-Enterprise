@@ -49,13 +49,15 @@ mobile/
 │           ├── maintenance_screen.dart
 │           ├── app_shell.dart    # Bottom nav (Home/Shop/Cart/Wishlist/Account)
 │           ├── home_screen.dart
-│           ├── shop_screen.dart
+│           ├── shop_screen.dart           # Search + category + sort, deep-link via ?cat=
 │           ├── product_detail_screen.dart
 │           ├── cart_screen.dart
 │           ├── wishlist_screen.dart
 │           ├── orders_screen.dart
 │           ├── account_screen.dart
+│           ├── shipping_address_screen.dart
 │           ├── login_screen.dart
+│           ├── login_2fa_screen.dart       # TOTP step after `two_factor_required`
 │           ├── register_screen.dart
 │           ├── password_reset_screen.dart
 │           └── checkout_screen.dart
@@ -167,19 +169,22 @@ The mobile client uses the **same** `/api/v1/*` endpoints the Next.js web app do
 Implemented:
 
 - Browse home + shop + product detail with cached images
-- Search (debounced) + category filters
+- Search (debounced) + category filters + sort menu (newest / price / name)
+- Home category chips deep-link into shop with the category preselected
 - Wishlist (sign-in required, optimistic toggle)
 - Cart (add / update / remove / checkout)
 - Auth (register / login with username or email / logout / password reset request)
-- Orders list
-- Checkout via Paystack-hosted page in WebView, with verify on return
+- **TOTP 2FA prompt** when the backend reports `two_factor_required`
+- **In-app shipping address editor** (`/account/shipping-address`) so new users can
+  finish checkout without bouncing to the web profile page
+- Orders list (now also reachable from the Account screen)
+- Checkout via Paystack-hosted page in WebView, with verify on return — disabled
+  with a guided CTA when the saved shipping address is missing
 - Maintenance mode parity with the web `/maintenance` page
 
 Deferred (TODO, not blocking shoppers):
 
 - Google OAuth sign-in (web flow already works via the backend; mobile needs `flutter_appauth` + URL scheme)
-- TOTP 2FA prompt screen (login currently surfaces a friendly message and asks the user to finish on web)
-- In-app shipping address editor (currently reads address from the user's web profile)
 - In-app password reset confirmation (deep link from email opens the web reset page)
 - Reviews + returns
 - Push notifications, deep links

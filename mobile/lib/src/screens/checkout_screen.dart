@@ -34,7 +34,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if ((user.shippingAddressLine1 ?? '').trim().isEmpty ||
         (user.shippingRegion ?? '').trim().isEmpty ||
         (user.shippingCity ?? '').trim().isEmpty) {
-      setState(() => _error = 'Add a shipping address from the website first (in-app editor coming in v2).');
+      setState(() => _error =
+          'Add a shipping address before placing this order.');
+      if (mounted) context.push('/account/shipping-address');
       return;
     }
 
@@ -99,10 +101,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             return const Center(child: Text('Your cart is empty.'));
           }
           final user = auth.user;
+          final hasAddress = user != null &&
+              (user.shippingAddressLine1 ?? '').trim().isNotEmpty &&
+              (user.shippingRegion ?? '').trim().isNotEmpty &&
+              (user.shippingCity ?? '').trim().isNotEmpty;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text('Ship to', style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Ship to',
+                      style: Theme.of(context).textTheme.titleLarge),
+                  if (user != null)
+                    TextButton(
+                      onPressed: () =>
+                          context.push('/account/shipping-address'),
+                      child: Text(hasAddress ? 'Edit' : 'Add'),
+                    ),
+                ],
+              ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(14),
@@ -113,21 +131,49 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
                 child: user == null
                     ? const Text('Sign in to continue.')
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(user.shippingContactName ?? user.name,
-                              style: Theme.of(context).textTheme.titleMedium),
-                          if ((user.shippingAddressLine1 ?? '').isNotEmpty)
-                            Text(user.shippingAddressLine1!),
-                          if ((user.shippingAddressLine2 ?? '').isNotEmpty)
-                            Text(user.shippingAddressLine2!),
-                          if (user.shippingCity != null && user.shippingRegion != null)
-                            Text('${user.shippingCity}, ${user.shippingRegion}'),
-                          if ((user.shippingContactPhone ?? '').isNotEmpty)
-                            Text(user.shippingContactPhone!),
-                        ],
-                      ),
+                    : !hasAddress
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'No shipping address saved yet.',
+                                style:
+                                    Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Add an address so we know where to deliver this order.',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                        color: SikapaColors.textMuted),
+                              ),
+                              const SizedBox(height: 10),
+                              FilledButton(
+                                onPressed: () => context
+                                    .push('/account/shipping-address'),
+                                child: const Text('Add address'),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(user.shippingContactName ?? user.name,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium),
+                              if ((user.shippingAddressLine1 ?? '').isNotEmpty)
+                                Text(user.shippingAddressLine1!),
+                              if ((user.shippingAddressLine2 ?? '').isNotEmpty)
+                                Text(user.shippingAddressLine2!),
+                              Text(
+                                  '${user.shippingCity ?? ''}, ${user.shippingRegion ?? ''}'),
+                              if ((user.shippingContactPhone ?? '').isNotEmpty)
+                                Text(user.shippingContactPhone!),
+                            ],
+                          ),
               ),
               const SizedBox(height: 24),
               Text('Order summary', style: Theme.of(context).textTheme.titleLarge),
@@ -167,11 +213,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: _busy ? null : _placeOrderAndPay,
+                onPressed: _busy || !hasAddress ? null : _placeOrderAndPay,
                 icon: const Icon(Icons.lock_outline),
                 label: _busy
                     ? const Text('Processing...')
-                    : const Text('Place order & pay'),
+                    : Text(hasAddress
+                        ? 'Place order & pay'
+                        : 'Add address to continue'),
               ),
             ],
           );
