@@ -6,6 +6,7 @@ import '../core/api/api_exception.dart';
 import '../core/theme.dart';
 import '../features/auth/auth_service.dart';
 import '../providers.dart';
+import 'login_2fa_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -41,7 +42,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .login(_idCtrl.text.trim(), _pwCtrl.text);
       if (mounted) context.go('/');
     } on TwoFactorRequiredException {
-      if (mounted) setState(() => _error = 'Two-factor required — finish on the website for now.');
+      if (mounted) {
+        context.push(
+          '/login-2fa',
+          extra: Login2faArgs(
+            identifier: _idCtrl.text.trim(),
+            password: _pwCtrl.text,
+          ),
+        );
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {

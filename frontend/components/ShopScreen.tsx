@@ -290,7 +290,7 @@ export function ShopScreen() {
 
       {effectiveView === "list" ? (
         <ul className="mt-5 space-y-4" aria-label="Products">
-          {filtered.map((p) => (
+          {filtered.map((p, i) => (
             <li
               key={p.id}
               className="flex min-h-[168px] overflow-hidden rounded-[10px] bg-white shadow-[0_2px_14px_rgba(59,42,37,0.06)] ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10"
@@ -299,13 +299,17 @@ export function ShopScreen() {
                 href={`/product/${p.id}`}
                 className="sikapa-tap flex min-h-[168px] min-w-0 flex-1"
               >
-                <div className="relative w-[40%] min-h-[168px] shrink-0 sm:w-[38%]">
+                <div className="relative w-[40%] min-h-[168px] shrink-0 bg-sikapa-gray-soft dark:bg-zinc-800 sm:w-[38%]">
                   <Image
+                    key={cleanImageUrl(p.image)}
                     src={cleanImageUrl(p.image)}
                     alt=""
                     fill
                     className="object-cover"
                     sizes="(max-width:430px) 40vw, 180px"
+                    loading={i < 4 ? "eager" : "lazy"}
+                    decoding="async"
+                    fetchPriority={i < 2 ? "high" : "auto"}
                     unoptimized
                   />
                 </div>
@@ -337,9 +341,9 @@ export function ShopScreen() {
         </ul>
       ) : (
         <ul className={`mt-5 ${PRODUCT_GRID_CLASS}`} aria-label="Products">
-          {filtered.map((p) => (
+          {filtered.map((p, i) => (
             <li key={p.id}>
-              <ProductCardGrid product={p} />
+              <ProductCardGrid product={p} priority={i < 4} />
             </li>
           ))}
         </ul>
