@@ -1,0 +1,187 @@
+Sikapa Enterprise License
+
+Copyright (c) 2026 Sikapa Enterprise. All rights reserved.
+
+
+---
+
+Proprietary Software License
+
+Sikapa Enterprise is proprietary software.
+
+This repository, including all source code, documentation, assets, infrastructure configurations, CI/CD workflows, mobile applications, backend services, database schemas, and related materials, is protected under applicable copyright and intellectual property laws.
+
+No part of this project may be copied, modified, distributed, sublicensed, sold, published, deployed commercially, reverse engineered, or used to create derivative works without prior written permission from the project owner.
+
+
+---
+
+Permitted Use
+
+You may:
+
+Clone and review the repository for authorized internal development
+
+Contribute only when explicitly granted access by the project owner
+
+Run the project locally for approved testing and development purposes
+
+Use documentation internally for project-related work
+
+
+
+---
+
+Restrictions
+
+Unless explicitly authorized in writing, you may NOT:
+
+Redistribute this project publicly or privately
+
+Rebrand or resell the platform
+
+Use the codebase in commercial products or SaaS platforms
+
+Modify and redistribute any portion of the software
+
+Remove copyright or ownership notices
+
+Extract business logic, architecture, or infrastructure for reuse
+
+Deploy copies of the platform for external commercial use
+
+Train AI systems or datasets using proprietary project materials
+
+
+
+---
+
+Contributions
+
+All contributions, pull requests, patches, or submitted improvements become part of the Sikapa Enterprise project and remain the intellectual property of the project owner unless otherwise agreed in writing.
+
+By contributing to this repository, contributors agree that:
+
+Contributions may be modified, rejected, or removed at any time
+
+Ownership of the original platform remains unchanged
+
+Contributions do not grant ownership or licensing rights to the contributor
+
+
+
+---
+
+Third-Party Dependencies
+
+This project may include third-party libraries, frameworks, and services that are licensed under their own respective licenses.
+
+Examples may include:
+
+Flutter
+
+Next.js
+
+FastAPI
+
+SQLAlchemy
+
+Tailwind CSS
+
+PostgreSQL
+
+GitHub Actions
+
+
+Use of those dependencies remains subject to their original license terms.
+
+
+---
+
+Security & Infrastructure
+
+Unauthorized attempts to:
+
+bypass security mechanisms
+
+access restricted infrastructure
+
+misuse deployment pipelines
+
+abuse authentication systems
+
+exploit vulnerabilities
+
+
+may result in access revocation and possible legal action.
+
+
+---
+
+Warranty Disclaimer
+
+This software is provided "AS IS" without warranty of any kind, express or implied, including but not limited to:
+
+merchantability
+
+fitness for a particular purpose
+
+non-infringement
+
+operational availability
+
+security guarantees
+
+
+The project owner shall not be held liable for:
+
+data loss
+
+service interruption
+
+security incidents
+
+financial damages
+
+operational failures
+
+indirect or consequential damages
+
+
+arising from the use or inability to use this software.
+
+
+---
+
+Licensing Requests
+
+For:
+
+commercial licensing
+
+partnership inquiries
+
+deployment permissions
+
+enterprise usage
+
+white-label agreements
+
+collaboration opportunities
+
+
+contact the project owner directly.
+
+
+---
+
+Contact
+
+Project: Sikapa Enterprise
+
+For authorized usage, licensing, or partnership discussions, contact the repository owner or organization administrators.
+
+
+---
+
+Last Updated: May 18, 2026 License Version: 1.0
