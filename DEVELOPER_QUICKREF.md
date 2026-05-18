@@ -1,43 +1,192 @@
-# Sikapa Production-Ready Changes - Developer Quick Reference
+# Sikapa Production Readiness Guide
+## Developer Quick Reference
 
-## What Changed?
+This document provides a practical overview of the latest production-focused improvements introduced across the Sikapa platform.
 
-### 🔐 Security Fixes
+It is intended as a quick reference for:
+- Backend developers
+- Frontend developers
+- Mobile developers
+- DevOps contributors
+- CI/CD maintainers
 
-| Change | Location | What to Do |
-|--------|----------|-----------|
-| `SECRET_KEY` now required | `app/core/security.py` | Set in `.env` - will fail on prod without it |
-| Password validation | `app/core/validation.py` | Use `validate_password()` on user input |
-| HTML sanitization | `app/core/validation.py` | Use `sanitize_html()` to prevent XSS |
-| Timezone-aware datetimes | `app/models.py` | Already updated - check migrations |
-| Token validation improved | `app/core/security.py` | Decode functions now return None on error |
+---
 
-### 📊 Database Changes
+# Overview
 
-| Change | Migration | Impact |
-|--------|-----------|--------|
-| Soft deletes added | New model fields | `deleted_at` field on Product, User, etc. |
-| Audit logging | New AuditLog table | Track all admin actions & auth events |
-| Timezone fix | All timestamp fields | Run migrations: `alembic upgrade head` |
+The platform has now moved toward a more production-oriented architecture with improvements focused on:
 
-### 🚨 Error Handling
+- Security hardening
+- Validation consistency
+- Structured error handling
+- Audit logging
+- Better observability
+- Environment safety
+- CI/CD stability
+- Mobile release automation
+- Database reliability
+- Frontend resilience
 
-**Old Way:**
+---
+
+# Security Improvements
+
+## JWT & Authentication
+
+| Change | Location | Notes |
+|--------|----------|-------|
+| `SECRET_KEY` required | `app/core/security.py` | Application will fail securely if missing in production |
+| Improved token validation | `app/core/security.py` | Decode functions now safely return `None` on invalid tokens |
+| Token rotation awareness | Auth layer | Changing `SECRET_KEY` invalidates all sessions |
+| Environment-based security | `.env` | Secrets now expected through deployment providers |
+
+---
+
+## Input Validation & Sanitization
+
+| Feature | Location | Purpose |
+|--------|----------|---------|
+| Password validation | `app/core/validation.py` | Prevent weak passwords |
+| Email validation | `app/core/validation.py` | Normalize and validate email structure |
+| Phone validation | `app/core/validation.py` | Validate supported formats |
+| Amount validation | `app/core/validation.py` | Prevent invalid payment values |
+| HTML sanitization | `app/core/validation.py` | Prevent XSS injection attacks |
+| Text sanitization | `app/core/validation.py` | Clean user-provided input safely |
+
+### Example Usage
+
 ```python
-raise HTTPException(status_code=400, detail="Bad request")
+from app.core.validation import (
+    validate_email,
+    validate_password,
+    validate_phone,
+    validate_amount,
+    sanitize_text,
+)
+
+try:
+    email = validate_email(request.email)
+
+    validate_password(request.password)
+
+except ValueError as e:
+    raise ValidationError(str(e))
 ```
 
-**New Way:**
+---
+
+# Database Improvements
+
+## Timezone-Aware Datetimes
+
+All major timestamp fields now use timezone-aware UTC datetimes.
+
+### Benefits
+- Safer distributed deployments
+- Accurate audit trails
+- Better cross-region consistency
+- Proper API serialization
+
+### Action Required
+
+Run database migrations:
+
+```bash
+alembic upgrade head
+```
+
+---
+
+## Soft Deletes
+
+Soft delete support has been added to important models.
+
+### Examples
+- User
+- Product
+- Order
+- Inventory entities
+
+### New Field
+
 ```python
-from app.core.errors import ValidationError
-raise ValidationError(
-    message="Email already exists",
-    code="VAL_002",
-    field="email"
+deleted_at
+```
+
+### Benefits
+- Safer recovery
+- Historical tracking
+- Better audit support
+- Reduced accidental data loss
+
+---
+
+## Audit Logging System
+
+A centralized audit logging system has been introduced.
+
+### Tracks
+- Authentication events
+- Admin actions
+- Product changes
+- User management actions
+- Sensitive system operations
+
+### Example
+
+```python
+from app.core.audit import AuditLogger
+
+AuditLogger.log_user_action(
+    session=db,
+    user_id=current_user.id,
+    action="update",
+    resource_type="product",
+    resource_id=product.id,
+    changes={
+        "price": {
+            "old": 100,
+            "new": 120,
+        }
+    },
 )
 ```
 
-Response format:
+---
+
+# Structured Error Handling
+
+The platform now uses centralized structured API errors.
+
+---
+
+## Previous Approach
+
+```python
+raise HTTPException(
+    status_code=400,
+    detail="Bad request"
+)
+```
+
+---
+
+## Current Approach
+
+```python
+from app.core.errors import ValidationError
+
+raise ValidationError(
+    message="Email already exists",
+    code="VAL_002",
+    field="email",
+)
+```
+
+---
+
+## Standardized Error Response
+
 ```json
 {
   "success": false,
@@ -49,60 +198,57 @@ Response format:
 }
 ```
 
-### 📝 Logging
+---
 
-**Setup once in main.py:**
+# Logging & Observability
+
+Structured logging is now supported across backend services.
+
+---
+
+## Setup
+
 ```python
 from app.core.logging_config import setup_structured_logging
-setup_structured_logging(level="INFO", log_json=True)
+
+setup_structured_logging(
+    level="INFO",
+    log_json=True,
+)
 ```
 
-**Use anywhere:**
+---
+
+## Usage
+
 ```python
+import logging
+
 logger = logging.getLogger(__name__)
-logger.info("User action", extra={"user_id": 123, "action": "purchase"})
-# Output: JSON with timestamp, level, message, extra fields
-```
 
-### 🛡️ Input Validation
-
-```python
-from app.core.validation import (
-    validate_email,
-    validate_password,
-    validate_phone,
-    validate_amount,
-    sanitize_text,
-)
-
-# Use in route handlers
-try:
-    email = validate_email(request.email)
-    password = request.password
-    validate_password(password)  # Raises ValueError if weak
-except ValueError as e:
-    raise ValidationError(str(e))
-```
-
-### 📋 Audit Logging
-
-**Log important actions:**
-```python
-from app.core.audit import AuditLogger
-
-AuditLogger.log_user_action(
-    session=db,
-    user_id=current_user.id,
-    action="update",
-    resource_type="product",
-    resource_id=product.id,
-    changes={"price": {"old": 100, "new": 120}},
+logger.info(
+    "User action",
+    extra={
+        "user_id": 123,
+        "action": "purchase",
+    },
 )
 ```
 
-### 🎨 Frontend Components
+### Benefits
+- JSON-compatible logs
+- Better monitoring support
+- Easier production debugging
+- Compatible with Render, ELK, Datadog, Grafana, etc.
 
-**Error Boundary (wrap pages):**
+---
+
+# Frontend Stability Improvements
+
+## Error Boundaries
+
+Wrap critical pages with:
+
 ```tsx
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -115,132 +261,251 @@ export default function Page() {
 }
 ```
 
-**Loading states:**
+---
+
+## Loading & Error Components
+
 ```tsx
-import { LoadingSpinner, ErrorDisplay, Skeleton } from "@/components/LoadingStates";
+import {
+  LoadingSpinner,
+  ErrorDisplay,
+  Skeleton,
+} from "@/components/LoadingStates";
+```
 
-// Loading
+### Loading
+
+```tsx
 <LoadingSpinner message="Fetching products..." />
+```
 
-// Error
-<ErrorDisplay error={error} title="Failed to load" onDismiss={() => setError(null)} />
+### Error
 
-// Skeleton
+```tsx
+<ErrorDisplay
+  error={error}
+  title="Failed to load"
+  onDismiss={() => setError(null)}
+/>
+```
+
+### Skeletons
+
+```tsx
 <Skeleton count={5} height="h-12" />
 ```
 
 ---
 
-## Environment Variables
+# Mobile Infrastructure Improvements
 
-### Backend (.env)
+The Flutter mobile pipeline now supports:
 
-**Must Change:**
-```bash
-SECRET_KEY=<run: python -c "import secrets; print(secrets.token_urlsafe(32))">
-ENVIRONMENT=production
-CORS_ORIGINS=https://app.example.com  # Exact domain, no *
-DATABASE_URL=postgresql://...
-```
-
-**Copy from .env.example:**
-- All Paystack keys
-- Email settings
-- OAuth credentials
-
-### Frontend (.env.local)
-
-**Must Set:**
-```bash
-NEXT_PUBLIC_API_BASE_URL=https://api.example.com/api  # Include /api
-```
-
-**Optional:**
-- Google OAuth Client ID
-- Paystack public key
-- Analytics IDs
+- Automated Android builds
+- Automated iOS validation builds
+- GitHub Release publishing
+- Artifact uploads
+- Runtime configuration injection
+- Gradle caching
+- Flutter version pinning
+- Automated testing and analysis
 
 ---
 
-## Migration Steps
+## Mobile Runtime Configuration
+
+Flutter now uses:
 
 ```bash
-# 1. Update code
+--dart-define
+```
+
+instead of `.env` files.
+
+### Examples
+
+```bash
+flutter run \
+  --dart-define=SIKAPA_API_BASE=http://10.0.2.2:8000/api/v1
+```
+
+```bash
+flutter build apk --release \
+  --dart-define=SIKAPA_API_BASE=https://api.example.com/api/v1
+```
+
+---
+
+# Environment Configuration
+
+## Backend (`backend/.env`)
+
+### Required
+
+```env
+SECRET_KEY=<secure-random-secret>
+DATABASE_URL=postgresql://...
+ENVIRONMENT=production
+CORS_ORIGINS=https://app.example.com
+```
+
+### Important Notes
+
+- Never use wildcard CORS in production
+- Use HTTPS-only frontend origins
+- Keep secrets outside Git
+- Use deployment providers for secret management
+
+---
+
+## Frontend (`frontend/.env.local`)
+
+### Required
+
+```env
+NEXT_PUBLIC_API_URL=https://api.example.com/api/v1
+```
+
+### Important
+
+The API URL must:
+- include `/api/v1`
+- not include a trailing slash
+- match the backend origin exactly
+
+---
+
+## Mobile
+
+The Flutter app reads configuration using:
+
+```bash
+--dart-define
+```
+
+### Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `SIKAPA_API_BASE` | Full API base URL |
+| `SIKAPA_GOOGLE_OAUTH_ENABLED` | Toggle Google OAuth UI |
+
+---
+
+# Migration Workflow
+
+## Backend Migration Process
+
+```bash
+# Pull latest changes
 git pull origin main
 
-# 2. Install new dependencies
-pip install python-json-logger bleach
+# Install dependencies
+pip install -r requirements.txt
+
+# Frontend dependencies
 npm install
 
-# 3. Create migration for new tables
+# Generate migration
 cd backend
-alembic revision --autogenerate -m "Add audit and soft deletes"
 
-# 4. Review migration file (migration/versions/xxx.py)
-# Make sure it looks correct
+alembic revision --autogenerate \
+  -m "Production infrastructure updates"
 
-# 5. Apply migration
+# Review migration carefully
+# migration/versions/*.py
+
+# Apply migration
 alembic upgrade head
-
-# 6. Test locally
-python -m pytest tests/
-npm run test
-
-# 7. Deploy
-git push origin main
 ```
 
 ---
 
-## Common Tasks
+# Testing Workflow
 
-### Adding a new API endpoint with validation
+## Backend
+
+```bash
+pytest tests/
+```
+
+---
+
+## Frontend
+
+```bash
+npm run lint
+npm run test
+```
+
+---
+
+## Mobile
+
+```bash
+flutter analyze
+flutter test
+```
+
+---
+
+# Common Development Patterns
+
+## Creating Validated Endpoints
 
 ```python
 from fastapi import APIRouter, Depends
 from app.core.validation import validate_email
 from app.core.errors import ValidationError
-from app.core.audit import AuditLogger
 
 router = APIRouter()
 
 @router.post("/users")
-async def create_user(request: UserCreate, db: Session = Depends(get_session)):
-    # Validate input
+async def create_user(
+    request: UserCreate,
+    db: Session = Depends(get_session),
+):
     try:
         email = validate_email(request.email)
+
     except ValueError as e:
-        raise ValidationError(str(e), field="email")
-    
-    # Create user
-    user = User(email=email, name=request.name)
+        raise ValidationError(
+            message=str(e),
+            field="email",
+        )
+
+    user = User(
+        email=email,
+        name=request.name,
+    )
+
     db.add(user)
     db.commit()
-    
-    # Audit log
-    AuditLogger.log_user_action(
-        db, current_user.id, "create", "user", user.id
-    )
-    
+
     return user
 ```
 
-### Logging in handlers
+---
+
+## Logging in Route Handlers
 
 ```python
 import logging
+
 logger = logging.getLogger(__name__)
 
-@router.post("/orders")
-async def create_order(req: OrderCreate, user: User):
-    logger.info(
-        "Creating order",
-        extra={"user_id": user.id, "items": len(req.items)}
-    )
-    # ... order creation logic ...
+logger.info(
+    "Creating order",
+    extra={
+        "user_id": user.id,
+        "items": len(req.items),
+    },
+)
 ```
 
-### Catching and handling errors
+---
+
+## Handling Database Errors
 
 ```python
 from app.core.errors import (
@@ -250,86 +515,201 @@ from app.core.errors import (
 )
 
 try:
-    user = db.query(User).filter(User.id == user_id).first()
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
     if not user:
-        raise ResourceNotFoundError("User", user_id)
-    
-    if not user.email_verified:
-        raise InvalidInputError("Email not verified", field="email")
-        
+        raise ResourceNotFoundError(
+            "User",
+            user_id,
+        )
+
 except IntegrityError:
-    raise DuplicateError("email", req.email)
+    raise DuplicateError(
+        "email",
+        req.email,
+    )
 ```
 
 ---
 
-## Checklist for PRs
+# CI/CD & Deployment Improvements
 
-- [ ] No hardcoded secrets or defaults
-- [ ] Input validation on all user inputs
-- [ ] Error responses use new `ErrorResponse` format
-- [ ] Important actions logged to audit trail
-- [ ] Datetime fields use `timezone.now(timezone.utc)`
-- [ ] Frontend components wrapped in ErrorBoundary where appropriate
-- [ ] All tests passing
-- [ ] ESLint/Mypy passing with zero errors
+The platform now includes:
+- Automated mobile builds
+- Tagged release publishing
+- Workflow artifact uploads
+- Build caching
+- Static analysis enforcement
+- Unit test validation
+- Flutter version pinning
+- Concurrent workflow protection
 
 ---
 
-## Monitoring in Production
+# Pull Request Checklist
 
-### Check logs for errors
+Before merging:
+
+- [ ] No hardcoded secrets
+- [ ] Validation added for user input
+- [ ] Structured errors implemented
+- [ ] Audit logs added where required
+- [ ] UTC timezone-aware datetimes used
+- [ ] Frontend error boundaries added
+- [ ] Mobile builds passing
+- [ ] CI/CD checks passing
+- [ ] Tests passing
+- [ ] Linting passing
+- [ ] Migrations reviewed
+
+---
+
+# Production Monitoring
+
+## View Logs
+
 ```bash
-# Render: View in dashboard or CLI
 render logs --service sikapa-api --tail 100
+```
 
-# See specific error patterns
+---
+
+## Filter Errors
+
+```bash
 grep "ERROR" logs.json | jq .
 ```
 
-### Check audit trail
+---
+
+## Recent Audit Events
+
 ```sql
-SELECT * FROM auditlog 
-WHERE created_at > NOW() - INTERVAL 1 DAY 
+SELECT *
+FROM auditlog
+WHERE created_at > NOW() - INTERVAL '1 day'
 ORDER BY created_at DESC
 LIMIT 20;
 ```
 
-### Check auth events
+---
+
+## Authentication Activity
+
 ```sql
-SELECT * FROM auditlog 
-WHERE action = 'login' 
-AND created_at > NOW() - INTERVAL 1 DAY;
+SELECT *
+FROM auditlog
+WHERE action = 'login'
+AND created_at > NOW() - INTERVAL '1 day';
 ```
 
 ---
 
-## Troubleshooting
+# Troubleshooting
 
-### Issue: "SECRET_KEY environment variable must be set"
-**Solution:** Set `SECRET_KEY` in environment (production only requires this)
+## SECRET_KEY Missing
 
-### Issue: Audit logs not appearing
-**Solution:** Restart app - audit table must exist in DB. Run migration first.
+### Problem
 
-### Issue: CORS errors in browser
-**Solution:** Check `CORS_ORIGINS` env var matches frontend domain exactly. No wildcards!
+```text
+SECRET_KEY environment variable must be set
+```
 
-### Issue: Token validation failing
-**Solution:** Decode functions now return None. Use `if token_data:` instead of catching exception.
+### Solution
 
-### Issue: Password validation too strict
-**Solution:** Increase variety: add uppercase, digits, and special char. Min 8 chars.
+Set a valid production secret:
 
----
-
-## Support
-
-- **Docs:** `docs/PRODUCTION_DEPLOYMENT.md`
-- **Changes Summary:** `docs/IMPROVEMENTS_SUMMARY.md`
-- **Environment Setup:** `backend/.env.example`, `frontend/.env.local.example`
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
 ---
 
-**Last Updated:** April 21, 2026  
-**Version:** 0.2.0
+## Audit Logs Not Appearing
+
+### Solution
+
+- Ensure migrations were applied
+- Restart backend services
+- Confirm `auditlog` table exists
+
+---
+
+## CORS Errors
+
+### Solution
+
+Ensure:
+
+```env
+CORS_ORIGINS=https://yourdomain.com
+```
+
+matches the frontend origin exactly.
+
+---
+
+## Token Validation Failures
+
+Decode helpers now safely return:
+
+```python
+None
+```
+
+Always check:
+
+```python
+if token_data:
+```
+
+instead of relying only on exceptions.
+
+---
+
+# Documentation References
+
+| Document | Purpose |
+|----------|---------|
+| `docs/PRODUCTION_DEPLOYMENT.md` | Deployment procedures |
+| `docs/IMPROVEMENTS_SUMMARY.md` | Full production changes |
+| `docs/ENVIRONMENT.md` | Environment configuration |
+| `mobile/README.md` | Flutter mobile setup |
+| `backend/.env.example` | Backend environment template |
+
+---
+
+# Current Platform Status
+
+### Backend
+- Production-oriented authentication
+- Structured validation
+- Audit logging
+- Soft deletes
+- Improved observability
+
+### Frontend
+- Better loading/error handling
+- Error boundaries
+- Cleaner API integration
+
+### Mobile
+- Automated CI/CD
+- Tagged release automation
+- Runtime environment injection
+- Android + iOS build support
+
+### Infrastructure
+- Environment-based configuration
+- Structured logging
+- Safer deployment workflows
+- Improved release management
+
+---
+
+**Last Updated:** May 18, 2026  
+**Platform Version:** 0.2.1
