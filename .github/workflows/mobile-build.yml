@@ -84,8 +84,10 @@ on:
       - "mobile/**"
       - ".github/workflows/mobile-build.yml"
 
+# Match ci.yml: flutter-action cache needs actions:read. contents:write only on release job.
 permissions:
-  contents: write
+  contents: read
+  actions: read
 
 concurrency:
   group: mobile-build-${{ github.ref }}
@@ -397,9 +399,7 @@ jobs:
       - android
       - ios
 
-    # Only on mobile release tags, and only when both platform jobs ran (not skipped).
     if: >-
-      always() &&
       startsWith(github.ref, 'refs/tags/mobile-v') &&
       needs.android.result == 'success' &&
       needs.ios.result == 'success'
@@ -408,6 +408,7 @@ jobs:
 
     permissions:
       contents: write
+      actions: read
 
     steps:
       - name: Checkout repository
