@@ -15,16 +15,19 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: lighthouse-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   lighthouse:
     name: Lighthouse CI
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
     # Lighthouse is a signal, not a gate. Keep the job green while we burn in
     # the numbers; flip to `false` when budgets in lighthouserc.json are real.
     continue-on-error: true
