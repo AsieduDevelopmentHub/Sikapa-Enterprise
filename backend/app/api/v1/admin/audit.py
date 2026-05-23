@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.api.v1.auth.dependencies import require_admin_permission
+from app.api.v1.auth.dependencies import require_admin_permission_any
 from app.db import get_session
 from app.models import AuditLog, User
 
@@ -50,7 +50,7 @@ async def list_audit_logs(
     action: Optional[str] = Query(None),
     user_id: Optional[int] = Query(None),
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_admin_permission("view_analytics")),
+    current_user: User = Depends(require_admin_permission_any("view_audit", "view_analytics")),
 ):
     """Return audit log entries newest-first with optional filters."""
     stmt = select(AuditLog).order_by(AuditLog.created_at.desc())
