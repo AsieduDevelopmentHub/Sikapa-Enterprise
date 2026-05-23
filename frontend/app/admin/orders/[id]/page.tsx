@@ -8,7 +8,7 @@ import { useDialog } from "@/context/DialogContext";
 import {
   adminDownloadInvoicePdf,
   adminFetchOrderDetail,
-  adminFetchUsers,
+  adminFetchUsersForLabels,
   adminUpdateOrderStatus,
   adminUpdateOrderTracking,
   type AdminOrderDetail,
@@ -40,7 +40,7 @@ export default function AdminOrderDetailPage() {
     try {
       const [o, users] = await Promise.all([
         adminFetchOrderDetail(accessToken, id),
-        adminFetchUsers(accessToken, { limit: 100 }),
+        adminFetchUsersForLabels(accessToken, { limit: 100 }),
       ]);
       setOrder(o);
       const u = users.find((x) => x.id === o.user_id);

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { adminFetchOrders, adminFetchUsers, type AdminOrderListItem } from "@/lib/api/admin";
+import { adminFetchOrders, adminFetchUsersForLabels, type AdminOrderListItem } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminOrdersPageSkeleton } from "@/components/admin/Skeleton";
@@ -30,7 +30,7 @@ export default function AdminOrdersPage() {
           limit: 30,
           status: filter === "all" ? undefined : filter,
         }),
-        adminFetchUsers(accessToken, { limit: 100 }),
+        adminFetchUsersForLabels(accessToken, { limit: 100 }),
       ]);
       const nameMap: Record<number, string> = {};
       for (const u of users) {

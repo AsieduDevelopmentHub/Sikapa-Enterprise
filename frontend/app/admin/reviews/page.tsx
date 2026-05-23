@@ -8,7 +8,7 @@ import {
   adminDeleteReview,
   adminFetchProducts,
   adminFetchReviews,
-  adminFetchUsers,
+  adminFetchUsersForLabels,
   type AdminReview,
 } from "@/lib/api/admin";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
@@ -29,7 +29,7 @@ export default function AdminReviewsPage() {
     try {
       const [reviews, userRows, productRows] = await Promise.all([
         adminFetchReviews(accessToken),
-        adminFetchUsers(accessToken, { limit: 100 }),
+        adminFetchUsersForLabels(accessToken, { limit: 100 }),
         adminFetchProducts(accessToken, { limit: 100 }),
       ]);
       setRows(reviews);
