@@ -1,5 +1,6 @@
 # vscode
 /.vscode/
+/.cursor/
 
 # Node
 node_modules
