@@ -1,3 +1,5 @@
+import { shuffledCopy } from "@/lib/shuffle-array";
+
 export type CategoryKey = "all" | "bestsellers" | "wigs" | "skincare" | "perfumes";
 
 export type MockProduct = {
@@ -135,15 +137,15 @@ export function getProductById(id: string): MockProduct | undefined {
   return MOCK_PRODUCTS.find((p) => p.id === id);
 }
 
-/** Products for each home category rail (bestsellers = highest rated first). */
+/** Products for each home category rail (bestsellers = top rated; others = random sample). */
 export function productsForHomeCategory(key: string, pool: MockProduct[] = MOCK_PRODUCTS): MockProduct[] {
   if (key === "bestsellers") {
     return [...pool].sort((a, b) => b.rating - a.rating).slice(0, 8);
   }
   if (key === "all") {
-    return [...pool].slice(0, 8);
+    return shuffledCopy(pool).slice(0, 8);
   }
-  return pool.filter((p) => p.category === key).slice(0, 8);
+  return shuffledCopy(pool.filter((p) => p.category === key)).slice(0, 8);
 }
 
 export function formatGhs(n: number): string {

@@ -20,6 +20,7 @@ import {
 } from "@/components/StorefrontSkeletons";
 import { ProductCardGrid } from "@/components/product/ProductCardGrid";
 import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
+import { shuffledCopy } from "@/lib/shuffle-array";
 
 const SHOP_VIEW_STORAGE_KEY = "sikapa-shop-view-mode";
 
@@ -134,7 +135,7 @@ export function ShopScreen() {
 
   const [query, setQuery] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [sortKey, setSortKey] = useState<SortKey>("random");
   const [inStockOnly, setInStockOnly] = useState(false);
 
   const filtered = useMemo(() => {
@@ -143,17 +144,11 @@ export function ShopScreen() {
     const q = query.trim().toLowerCase();
     if (q) list = list.filter((p) => p.name.toLowerCase().includes(q));
     if (inStockOnly) list = list.filter((p) => p.in_stock === undefined || p.in_stock > 0);
-    const next = [...list];
-    if (sortKey === "price-asc") next.sort((a, b) => a.price - b.price);
-    else if (sortKey === "price-desc") next.sort((a, b) => b.price - a.price);
-    else if (sortKey === "name") next.sort((a, b) => a.name.localeCompare(b.name));
-    else if (sortKey === "random") {
-      for (let i = next.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [next[i], next[j]] = [next[j], next[i]];
-      }
-    }
-    return next;
+    if (sortKey === "price-asc") return [...list].sort((a, b) => a.price - b.price);
+    if (sortKey === "price-desc") return [...list].sort((a, b) => b.price - a.price);
+    if (sortKey === "name") return [...list].sort((a, b) => a.name.localeCompare(b.name));
+    if (sortKey === "random") return shuffledCopy(list);
+    return list;
   }, [tab, query, products, inStockOnly, sortKey]);
 
   function addToCartClick(e: React.MouseEvent, id: string) {
@@ -240,11 +235,11 @@ export function ShopScreen() {
               onChange={(e) => setSortKey(e.target.value as SortKey)}
               className="sikapa-select mt-1 w-full text-body text-sikapa-text-primary"
             >
-              <option value="default">Featured / default</option>
+              <option value="random">Discover (random)</option>
+              <option value="default">Catalog order</option>
               <option value="price-asc">Price: low to high</option>
               <option value="price-desc">Price: high to low</option>
               <option value="name">Name A–Z</option>
-              <option value="random">Discover (Random)</option>
             </select>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-body text-sikapa-text-primary dark:text-zinc-200">
