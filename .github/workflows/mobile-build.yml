@@ -92,7 +92,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: "3.32.0"
+  # Must match mobile/README.md (Flutter 3.41+ / Dart ^3.11.5 in pubspec.yaml).
+  FLUTTER_VERSION: "3.41.0"
   FLUTTER_CHANNEL: stable
   WORKING_DIR: mobile
 
@@ -104,6 +105,7 @@ jobs:
   android:
     name: Android Release Build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       # -----------------------------------------------------------------------
@@ -219,21 +221,26 @@ jobs:
             DEFINES+=("--dart-define=SIKAPA_GOOGLE_OAUTH_ENABLED=${OAUTH}")
           fi
 
-          flutter build apk \
-            --release \
-            --build-number=${{ github.run_number }} \
-            "${DEFINES[@]}"
+          run_flutter_build() {
+            if [ "${#DEFINES[@]}" -gt 0 ]; then
+              flutter "$@" "${DEFINES[@]}"
+            else
+              flutter "$@"
+            fi
+          }
 
-          flutter build apk \
+          run_flutter_build build apk \
+            --release \
+            --build-number=${{ github.run_number }}
+
+          run_flutter_build build apk \
             --release \
             --split-per-abi \
-            --build-number=${{ github.run_number }} \
-            "${DEFINES[@]}"
+            --build-number=${{ github.run_number }}
 
-          flutter build appbundle \
+          run_flutter_build build appbundle \
             --release \
-            --build-number=${{ github.run_number }} \
-            "${DEFINES[@]}"
+            --build-number=${{ github.run_number }}
 
       # -----------------------------------------------------------------------
       # Stage Artifacts
@@ -271,7 +278,14 @@ jobs:
 
   ios:
     name: iOS Release Build
+    # macOS runners often show GitHub "startup failure" when minutes are exhausted or
+    # the queue is full (common on free/private repos). Run iOS only for releases and
+    # manual dispatch; Android still validates every push to main/mobile.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.ref, 'refs/tags/mobile-v')
     runs-on: macos-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
@@ -327,11 +341,18 @@ jobs:
             DEFINES+=("--dart-define=SIKAPA_GOOGLE_OAUTH_ENABLED=${OAUTH}")
           fi
 
-          flutter build ios \
-            --release \
-            --no-codesign \
-            --build-number=${{ github.run_number }} \
-            "${DEFINES[@]}"
+          if [ "${#DEFINES[@]}" -gt 0 ]; then
+            flutter build ios \
+              --release \
+              --no-codesign \
+              --build-number=${{ github.run_number }} \
+              "${DEFINES[@]}"
+          else
+            flutter build ios \
+              --release \
+              --no-codesign \
+              --build-number=${{ github.run_number }}
+          fi
 
       - name: Package unsigned IPA
         working-directory: ${{ env.WORKING_DIR }}
@@ -376,7 +397,12 @@ jobs:
       - android
       - ios
 
-    if: startsWith(github.ref, 'refs/tags/mobile-v')
+    # Only on mobile release tags, and only when both platform jobs ran (not skipped).
+    if: >-
+      always() &&
+      startsWith(github.ref, 'refs/tags/mobile-v') &&
+      needs.android.result == 'success' &&
+      needs.ios.result == 'success'
 
     runs-on: ubuntu-latest
 
