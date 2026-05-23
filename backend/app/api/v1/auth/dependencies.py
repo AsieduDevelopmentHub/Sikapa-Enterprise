@@ -147,3 +147,22 @@ def require_admin_permission(permission: str):
         )
 
     return _checker
+
+
+def require_admin_permission_any(*permissions: str):
+    """Dependency factory — caller needs at least one of the listed permissions."""
+    required = [p.strip().lower() for p in permissions if p.strip()]
+
+    async def _checker(current_user: User = Depends(get_current_admin_user)) -> User:
+        role = (current_user.admin_role or "").strip().lower()
+        if role in _ROLES_WITH_FULL_BYPASS:
+            return current_user
+        keys = _permission_set(current_user)
+        if any(p in keys for p in required):
+            return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Missing admin permission (need one of): {', '.join(required)}",
+        )
+
+    return _checker

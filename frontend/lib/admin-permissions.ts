@@ -2,6 +2,7 @@
 
 export type AdminPermissionDef = { key: string; label: string };
 
+/** Default permission bundles applied when creating or promoting staff/admin accounts. */
 export const ADMIN_PERMISSION_PRESETS: Record<"super_admin" | "admin" | "staff", string[]> = {
   super_admin: [],
   admin: [
@@ -14,6 +15,7 @@ export const ADMIN_PERMISSION_PRESETS: Record<"super_admin" | "admin" | "staff",
     "manage_coupons",
     "manage_reviews",
     "view_analytics",
+    "view_audit",
     "view_payments",
     "manage_settings",
   ],
@@ -24,12 +26,13 @@ export const ADMIN_PERMISSION_PRESETS: Record<"super_admin" | "admin" | "staff",
     "manage_inventory",
     "manage_reviews",
     "view_analytics",
+    "view_audit",
     "view_payments",
   ],
 };
 
 /** Nav href → permission required (super_admin/admin roles bypass all checks). */
-export const ADMIN_NAV_PERMISSIONS: Record<string, string | null> = {
+export const ADMIN_NAV_PERMISSIONS: Record<string, string | string[] | null> = {
   "/system": null,
   "/system/products": "manage_products",
   "/system/categories": "manage_products",
@@ -44,7 +47,7 @@ export const ADMIN_NAV_PERMISSIONS: Record<string, string | null> = {
   "/system/payments": "view_payments",
   "/system/staff": "manage_staff",
   "/system/settings": "manage_settings",
-  "/system/audit": "view_analytics",
+  "/system/audit": ["view_audit", "view_analytics"],
 };
 
 export const STATIC_ADMIN_PERMISSION_CATALOG: AdminPermissionDef[] = [
@@ -56,7 +59,8 @@ export const STATIC_ADMIN_PERMISSION_CATALOG: AdminPermissionDef[] = [
   { key: "manage_inventory", label: "Manage inventory" },
   { key: "manage_coupons", label: "Manage coupons" },
   { key: "manage_reviews", label: "Manage reviews" },
-  { key: "view_analytics", label: "View analytics" },
+  { key: "view_analytics", label: "View analytics & search insights" },
+  { key: "view_audit", label: "View audit log" },
   { key: "view_payments", label: "View payments" },
   { key: "manage_settings", label: "Manage settings" },
 ];
@@ -75,12 +79,16 @@ type AdminLike = {
   admin_permissions?: string | null;
 };
 
-export function hasAdminPermission(user: AdminLike | null | undefined, permission: string): boolean {
+export function hasAdminPermission(
+  user: AdminLike | null | undefined,
+  permission: string | string[]
+): boolean {
   if (!user?.is_admin) return false;
   const role = (user.admin_role || "").trim().toLowerCase();
   if (role === "super_admin" || role === "admin") return true;
   const keys = parsePermissionString(user.admin_permissions);
-  return keys.includes(permission.trim().toLowerCase());
+  const required = Array.isArray(permission) ? permission : [permission];
+  return required.some((p) => keys.includes(p.trim().toLowerCase()));
 }
 
 export function canAccessAdminNav(user: AdminLike | null | undefined, href: string): boolean {

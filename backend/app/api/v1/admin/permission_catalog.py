@@ -12,7 +12,8 @@ ADMIN_PERMISSION_DEFS: tuple[tuple[str, str], ...] = (
     ("manage_inventory", "Manage inventory"),
     ("manage_coupons", "Manage coupons"),
     ("manage_reviews", "Manage reviews"),
-    ("view_analytics", "View analytics"),
+    ("view_analytics", "View analytics & search insights"),
+    ("view_audit", "View audit log"),
     ("view_payments", "View payments"),
     ("manage_settings", "Manage settings"),
 )

@@ -1,13 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   adminCreateProduct,
   adminUpdateProduct,
   type AdminCategory,
   type AdminProduct,
 } from "@/lib/api/admin";
+import {
+  CategorySearchSelect,
+  resolveCategoryIdFromProductField,
+} from "@/components/admin/CategorySearchSelect";
 
 function slugify(name: string): string {
   return name
@@ -43,13 +47,25 @@ export function ProductForm({
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [price, setPrice] = useState(initial != null ? String(initial.price) : "");
-  const [category, setCategory] = useState(
-    initialCategoryName || initial?.category || ""
-  );
+  const [categoryId, setCategoryId] = useState<number | null>(null);
   const [inStock, setInStock] = useState(initial != null ? String(initial.in_stock) : "0");
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const resolved = resolveCategoryIdFromProductField(initial?.category, categoryHints);
+    if (resolved != null) {
+      setCategoryId(resolved);
+      return;
+    }
+    if (initialCategoryName) {
+      const hit = categoryHints.find(
+        (c) => c.name.toLowerCase() === initialCategoryName.trim().toLowerCase()
+      );
+      if (hit) setCategoryId(hit.id);
+    }
+  }, [initial?.category, initialCategoryName, categoryHints]);
 
   const derivedSlug = useMemo(() => slugify(name.trim()), [name]);
 
@@ -63,7 +79,11 @@ export function ProductForm({
       fd.append("slug", derivedSlug || slugify(name.trim()));
       if (description.trim()) fd.append("description", description.trim());
       fd.append("price", String(Number(price)));
-      if (category.trim()) fd.append("category", category.trim());
+      if (categoryId != null) {
+        const picked = categoryHints.find((c) => c.id === categoryId);
+        // Send name so the backend can resolve id/slug/spacing variants reliably.
+        fd.append("category", picked?.name ?? String(categoryId));
+      }
       fd.append("in_stock", String(parseInt(inStock, 10) || 0));
       if (mode === "edit") {
         fd.append("is_active", isActive ? "true" : "false");
@@ -82,8 +102,6 @@ export function ProductForm({
       setSaving(false);
     }
   };
-
-  const catNames = categoryHints.filter((c) => c.is_active).map((c) => c.name);
 
   return (
     <form onSubmit={(e) => void submit(e)} className="w-full min-w-0 max-w-full space-y-4">
@@ -145,20 +163,17 @@ export function ProductForm({
             className="mt-1 w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-body outline-none ring-sikapa-gold focus:ring-2"
           />
         </label>
-        <label className="block text-small font-medium text-sikapa-text-secondary">
+        <div className="block text-small font-medium text-sikapa-text-secondary">
           Category
-          <input
-            list="admin-cat-hints"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-body outline-none ring-sikapa-gold focus:ring-2"
+          <CategorySearchSelect
+            categories={categoryHints}
+            value={categoryId}
+            onChange={setCategoryId}
           />
-          <datalist id="admin-cat-hints">
-            {catNames.map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
-        </label>
+          <p className="mt-1 text-[11px] font-normal text-sikapa-text-muted">
+            Pick from your catalog — spacing and hyphens are matched automatically on save.
+          </p>
+        </div>
       </div>
       {mode === "edit" && (
         <label className="flex items-center gap-2 text-small font-medium text-sikapa-text-secondary">
