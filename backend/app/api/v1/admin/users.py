@@ -2,10 +2,11 @@
 Admin user management routes
 """
 from typing import List, Any
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from pydantic import BaseModel, Field, EmailStr
 from sqlmodel import Session
 
+from app.core.audit import AuditLogger
 from app.db import get_session
 from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User
@@ -51,6 +52,7 @@ async def get_permission_catalog(
 @router.post("/staff-accounts", response_model=UserManagementResponse, status_code=status.HTTP_201_CREATED)
 async def create_staff_account_endpoint(
     payload: StaffAccountCreate,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_staff")),
 ):
@@ -63,6 +65,20 @@ async def create_staff_account_endpoint(
         role=payload.role,
         permissions=payload.permissions,
         creator=current_user,
+    )
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="create_staff",
+        resource_type="user",
+        resource_id=user.id,
+        changes={
+            "username": user.username,
+            "email": user.email,
+            "admin_role": user.admin_role,
+            "admin_permissions": user.admin_permissions,
+        },
+        request=request,
     )
     return UserManagementResponse.model_validate(user)
 
@@ -89,6 +105,7 @@ async def list_users(
 @router.patch("/{user_id}/deactivate", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_user_endpoint(
     user_id: int,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_users")),
 ):
@@ -99,21 +116,39 @@ async def deactivate_user_endpoint(
             detail="Cannot deactivate yourself",
         )
     await deactivate_user(session, user_id)
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="deactivate_user",
+        resource_type="user",
+        resource_id=user_id,
+        request=request,
+    )
 
 
 @router.patch("/{user_id}/activate", status_code=status.HTTP_204_NO_CONTENT)
 async def activate_user_endpoint(
     user_id: int,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_users")),
 ):
     """Activate a user."""
     await activate_user(session, user_id)
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="activate_user",
+        resource_type="user",
+        resource_id=user_id,
+        request=request,
+    )
 
 
 @router.patch("/{user_id}/promote-admin", status_code=status.HTTP_204_NO_CONTENT)
 async def grant_admin_role_endpoint(
     user_id: int,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_staff")),
 ):
@@ -123,12 +158,22 @@ async def grant_admin_role_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot modify your own admin role",
         )
-    await grant_admin_role(session, user_id)
+    user = await grant_admin_role(session, user_id)
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="grant_admin",
+        resource_type="user",
+        resource_id=user_id,
+        changes={"admin_role": user.admin_role, "admin_permissions": user.admin_permissions},
+        request=request,
+    )
 
 
 @router.patch("/{user_id}/revoke-admin", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_admin_role_endpoint(
     user_id: int,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_staff")),
 ):
@@ -144,12 +189,21 @@ async def revoke_admin_role_endpoint(
     if user_is_super_admin(target):
         assert_can_assign_super_admin(current_user)
     await revoke_admin_role(session, user_id)
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="revoke_admin",
+        resource_type="user",
+        resource_id=user_id,
+        request=request,
+    )
 
 
 @router.patch("/{user_id}/staff-role")
 async def set_staff_role(
     user_id: int,
     payload: StaffRoleUpdate,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_staff")),
 ):
@@ -159,6 +213,8 @@ async def set_staff_role(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    prev_role = user.admin_role
+    prev_perms = user.admin_permissions
     payload_role = payload.role.strip().lower()
     will_be_super = payload_role == "super_admin"
     if user_is_super_admin(user) or will_be_super:
@@ -176,4 +232,16 @@ async def set_staff_role(
     session.add(user)
     session.commit()
     session.refresh(user)
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="set_staff_role",
+        resource_type="user",
+        resource_id=user_id,
+        changes={
+            "admin_role": {"old": prev_role, "new": user.admin_role},
+            "admin_permissions": {"old": prev_perms, "new": user.admin_permissions},
+        },
+        request=request,
+    )
     return UserManagementResponse.model_validate(user)
