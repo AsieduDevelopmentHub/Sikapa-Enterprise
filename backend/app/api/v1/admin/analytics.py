@@ -120,8 +120,9 @@ async def get_dashboard_metrics(
         period_days=days,
     )
     
-    # Cache for 5 minutes (300 seconds)
-    cache.set(cache_key, result.model_dump(), ttl=300)
+    # Short cache (30s) so admin sees fresh metrics within seconds of changes;
+    # all relevant mutations also call cache.delete_pattern("admin:dashboard:*").
+    cache.set(cache_key, result.model_dump(), ttl=30)
     return result
 
 
