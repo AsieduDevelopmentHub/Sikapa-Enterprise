@@ -55,8 +55,12 @@ export default function AdminOrderDetailPage() {
   }, [accessToken, id]);
 
   useEffect(() => {
+    if (!Number.isFinite(id)) {
+      setErr("Invalid order ID.");
+      return;
+    }
     void load();
-  }, [load]);
+  }, [load, id]);
 
   const origin = typeof window !== "undefined" ? getBackendOrigin() : "";
 
