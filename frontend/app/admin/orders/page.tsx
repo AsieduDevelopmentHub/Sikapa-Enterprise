@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchOrders, adminFetchUsersForLabels, type AdminOrderListItem } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminRefreshButton } from "@/components/admin/AdminRefreshButton";
 import { AdminOrdersPageSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 const FILTERS = ["all", "pending", "processing", "packed", "shipped", "delivered", "cancelled"] as const;
 
@@ -20,9 +22,9 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const [data, users] = await Promise.all([
@@ -45,9 +47,7 @@ export default function AdminOrdersPage() {
     }
   }, [accessToken, filter]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { reload } = useAdminLiveLoad(load, [accessToken, filter]);
 
   const visibleRows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -70,8 +70,13 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="w-full min-w-0 max-w-full">
-      <h1 className="font-serif text-page-title font-semibold">Orders</h1>
-      <p className="text-small text-sikapa-text-secondary">Fulfillment, payment state, and invoices.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-serif text-page-title font-semibold">Orders</h1>
+          <p className="text-small text-sikapa-text-secondary">Fulfillment, payment state, and invoices.</p>
+        </div>
+        <AdminRefreshButton onClick={() => reload()} loading={loading} />
+      </div>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
           {FILTERS.map((f) => (

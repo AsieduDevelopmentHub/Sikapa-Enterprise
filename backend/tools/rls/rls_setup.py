@@ -486,8 +486,14 @@ def setup_rls_policies() -> None:
            WITH CHECK (app.is_admin() OR user_id = app.current_uid());""",
         """CREATE POLICY p_emailsub_del ON emailsubscription FOR DELETE
            USING (app.is_admin());""",
-        """CREATE POLICY p_audit_all ON auditlog FOR ALL
+        """CREATE POLICY p_audit_select ON auditlog FOR SELECT
+           USING (app.is_admin());""",
+        """CREATE POLICY p_audit_insert ON auditlog FOR INSERT
+           WITH CHECK (user_id = app.current_uid() OR app.is_admin());""",
+        """CREATE POLICY p_audit_update ON auditlog FOR UPDATE
            USING (app.is_admin()) WITH CHECK (app.is_admin());""",
+        """CREATE POLICY p_audit_delete ON auditlog FOR DELETE
+           USING (app.is_admin());""",
         """CREATE POLICY p_invadj_all ON inventoryadjustment FOR ALL
            USING (app.is_admin()) WITH CHECK (app.is_admin());""",
         """CREATE POLICY p_coupon_select ON coupon FOR SELECT

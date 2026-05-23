@@ -97,6 +97,10 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Admin JSON must never be cached by browsers or CDNs — lists change constantly.
+    if request.url.path.startswith("/api/v1/admin"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
     # Applied unconditionally — clickjacking is protocol-agnostic
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Content-Security-Policy"] = (

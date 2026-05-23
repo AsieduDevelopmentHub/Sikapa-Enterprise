@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchAuditLogs, type AuditLogRow } from "@/lib/api/admin";
 import { Skeleton } from "@/components/admin/Skeleton";
+import { AdminRefreshButton } from "@/components/admin/AdminRefreshButton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 function formatWhen(iso: string): string {
   try {
@@ -31,9 +33,9 @@ export default function AdminAuditPage() {
   const [resourceType, setResourceType] = useState("");
   const [action, setAction] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const data = await adminFetchAuditLogs(accessToken, {
@@ -50,17 +52,18 @@ export default function AdminAuditPage() {
     }
   }, [accessToken, resourceType, action]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { reload } = useAdminLiveLoad(load, [accessToken, resourceType, action]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-[1.5rem] font-semibold text-sikapa-text-primary">Audit log</h1>
-        <p className="mt-1 text-small text-sikapa-text-secondary">
-          Actions recorded in Supabase/Postgres (`auditlog`). Syncs with order, product, staff, and payment events.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-serif text-[1.5rem] font-semibold text-sikapa-text-primary">Audit log</h1>
+          <p className="mt-1 text-small text-sikapa-text-secondary">
+            Actions recorded in Supabase/Postgres (`auditlog`). Syncs with order, product, staff, and payment events.
+          </p>
+        </div>
+        <AdminRefreshButton onClick={() => reload()} loading={loading} />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -80,7 +83,7 @@ export default function AdminAuditPage() {
         />
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={() => reload()}
           className="rounded-lg bg-sikapa-gold px-4 py-2 text-small font-semibold text-white"
         >
           Filter
