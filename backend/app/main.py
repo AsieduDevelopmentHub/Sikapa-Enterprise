@@ -84,6 +84,15 @@ if _cors_regex:
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.add_middleware(GZipMiddleware, minimum_size=1200)
 
+_allowed_hosts = os.getenv("ALLOWED_HOSTS", "").strip()
+if _allowed_hosts:
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=[h.strip() for h in _allowed_hosts.split(",") if h.strip()],
+    )
+
 # Outermost gate: when MAINTENANCE_MODE=true, return 503 for non-allowlisted
 # requests. Allowlist always includes /health and the Paystack webhook so
 # probes and payment confirmations keep working. See app/core/maintenance.py.
@@ -101,6 +110,9 @@ async def add_security_headers(request: Request, call_next):
     if request.url.path.startswith("/api/v1/admin"):
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
         response.headers["Pragma"] = "no-cache"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=(), payment=(self)"
+    )
     # Applied unconditionally — clickjacking is protocol-agnostic
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Content-Security-Policy"] = (
@@ -140,7 +152,8 @@ def on_startup() -> None:
     validate_production_config_or_raise()
     warn_dev_secret()
     warn_database_config()
-    create_db_and_tables()
+    if not is_production_environment():
+        create_db_and_tables()
     
     # Warm up cache for Admin Dashboard (Lite)
     try:

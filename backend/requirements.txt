@@ -3,7 +3,7 @@
 # -----------------------------
 fastapi==0.110.0
 uvicorn[standard]==0.23.2
-python-multipart==0.0.9          # Required for file uploads (UploadFile)
+python-multipart==0.0.18          # Required for file uploads (UploadFile); >=0.0.18 fixes CVE-2024-53981
 
 # -----------------------------
 # Data Validation & Settings

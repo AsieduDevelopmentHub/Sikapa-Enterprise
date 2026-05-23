@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
     get_password_hash,
     verify_password,
     create_access_token,
@@ -173,23 +174,53 @@ def create_user_tokens(user: User) -> dict:
 
 
 # ============ Token Refresh ============
+def _blacklist_token(session: Session, user_id: int, token: str, payload: dict) -> None:
+    """Revoke a JWT by storing it until its natural expiry."""
+    exp = payload.get("exp")
+    if exp:
+        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+    else:
+        expires_at = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    session.add(
+        TokenBlacklist(
+            user_id=user_id,
+            token=token,
+            expires_at=expires_at,
+        )
+    )
+    session.commit()
+
+
 def refresh_access_token(session: Session, refresh_token: str) -> dict:
-    """Generate new access token from refresh token."""
+    """Generate new access token from refresh token; rotate refresh token."""
+    blacklisted = session.exec(
+        select(TokenBlacklist).where(TokenBlacklist.token == refresh_token)
+    ).first()
+    if blacklisted:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+        )
+
     try:
         payload = decode_refresh_token(refresh_token)
+        if not payload:
+            raise ValueError("invalid payload")
         subject = payload.get("sub")
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token"
+            detail="Invalid refresh token",
         )
 
     user = _load_user_by_token_subject(session, subject)
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive"
+            detail="User not found or inactive",
         )
+
+    _blacklist_token(session, user.id, refresh_token, payload)
 
     subject = str(user.id)
     new_access_token = create_access_token({"sub": subject})

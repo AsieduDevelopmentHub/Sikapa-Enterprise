@@ -1,10 +1,11 @@
 """
 Email subscriptions routes - newsletter management
 """
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlmodel import Session
 from pydantic import BaseModel, EmailStr
 
+from app.core.rate_limit import limiter
 from app.db import get_session
 from app.api.v1.subscriptions.schemas import SubscriptionResponse
 from app.api.v1.subscriptions.services import (
@@ -27,25 +28,29 @@ class UnsubscribeRequest(BaseModel):
 
 
 @router.post("/subscribe", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def subscribe(
-    request: EmailSubscribeRequest,
+    request: Request,
+    body: EmailSubscribeRequest,
     session: Session = Depends(get_session),
 ):
     """Subscribe email to newsletter."""
     return await subscribe_email(
         session,
-        request.email,
-        marketing_opt_in=request.marketing_opt_in,
+        body.email,
+        marketing_opt_in=body.marketing_opt_in,
     )
 
 
 @router.post("/unsubscribe", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def unsubscribe(
-    request: UnsubscribeRequest,
+    request: Request,
+    body: UnsubscribeRequest,
     session: Session = Depends(get_session),
 ):
     """Unsubscribe email from newsletter."""
-    await unsubscribe_email(session, request.email)
+    await unsubscribe_email(session, body.email)
 
 
 @router.get("/unsubscribe/{token}", status_code=status.HTTP_204_NO_CONTENT)

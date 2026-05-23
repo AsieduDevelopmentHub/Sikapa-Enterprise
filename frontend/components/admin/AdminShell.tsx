@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { pingBackendHealth } from "@/lib/api/client";
-import { canAccessAdminNav } from "@/lib/admin-permissions";
+import { canAccessAdminNav, canAccessAdminPath } from "@/lib/admin-permissions";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 
 export type AdminNavItem = {
@@ -180,6 +180,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <p className="text-body text-sikapa-text-secondary">You do not have access to the admin portal.</p>
         <Link href="/account" className="mt-4 inline-block font-semibold text-sikapa-gold">
           Back to account
+        </Link>
+      </div>
+    );
+  }
+
+  if (!canAccessAdminPath(user, pathname)) {
+    return (
+      <div className="min-h-screen bg-sikapa-cream px-6 py-16 font-sans text-center">
+        <p className="text-body text-sikapa-text-secondary">
+          Your account does not have permission to view this admin section.
+        </p>
+        <Link href="/system" className="mt-4 inline-block font-semibold text-sikapa-gold">
+          Back to dashboard
         </Link>
       </div>
     );

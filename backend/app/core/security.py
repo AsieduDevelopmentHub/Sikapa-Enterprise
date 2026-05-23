@@ -20,6 +20,8 @@ from dotenv import load_dotenv
 from passlib.context import CryptContext
 from passlib.exc import MissingBackendError, UnknownHashError
 
+from app.core.startup_checks import is_production_environment
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -29,8 +31,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    is_production = os.getenv("ENVIRONMENT", "development").lower() == "production"
-    if is_production:
+    if is_production_environment():
         raise ValueError(
             "FATAL: SECRET_KEY environment variable must be set in production. "
             "Generate with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
@@ -57,8 +58,7 @@ _jwt_key = {"kty": "oct", "k": base64.urlsafe_b64encode(SECRET_KEY.encode()).dec
 def _build_fernet() -> Fernet | None:
     raw = os.getenv("TOTP_ENCRYPTION_KEY", "").strip()
     if not raw:
-        is_prod = os.getenv("ENVIRONMENT", "development").lower() == "production"
-        if is_prod:
+        if is_production_environment():
             raise ValueError(
                 "FATAL: TOTP_ENCRYPTION_KEY must be set in production. "
                 "Generate with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
