@@ -23,6 +23,7 @@ from app.models import (
 )
 from app.core.email_service import EmailService
 from app.core.sku_generator import generate_product_sku
+from app.api.v1.admin.category_resolve import resolve_product_category
 from app.api.v1.admin.crud_helpers import (
     get_entity_or_404,
     create_entity_with_slug,
@@ -237,6 +238,8 @@ async def revoke_admin_role(session: Session, user_id: int) -> User:
 async def create_product_admin(session: Session, product_data: dict) -> Product:
     """Create a product. Fills `sku` when omitted or blank (category + name)."""
     data = dict(product_data)
+    if "category" in data:
+        data["category"] = resolve_product_category(session, data.get("category"))
     sku_val = data.get("sku")
     if sku_val is None or (isinstance(sku_val, str) and not str(sku_val).strip()):
         data["sku"] = generate_product_sku(
@@ -253,11 +256,14 @@ async def update_product_admin(
     product_data: dict,
 ) -> Product:
     """Update a product."""
+    data = dict(product_data)
+    if "category" in data:
+        data["category"] = resolve_product_category(session, data.get("category"))
     before = await get_entity_or_404(session, Product, product_id)
     prev_price = float(before.price)
     prev_stock = int(before.in_stock)
     updated = await update_entity_generic(
-        session, Product, product_id, product_data, has_slug=True
+        session, Product, product_id, data, has_slug=True
     )
     if not (updated.sku or "").strip():
         updated.sku = generate_product_sku(
@@ -269,7 +275,7 @@ async def update_product_admin(
         session.add(updated)
         session.commit()
         session.refresh(updated)
-    if "in_stock" in product_data and int(updated.in_stock) != prev_stock:
+    if "in_stock" in data and int(updated.in_stock) != prev_stock:
         delta = int(updated.in_stock) - prev_stock
         log = InventoryAdjustment(
             product_id=updated.id,
