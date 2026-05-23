@@ -7,9 +7,11 @@ on:
     branches: [main, frontend, backend]
   workflow_dispatch:
 
+# Keep workflow-level permissions minimal (matches actions-smoke.yml). Jobs that
+# need cache or elevated scopes declare them per-job — extra scopes here can
+# cause startup_failure when the repo GITHUB_TOKEN policy is read-only.
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -20,6 +22,9 @@ jobs:
   backend:
     name: Backend CI
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     strategy:
       matrix:
         python-version: ["3.11"]
@@ -80,6 +85,9 @@ jobs:
   frontend:
     name: Frontend CI
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -108,61 +116,3 @@ jobs:
       - name: Run frontend tests
         working-directory: frontend
         run: npm test
-
-  auto-pr-merge-frontend-to-main:
-    name: Auto PR + Auto-merge (frontend -> main)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      actions: read
-    continue-on-error: true
-    needs: [backend, frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/frontend'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create or update PR and enable auto-merge
-        env:
-          # Prefer a PAT with `repo` + `workflow` scope so the created PR can
-          # actually re-trigger checks on `main`. Falls back to the built-in
-          # token, which CAN open PRs but CANNOT auto-merge across branches.
-          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
-        run: |
-          set -euo pipefail
-
-          # Nothing to do when `frontend` is not ahead of `main`.
-          if git fetch origin main --depth=1 >/dev/null 2>&1; then
-            AHEAD=$(git rev-list --count origin/main..HEAD || echo 0)
-            if [ "${AHEAD}" = "0" ]; then
-              echo "frontend is not ahead of main — skipping auto-PR."
-              exit 0
-            fi
-          fi
-
-          PR_NUM=$(gh pr list --head frontend --base main --state open \
-            --json number --jq '.[0].number // empty' || true)
-
-          if [ -z "${PR_NUM}" ]; then
-            # `gh pr create` prints the PR URL on stdout; parse the number from it.
-            PR_URL=$(gh pr create --base main --head frontend \
-              --title "chore: sync frontend branch into main" \
-              --body  "Auto-generated PR after CI passed on \`frontend\`." \
-              2>/dev/null || true)
-            PR_NUM="${PR_URL##*/}"
-            if ! [[ "${PR_NUM}" =~ ^[0-9]+$ ]]; then
-              PR_NUM=$(gh pr list --head frontend --base main --state open \
-                --json number --jq '.[0].number // empty' || true)
-            fi
-          fi
-
-          if [ -n "${PR_NUM}" ]; then
-            echo "Enabling auto-merge for PR #${PR_NUM}"
-            gh pr merge "${PR_NUM}" --auto --squash \
-              || echo "Auto-merge unavailable — enable it in repo Settings → General → Pull Requests, or supply GH_ACTIONS_PR_TOKEN."
-          else
-            echo "No PR created or found — skipping auto-merge."
-          fi
