@@ -17,7 +17,7 @@ export function MaintenanceWatcher() {
   const pathname = usePathname();
 
   useEffect(() => {
-    function onMaintenance(_event: Event) {
+    function onMaintenance() {
       if (pathname === MAINTENANCE_PATH) return;
       router.replace(MAINTENANCE_PATH);
     }

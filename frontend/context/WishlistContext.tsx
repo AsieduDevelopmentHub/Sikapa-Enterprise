@@ -99,18 +99,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       setWishErr(null);
 
       if (!accessToken) {
-        let isNowSaved = false;
         setGuestWishIds((prev) => {
           const next = new Set(prev);
           if (next.has(productId)) {
             next.delete(productId);
-            isNowSaved = false;
           } else {
             // Add to front of set-derived array logic (Set doesn't have order in simple sense, but JS Sets maintain insertion order)
             // To put it at top, we create a new set with productId first
-            const newSet = new Set([productId, ...Array.from(prev)]);
-            isNowSaved = true;
-            return newSet;
+            return new Set([productId, ...Array.from(prev)]);
           }
           return next;
         });
