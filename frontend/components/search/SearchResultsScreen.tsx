@@ -6,18 +6,25 @@ import { useEffect, useMemo, useState } from "react";
 import { SearchAutocomplete } from "@/components/search/SearchAutocomplete";
 import { ProductCardGrid } from "@/components/product/ProductCardGrid";
 import { useCatalog } from "@/context/CatalogContext";
-import { pingProductSearchAnalytics } from "@/lib/api/products";
-import {
-  TRENDING_SEARCHES,
-  addRecentSearch,
-  filterByPriceAndRating,
-  matchesQuery,
-  sortProducts,
-  readRecentSearches,
-  type SortKey,
-} from "@/lib/search-helpers";
+import { mapApiProductToMock, pingProductSearchAnalytics } from "@/lib/api/products";
+import { TRENDING_SEARCHES, addRecentSearch, readRecentSearches, type SortKey } from "@/lib/search-helpers";
 import { PRODUCT_GRID_CLASS } from "@/lib/storefront-layout";
-import { useProducts } from "@/lib/hooks/useProducts";
+import { useCategories, useProducts, type ProductFilters } from "@/lib/hooks/useProducts";
+
+function sortKeyToApiFilters(sort: SortKey): Pick<ProductFilters, "sortBy" | "sortOrder"> {
+  switch (sort) {
+    case "price-asc":
+      return { sortBy: "price", sortOrder: "asc" };
+    case "price-desc":
+      return { sortBy: "price", sortOrder: "desc" };
+    case "rating":
+      return { sortBy: "rating", sortOrder: "desc" };
+    case "name":
+      return { sortBy: "name", sortOrder: "asc" };
+    default:
+      return { sortBy: "created_at", sortOrder: "desc" };
+  }
+}
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "relevance", label: "Best match" },
@@ -37,6 +44,7 @@ export function SearchResultsScreen() {
   const [priceMax, setPriceMax] = useState<number | null>(null);
 
   const { categories, loading: catalogLoading } = useCatalog();
+  const { data: apiCategories } = useCategories();
   const [recent, setRecent] = useState<string[]>([]);
 
   useEffect(() => {
@@ -49,17 +57,24 @@ export function SearchResultsScreen() {
     pingProductSearchAnalytics(q);
   }, [q]);
 
+  const sortFilters = sortKeyToApiFilters(sort);
   const { data: searchData, isLoading: searchLoading } = useProducts({
     search: q,
-    sortBy: sort === "relevance" ? "created_at" : (sort.split("-")[0] as any),
-    sortOrder: sort.endsWith("-asc") ? "asc" : "desc",
+    ...sortFilters,
     minRating: minRating > 0 ? minRating : undefined,
     maxPrice: priceMax ?? undefined,
   });
 
-  const products = searchData?.items || [];
+  const products = useMemo(() => {
+    if (!searchData?.items?.length) return [];
+    return searchData.items.map((row) => mapApiProductToMock(row, apiCategories ?? []));
+  }, [searchData, apiCategories]);
+
   const loading = searchLoading || catalogLoading;
-  const filtered = products; 
+  const filtered = useMemo(() => {
+    if (!inStockOnly) return products;
+    return products.filter((p) => (p.in_stock ?? 1) > 0);
+  }, [products, inStockOnly]);
 
   const priceCeiling = 10000; // Simplified for now or could be calculated from catalog
 
@@ -136,10 +151,10 @@ export function SearchResultsScreen() {
           <>
             <div className="mt-4 flex items-center justify-between gap-3">
               <p className="text-small text-sikapa-text-secondary dark:text-zinc-400">
-                {catalogLoading && products.length === 0
+                {loading && products.length === 0
                   ? "Searching…"
                   : `${filtered.length} ${filtered.length === 1 ? "result" : "results"} for `}
-                {catalogLoading && products.length === 0 ? null : (
+                {loading && products.length === 0 ? null : (
                   <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">“{q}”</span>
                 )}
               </p>

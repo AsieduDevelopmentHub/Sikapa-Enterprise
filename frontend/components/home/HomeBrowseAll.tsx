@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { useCatalog } from "@/context/CatalogContext";
-import { productsForHomeCategory } from "@/lib/mock-data";
 import { cleanImageUrl } from "@/lib/clean-image-url";
 
 

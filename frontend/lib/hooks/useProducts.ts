@@ -84,7 +84,7 @@ export function useProducts(filters: ProductFilters = {}) {
 }
 
 export function useCategories() {
-  return useQuery<any[]>({
+  return useQuery<ApiCategoryRow[]>({
     queryKey: ["categories"],
     queryFn: async () => {
       const baseUrl = getApiV1Base();

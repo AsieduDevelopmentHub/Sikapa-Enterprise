@@ -13,11 +13,9 @@ import { productsForHomeCategory } from "@/lib/mock-data";
 import {
   fetchCategories,
   fetchProductById,
-  fetchProducts,
   homeRailKeys,
   mapApiCategoriesToDisplay,
   mapApiProductToMock,
-  mockCatalogDisplay,
   type CatalogCategory,
 } from "@/lib/api/products";
 import { useCategories, useProducts } from "@/lib/hooks/useProducts";
