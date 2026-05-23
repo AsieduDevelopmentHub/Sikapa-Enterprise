@@ -9,12 +9,12 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
   actions: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Avoid canceling in-flight runs on rapid pushes (can surface as startup_failure).
+  cancel-in-progress: false
 
 jobs:
   backend:
@@ -57,6 +57,7 @@ jobs:
           RESEND_API_KEY: test-resend-api-key
           EMAIL_FROM: test@example.com
           FRONTEND_URL: http://localhost:3000
+          CORS_ORIGINS: http://localhost:3000
           EMAIL_ENABLED: "false"
           HTTPS_ENABLED: "false"
           DEBUG: "false"
