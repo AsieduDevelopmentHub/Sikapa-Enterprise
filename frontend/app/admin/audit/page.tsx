@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchAuditLogs, type AuditLogRow } from "@/lib/api/admin";
-import { SkeletonBlock } from "@/components/admin/Skeleton";
+import { Skeleton } from "@/components/admin/Skeleton";
 
 function formatWhen(iso: string): string {
   try {
@@ -94,7 +94,7 @@ export default function AdminAuditPage() {
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonBlock key={i} className="h-14 w-full rounded-lg" />
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
           ))}
         </div>
       ) : rows.length === 0 ? (
