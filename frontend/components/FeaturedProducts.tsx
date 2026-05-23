@@ -6,10 +6,14 @@ import { useCatalog } from "@/context/CatalogContext";
 import { HomeBannerSlideshow } from "@/components/home/HomeBannerSlideshow";
 import { HomeProductCarouselCard } from "@/components/home/HomeProductCarouselCard";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
+import { shuffledCopy } from "@/lib/shuffle-array";
 
 export function FeaturedProducts() {
   const { products, loading } = useCatalog();
-  const featured = useMemo(() => products.slice(0, Math.min(products.length, 8)), [products]);
+  const featured = useMemo(
+    () => shuffledCopy(products).slice(0, Math.min(products.length, 8)),
+    [products]
+  );
 
   if (loading && products.length === 0) {
     return (
