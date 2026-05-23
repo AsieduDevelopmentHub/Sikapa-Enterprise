@@ -39,6 +39,9 @@ backend/coverage.xml
 
 # logs
 *.log
+*.logs
+/backend/*.logs
+
 
 # mcp
 /.vscode/mcp.json
