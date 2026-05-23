@@ -159,7 +159,7 @@ export async function fetchCategories(): Promise<ApiCategoryRow[]> {
 
 export async function fetchProducts(limit = 100): Promise<ApiProductRow[]> {
   const res = await apiFetchJson<ApiProductListResponse | null>(
-    `/products/?limit=${limit}&sort_by=created_at&sort_order=desc`
+    `/products/?limit=${limit}&sort_by=random&sort_order=desc`
   );
   if (!res || typeof res !== "object") return [];
   const items = (res as ApiProductListResponse).items;
