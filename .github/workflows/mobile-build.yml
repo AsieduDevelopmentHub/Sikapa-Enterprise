@@ -91,7 +91,7 @@ permissions:
 
 concurrency:
   group: mobile-build-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   # Must match mobile/README.md (Flutter 3.41+ / Dart ^3.11.5 in pubspec.yaml).

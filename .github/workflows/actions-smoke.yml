@@ -1,0 +1,28 @@
+# Minimal workflow to verify GitHub Actions can run on push.
+# If this fails with "startup failure" (0 jobs), the problem is repo/account
+# settings (Actions disabled, rulesets, billing) — not app code.
+name: Actions smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: actions-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Runner OK
+        run: |
+          echo "event=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "sha=${{ github.sha }}"
+          uname -a
