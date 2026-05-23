@@ -97,3 +97,31 @@ export function canAccessAdminNav(user: AdminLike | null | undefined, href: stri
   if (perm === null) return Boolean(user?.is_admin);
   return hasAdminPermission(user, perm);
 }
+
+/** Map internal `/admin/*` or public `/system/*` path to nav permission key. */
+export function adminPathToNavKey(pathname: string): string {
+  if (pathname.startsWith("/admin")) {
+    return `/system${pathname.slice("/admin".length) || ""}` || "/system";
+  }
+  if (pathname.startsWith("/system")) return pathname;
+  return pathname;
+}
+
+export function permissionForAdminPath(pathname: string): string | string[] | null | undefined {
+  const key = adminPathToNavKey(pathname);
+  if (key in ADMIN_NAV_PERMISSIONS) return ADMIN_NAV_PERMISSIONS[key];
+  const entries = Object.entries(ADMIN_NAV_PERMISSIONS)
+    .filter(([href]) => href !== "/system")
+    .sort(([a], [b]) => b.length - a.length);
+  for (const [href, perm] of entries) {
+    if (key === href || key.startsWith(`${href}/`)) return perm;
+  }
+  return undefined;
+}
+
+export function canAccessAdminPath(user: AdminLike | null | undefined, pathname: string): boolean {
+  const perm = permissionForAdminPath(pathname);
+  if (perm === undefined) return Boolean(user?.is_admin);
+  if (perm === null) return Boolean(user?.is_admin);
+  return hasAdminPermission(user, perm);
+}

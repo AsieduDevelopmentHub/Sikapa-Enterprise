@@ -30,7 +30,7 @@ def _paystack_secret_configured() -> bool:
 
 
 def validate_production_config_or_raise() -> None:
-    """Fail fast when production is enabled but secrets are unsafe."""
+    """Fail fast when production is enabled but secrets or infra are unsafe."""
     if not is_production_environment():
         return
 
@@ -52,6 +52,50 @@ def validate_production_config_or_raise() -> None:
         raise RuntimeError(
             "Production requires PAYSTACK_SECRET_KEY (sk_test_… or sk_live_…) from "
             "https://dashboard.paystack.com/#/settings/developer"
+        )
+
+    db_url = os.getenv("DATABASE_URL", "").strip()
+    if not db_url.startswith("postgresql"):
+        raise RuntimeError(
+            "Production requires a PostgreSQL DATABASE_URL (Supabase/Render Postgres). "
+            "SQLite is ephemeral and must not be used in production."
+        )
+
+    if os.getenv("DEBUG", "false").strip().lower() == "true":
+        raise RuntimeError("DEBUG=true is not allowed in production (SQL echo may leak PII).")
+
+    totp_key = os.getenv("TOTP_ENCRYPTION_KEY", "").strip()
+    if not totp_key:
+        raise RuntimeError(
+            "Production requires TOTP_ENCRYPTION_KEY. "
+            'Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+        )
+
+    cors = os.getenv("CORS_ORIGINS", "").strip()
+    if not cors:
+        raise RuntimeError(
+            "Production requires CORS_ORIGINS with your live frontend origin(s), "
+            "e.g. https://your-store.vercel.app"
+        )
+
+    frontend = os.getenv("FRONTEND_URL", "").strip()
+    if not frontend or "localhost" in frontend.lower():
+        raise RuntimeError(
+            "Production requires FRONTEND_URL set to your live storefront URL "
+            "(used in emails, Paystack callbacks, and OAuth redirects)."
+        )
+
+    redis_url = os.getenv("REDIS_URL", "").strip()
+    if not redis_url or "localhost" in redis_url:
+        logger.warning(
+            "REDIS_URL is unset or points at localhost — cache and auth rate limits "
+            "are per-process only on multi-instance hosts. Set Render Redis URL."
+        )
+
+    if os.getenv("UPLOAD_SERVE_LOCAL", "true").strip().lower() in {"1", "true", "yes"}:
+        logger.warning(
+            "UPLOAD_SERVE_LOCAL=true in production — prefer Supabase storage and "
+            "set UPLOAD_SERVE_LOCAL=false on Render."
         )
 
 
