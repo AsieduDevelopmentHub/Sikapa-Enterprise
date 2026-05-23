@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   adminFetchOrders,
   adminFetchTransactions,
-  adminFetchUsers,
+  adminFetchUsersForLabels,
   type PaystackTransactionRow,
 } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
@@ -28,7 +28,7 @@ export default function AdminPaymentsPage() {
       const [transactions, orders, users] = await Promise.all([
         adminFetchTransactions(accessToken, { limit: 100 }),
         adminFetchOrders(accessToken, { limit: 100 }),
-        adminFetchUsers(accessToken, { limit: 100 }),
+        adminFetchUsersForLabels(accessToken, { limit: 100 }),
       ]);
       setRows(transactions);
       const userNameById: Record<number, string> = {};

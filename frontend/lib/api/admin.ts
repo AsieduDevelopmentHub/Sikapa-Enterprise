@@ -285,6 +285,24 @@ export async function adminFetchUsers(
   return apiFetchJsonAuth<AdminUser[]>(accessToken, `${V1.admin.users}${suffix}`);
 }
 
+/** User list for display labels only — returns [] when caller lacks `view_users`. */
+export async function adminFetchUsersForLabels(
+  accessToken: string,
+  params?: { skip?: number; limit?: number }
+): Promise<AdminUser[]> {
+  try {
+    return await adminFetchUsers(accessToken, params);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const denied =
+      msg.includes("403") ||
+      msg.toLowerCase().includes("view_users") ||
+      msg.toLowerCase().includes("do not have access");
+    if (denied) return [];
+    throw e;
+  }
+}
+
 export async function adminDeactivateUser(accessToken: string, userId: number): Promise<void> {
   await apiFetchJsonAuthMethod<undefined>(
     accessToken,

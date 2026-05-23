@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ApiCategoryRow, ApiProductListResponse } from "@/lib/api/products";
 import { V1 } from "@/lib/api/v1-paths";
 import { getApiV1Base } from "@/lib/api/client";
 
@@ -14,12 +15,7 @@ export interface ProductFilters {
   search?: string;
 }
 
-export interface ProductsResponse {
-  total: number;
-  skip: number;
-  limit: number;
-  items: any[]; // Replace 'any' with Product model if available
-}
+export type ProductsResponse = ApiProductListResponse;
 
 export function useProducts(filters: ProductFilters = {}) {
   const {
