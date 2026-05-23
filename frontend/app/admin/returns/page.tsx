@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   adminFetchOrderDetail,
   adminFetchReturns,
-  adminFetchUsers,
+  adminFetchUsersForLabels,
   adminUpdateReturnStatus,
   type AdminOrderDetail,
   type AdminReturn,
@@ -80,7 +80,7 @@ export default function AdminReturnsPage() {
           status: filter === "all" ? undefined : filter,
           limit: 100,
         }),
-        adminFetchUsers(accessToken, { limit: 100 }),
+        adminFetchUsersForLabels(accessToken, { limit: 100 }),
       ]);
       setRows(data);
       const initial: Record<number, string> = {};
