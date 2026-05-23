@@ -134,6 +134,7 @@ if _upload_serve_local:
 def on_startup() -> None:
     validate_production_config_or_raise()
     warn_dev_secret()
+    warn_database_config()
     create_db_and_tables()
     
     # Warm up cache for Admin Dashboard (Lite)

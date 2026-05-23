@@ -56,7 +56,7 @@ TRUNCATE TABLE
   searchquerylog,
   emailsubscription,
   "order",
-  adminauditlog,
+  auditlog,
   businesssetting,
   tokenblacklist,
   otpcode,

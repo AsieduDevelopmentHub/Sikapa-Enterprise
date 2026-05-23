@@ -503,6 +503,44 @@ export async function adminFetchTransactions(
   );
 }
 
+export type AuditLogRow = {
+  id: number;
+  user_id?: number | null;
+  actor_username?: string | null;
+  actor_name?: string | null;
+  action: string;
+  resource_type: string;
+  resource_id?: number | null;
+  status: string;
+  changes?: unknown;
+  error_message?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+};
+
+export async function adminFetchAuditLogs(
+  accessToken: string,
+  params?: {
+    skip?: number;
+    limit?: number;
+    resource_type?: string;
+    resource_id?: number;
+    action?: string;
+    user_id?: number;
+  }
+): Promise<AuditLogRow[]> {
+  const q = new URLSearchParams();
+  if (params?.skip != null) q.set("skip", String(params.skip));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  if (params?.resource_type) q.set("resource_type", params.resource_type);
+  if (params?.resource_id != null) q.set("resource_id", String(params.resource_id));
+  if (params?.action) q.set("action", params.action);
+  if (params?.user_id != null) q.set("user_id", String(params.user_id));
+  const suffix = q.toString() ? `?${q}` : "";
+  return apiFetchJsonAuth<AuditLogRow[]>(accessToken, `${V1.admin.auditLogs}${suffix}`);
+}
+
 export async function adminFetchReviews(accessToken: string): Promise<AdminReview[]> {
   return apiFetchJsonAuth<AdminReview[]>(accessToken, `${V1.admin.reviews}/`);
 }

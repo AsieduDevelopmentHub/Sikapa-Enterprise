@@ -161,6 +161,7 @@ async def update_order_status_endpoint(
         changes={"status": {"old": prev_status, "new": order.status}},
         request=request,
     )
+    cache.delete_pattern("admin:dashboard:*")
     return order
 
 

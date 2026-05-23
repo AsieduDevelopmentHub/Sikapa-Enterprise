@@ -120,6 +120,7 @@ export const V1 = {
     searchSummary: "/admin/search-analytics/summary",
     searchTop: "/admin/search-analytics/top",
     searchZero: "/admin/search-analytics/zero-results",
+    auditLogs: "/admin/audit-logs",
     variants: "/admin/variants",
     variant: (id: number) => `/admin/variants/${id}`,
     productsBulkImport: "/admin/products/bulk-import",
