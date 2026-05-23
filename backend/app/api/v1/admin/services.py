@@ -110,22 +110,25 @@ async def activate_user(session: Session, user_id: int) -> User:
 
 
 async def grant_admin_role(session: Session, user_id: int) -> User:
-    """Grant admin role to a user."""
-    def validate_not_admin(user: User):
-        if user.is_admin:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User is already an admin",
-            )
-    
-    return await toggle_user_field(
-        session,
-        User,
-        user_id,
-        "is_admin",
-        True,
-        validation_fn=validate_not_admin,
-    )
+    """Grant admin role to a user. Also assigns role='admin' and full permission set
+    so the new admin is not blocked by `require_admin_permission` checks."""
+    user = await get_entity_or_404(session, User, user_id)
+    if user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already an admin",
+        )
+    user.is_admin = True
+    role_now = (user.admin_role or "").strip().lower()
+    if role_now in ("", "customer"):
+        user.admin_role = "admin"
+    if not (user.admin_permissions or "").strip():
+        user.admin_permissions = ",".join(sorted(KNOWN_ADMIN_PERMISSION_KEYS))
+    user.updated_at = datetime.utcnow()
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
 
 
 _USERNAME_RE = re.compile(r"^[a-z0-9._-]{3,50}$")
@@ -447,22 +450,33 @@ async def update_order_status(
     order_id: int,
     new_status: str,
 ) -> Order:
-    """Update order status."""
+    """Update order status (sets `delivered_at`, `updated_at` on transitions)."""
     valid_statuses = ["pending", "processing", "packed", "shipped", "delivered", "cancelled"]
-    
+
     if new_status not in valid_statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid status. Allowed: {', '.join(valid_statuses)}",
         )
-    
+
     order = await get_entity_or_404(session, Order, order_id)
+    if order.status == new_status:
+        return order
     order.status = new_status
-    
+    if new_status == "delivered" and order.delivered_at is None:
+        order.delivered_at = datetime.utcnow()
+    order.updated_at = datetime.utcnow()
+
     session.add(order)
     session.commit()
     session.refresh(order)
-    
+
+    try:
+        from app.core.cache import cache
+        cache.delete_pattern("admin:dashboard:*")
+    except Exception:
+        pass
+
     return order
 
 

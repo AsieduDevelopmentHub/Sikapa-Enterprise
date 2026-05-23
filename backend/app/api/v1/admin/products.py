@@ -5,10 +5,12 @@ import csv
 import io
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status, Query, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
+from app.core.audit import AuditLogger
+from app.core.cache import cache
 from app.db import get_session
 from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Product, ProductVariant
@@ -23,6 +25,18 @@ from app.api.v1.admin.services import (
 )
 from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text, sanitize_slug
 from app.core.newsletter_tasks import run_product_newsletter_job
+
+
+_PRODUCT_AUDIT_FIELDS = (
+    "name", "slug", "description", "price", "category", "sku",
+    "in_stock", "is_active", "image_url", "weight",
+)
+
+
+def _product_snapshot(p: Product | None) -> dict:
+    if p is None:
+        return {}
+    return {f: getattr(p, f, None) for f in _PRODUCT_AUDIT_FIELDS}
 
 router = APIRouter()
 
@@ -148,6 +162,7 @@ async def list_products_admin(
 @router.post("/", response_model=ProductManagementRead, status_code=status.HTTP_201_CREATED)
 async def create_product(
     background_tasks: BackgroundTasks,
+    request: Request,
     name: str = Form(...),
     slug: str = Form(...),
     description: str = Form(None),
@@ -187,6 +202,16 @@ async def create_product(
         "new_product",
         None,
     )
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="create",
+        resource_type="product",
+        resource_id=created.id,
+        changes=_product_snapshot(created),
+        request=request,
+    )
+    cache.delete_pattern("admin:dashboard:*")
     return created
 
 
@@ -204,6 +229,7 @@ async def get_product_admin(
 @router.put("/{product_id}", response_model=ProductManagementRead)
 async def update_product(
     background_tasks: BackgroundTasks,
+    request: Request,
     product_id: int,
     name: str = Form(None),
     slug: str = Form(None),
@@ -219,6 +245,7 @@ async def update_product(
     """Update a product."""
     existing = await get_entity_or_404(session, Product, product_id)
     prev_price = float(existing.price)
+    before_snapshot = _product_snapshot(existing)
 
     image_url = None
     if image:
@@ -250,17 +277,46 @@ async def update_product(
             "price_drop",
             prev_price,
         )
+    after_snapshot = _product_snapshot(updated)
+    diffs = {
+        f: {"old": before_snapshot.get(f), "new": after_snapshot.get(f)}
+        for f in _PRODUCT_AUDIT_FIELDS
+        if before_snapshot.get(f) != after_snapshot.get(f)
+    }
+    if diffs:
+        AuditLogger.log(
+            session,
+            user_id=current_user.id,
+            action="update",
+            resource_type="product",
+            resource_id=product_id,
+            changes=diffs,
+            request=request,
+        )
+        cache.delete_pattern("admin:dashboard:*")
     return updated
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product(
     product_id: int,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_products")),
 ):
     """Delete a product."""
+    snap = _product_snapshot(session.get(Product, product_id))
     await delete_product_admin(session, product_id)
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="delete",
+        resource_type="product",
+        resource_id=product_id,
+        changes={"snapshot": snap},
+        request=request,
+    )
+    cache.delete_pattern("admin:dashboard:*")
 
 
 @router.get("/low-stock/list", response_model=List[ProductManagementRead])
