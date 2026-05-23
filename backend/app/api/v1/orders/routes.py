@@ -2,12 +2,13 @@
 Orders API routes
 """
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Header, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response, Header, BackgroundTasks
 from sqlmodel import Session, select, func
 
 from app.db import get_session
 from app.models import Order, OrderItem, CartItem, Product, ProductVariant, User
 from app.api.v1.auth.dependencies import get_current_active_user
+from app.core.audit import AuditLogger
 from app.core.shipping_matrix import delivery_fee_dynamic_ghs, shipping_options_payload
 
 from app.api.v1.orders.schemas import (
@@ -103,6 +104,7 @@ async def get_order(
 @router.post("/", response_model=OrderSchema, status_code=status.HTTP_201_CREATED)
 async def create_order(
     order_data: OrderCreateSchema,
+    request: Request,
     background_tasks: BackgroundTasks,
     current_user=Depends(get_current_active_user),
     session: Session = Depends(get_session),
@@ -184,6 +186,21 @@ async def create_order(
 
     order = await create_order_from_cart(
         session, current_user.id, subtotal, fee, order_data, cart_items, idempotency_key
+    )
+
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="order_created",
+        resource_type="order",
+        resource_id=order.id,
+        changes={
+            "total_price": order.total_price,
+            "payment_status": order.payment_status,
+            "status": order.status,
+            "shipping_method": order_data.shipping_method,
+        },
+        request=request,
     )
     
     # Send confirmation email in background

@@ -70,3 +70,21 @@ def warn_dev_secret() -> None:
             "PAYSTACK_SECRET_KEY is not set — checkout will return 503 until you add keys from "
             "https://dashboard.paystack.com/#/settings/developer",
         )
+
+
+def warn_database_config() -> None:
+    """Warn when local SQLite is used — admin and storefront must share one DATABASE_URL."""
+    url = os.getenv("DATABASE_URL", "").strip()
+    if url.startswith("sqlite"):
+        logger.warning(
+            "DATABASE_URL points to SQLite (%s). Orders and admin data stay on this file only — "
+            "they will NOT match Render/Supabase until you set DATABASE_URL to your Supabase "
+            "Postgres connection string (same value as on Render).",
+            url.split("///")[-1] if "///" in url else url,
+        )
+    elif url.startswith("postgresql") and os.getenv("ENVIRONMENT", "").strip().lower() in {
+        "",
+        "development",
+        "dev",
+    }:
+        logger.info("DATABASE_URL uses PostgreSQL — admin and storefront share Supabase/production data.")

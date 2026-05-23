@@ -17,7 +17,6 @@ from app.models import (
     ProductVariant,
     Order,
     Category,
-    AdminAuditLog,
     InventoryAdjustment,
     Coupon,
     BusinessSetting,
