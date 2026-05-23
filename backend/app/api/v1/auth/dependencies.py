@@ -124,16 +124,20 @@ def _permission_set(user: User) -> set[str]:
     return {p.strip().lower() for p in raw.split(",") if p.strip()}
 
 
+_ROLES_WITH_FULL_BYPASS = {"super_admin", "admin"}
+
+
 def require_admin_permission(permission: str):
     """
     Dependency factory for granular admin access.
-    super_admin role bypasses explicit permission checks.
+    Both `super_admin` and `admin` roles bypass explicit permission checks; any
+    other admin (`staff`, custom roles) must have the key in `admin_permissions`.
     """
     required = permission.strip().lower()
 
     async def _checker(current_user: User = Depends(get_current_admin_user)) -> User:
         role = (current_user.admin_role or "").strip().lower()
-        if role == "super_admin":
+        if role in _ROLES_WITH_FULL_BYPASS:
             return current_user
         if required in _permission_set(current_user):
             return current_user

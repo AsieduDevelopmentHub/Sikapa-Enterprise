@@ -315,6 +315,8 @@ def initialize_paystack_for_order(
 
 
 def _apply_successful_payment(session: Session, order: Order, reference: str) -> Order:
+    prev_payment = order.payment_status
+    prev_status = order.status
     order.payment_status = "paid"
     order.payment_method = "paystack"
     if order.status == "pending":
@@ -354,6 +356,26 @@ def _apply_successful_payment(session: Session, order: Order, reference: str) ->
     session.commit()
     session.refresh(order)
     _send_order_confirmation_once(session, order)
+
+    try:
+        from app.core.audit import AuditLogger
+        from app.core.cache import cache
+        AuditLogger.log(
+            session,
+            user_id=order.user_id,
+            action="payment_succeeded",
+            resource_type="order",
+            resource_id=order.id,
+            changes={
+                "reference": reference,
+                "payment_status": {"old": prev_payment, "new": "paid"},
+                "status": {"old": prev_status, "new": order.status},
+            },
+        )
+        cache.delete_pattern("admin:dashboard:*")
+    except Exception:
+        pass
+
     return order
 
 

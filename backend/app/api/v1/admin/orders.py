@@ -3,10 +3,12 @@ Admin order management routes
 """
 from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query, Response
 from sqlmodel import Session, select
 from pydantic import BaseModel
 
+from app.core.audit import AuditLogger
+from app.core.cache import cache
 from app.db import get_session
 from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Order, Product
@@ -48,6 +50,17 @@ class OrderTrackingUpdate(BaseModel):
     shipping_provider: Optional[str] = None
     estimated_delivery: Optional[datetime] = None
     cancel_reason: Optional[str] = None
+
+
+class OrderShippingUpdate(BaseModel):
+    """Edit post-creation shipping & contact details (admin only)."""
+    shipping_address: Optional[str] = None
+    shipping_region: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_provider: Optional[str] = None
+    shipping_contact_name: Optional[str] = None
+    shipping_contact_phone: Optional[str] = None
+    notes: Optional[str] = None
 
 
 @router.get("/", response_model=List[OrderManagementRead])
@@ -96,6 +109,7 @@ async def admin_get_order_detail(
 async def admin_paystack_refund(
     order_id: int,
     body: PaystackRefundRequestBody,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
@@ -109,6 +123,20 @@ async def admin_paystack_refund(
         customer_note=body.customer_note,
         merchant_note=body.merchant_note,
     )
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="paystack_refund",
+        resource_type="order",
+        resource_id=order_id,
+        changes={
+            "amount": body.amount,
+            "merchant_note": body.merchant_note,
+            "result": data,
+        },
+        request=request,
+    )
+    cache.delete_pattern("admin:dashboard:*")
     return PaystackRefundResponse(**data)
 
 
@@ -116,11 +144,23 @@ async def admin_paystack_refund(
 async def update_order_status_endpoint(
     order_id: int,
     status_update: OrderStatusUpdate,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
-    """Update order status."""
+    """Update order status (also writes an audit log and busts the dashboard cache)."""
+    before = session.get(Order, order_id)
+    prev_status = getattr(before, "status", None)
     order = await update_order_status(session, order_id, status_update.status)
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="status_change",
+        resource_type="order",
+        resource_id=order_id,
+        changes={"status": {"old": prev_status, "new": order.status}},
+        request=request,
+    )
     return order
 
 
@@ -128,6 +168,7 @@ async def update_order_status_endpoint(
 async def update_order_tracking(
     order_id: int,
     tracking_update: OrderTrackingUpdate,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
@@ -137,6 +178,13 @@ async def update_order_tracking(
     This endpoint handles shipment notifications with tracking details,
     and automatically sends email notifications to customers.
     """
+    before = session.get(Order, order_id)
+    prev = {
+        "status": getattr(before, "status", None),
+        "tracking_number": getattr(before, "tracking_number", None),
+        "shipping_provider": getattr(before, "shipping_provider", None),
+        "estimated_delivery": getattr(before, "estimated_delivery", None),
+    }
     order = await update_order_status_and_notify(
         session=session,
         order_id=order_id,
@@ -145,13 +193,78 @@ async def update_order_tracking(
         shipping_provider=tracking_update.shipping_provider,
         estimated_delivery=tracking_update.estimated_delivery
     )
-    
+
     if tracking_update.status == "cancelled" and tracking_update.cancel_reason:
         order.cancel_reason = tracking_update.cancel_reason
         session.add(order)
         session.commit()
         session.refresh(order)
-    
+
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="tracking_update",
+        resource_type="order",
+        resource_id=order_id,
+        changes={
+            "previous": {k: str(v) if v else None for k, v in prev.items()},
+            "new_status": tracking_update.status,
+            "tracking_number": tracking_update.tracking_number,
+            "shipping_provider": tracking_update.shipping_provider,
+            "cancel_reason": tracking_update.cancel_reason,
+        },
+        request=request,
+    )
+    cache.delete_pattern("admin:dashboard:*")
+    return order
+
+
+@router.patch("/{order_id}/shipping")
+async def update_order_shipping(
+    order_id: int,
+    body: OrderShippingUpdate,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin_permission("manage_orders")),
+):
+    """Edit a saved order's shipping address / region / city / contact / notes.
+
+    Use only before the order ships — does not adjust totals or shipping fee.
+    """
+    order = session.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    payload = body.model_dump(exclude_unset=True)
+    if not payload:
+        return order
+
+    changes: dict[str, dict] = {}
+    for field, value in payload.items():
+        old = getattr(order, field, None)
+        if old == value:
+            continue
+        setattr(order, field, value)
+        changes[field] = {"old": old, "new": value}
+
+    if not changes:
+        return order
+
+    order.updated_at = datetime.utcnow()
+    session.add(order)
+    session.commit()
+    session.refresh(order)
+
+    AuditLogger.log(
+        session,
+        user_id=current_user.id,
+        action="shipping_update",
+        resource_type="order",
+        resource_id=order_id,
+        changes=changes,
+        request=request,
+    )
+    cache.delete_pattern("admin:dashboard:*")
     return order
 
 
