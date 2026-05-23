@@ -90,6 +90,10 @@ def _configure_postgres_rls_for_request(session: Session, request: Request) -> N
         _clear()
         return
 
+    if not payload:
+        _clear()
+        return
+
     subject = payload.get("sub")
     if not subject:
         _clear()

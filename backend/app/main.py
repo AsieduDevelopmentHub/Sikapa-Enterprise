@@ -22,6 +22,7 @@ from app.core.rate_limit import limiter
 from app.core.startup_checks import (
     is_production_environment,
     validate_production_config_or_raise,
+    warn_database_config,
     warn_dev_secret,
 )
 from app.core.cache import cache
@@ -36,6 +37,8 @@ logging.basicConfig(
 )
 
 _https_enabled = os.getenv("HTTPS_ENABLED", "false").lower() == "true"
+# Render terminates TLS at the edge; redirecting HTTP→HTTPS in-app breaks health checks.
+_on_render = os.getenv("RENDER", "").strip().lower() in {"true", "1", "yes"}
 _disable_openapi = os.getenv("DISABLE_OPENAPI", "").strip().lower() in {"1", "true", "yes"} or (
     is_production_environment()
 )
@@ -60,12 +63,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-if _https_enabled and os.getenv("DEBUG", "false").lower() != "true":
+if _https_enabled and not _on_render and os.getenv("DEBUG", "false").lower() != "true":
     app.add_middleware(HTTPSRedirectMiddleware)
 
-_cors_raw = os.getenv(
-    "CORS_ORIGINS"
-)
+_cors_raw = os.getenv("CORS_ORIGINS", "")
 cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
 cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
 _cors_regex = os.getenv("CORS_ORIGIN_REGEX", "").strip()
