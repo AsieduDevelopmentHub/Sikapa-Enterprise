@@ -18,6 +18,9 @@ os.environ["EMAIL_ENABLED"] = "false"
 os.environ["HTTPS_ENABLED"] = "false"
 os.environ["DEBUG"] = "false"
 os.environ["TESTING"] = "true"
+# Match CI: in-memory rate limits (avoid Redis from backend/.env during tests).
+os.environ["REDIS_URL"] = ""
+os.environ["PAYSTACK_SECRET_KEY"] = ""
 
 import pytest
 from httpx import AsyncClient

@@ -18,6 +18,7 @@ __pycache__
 /frontend/.env.local
 .env
 *.sqlite
+backend/coverage.xml
 
 # Pytest
 /backend/tests/__pycache__

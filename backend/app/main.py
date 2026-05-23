@@ -27,7 +27,8 @@ from app.core.startup_checks import (
 from app.core.cache import cache
 from app.db import create_db_and_tables
 
-load_dotenv()
+# Do not override env vars already set (CI, pytest conftest, Render dashboard).
+load_dotenv(override=False)
 
 logging.basicConfig(
     level=logging.INFO,

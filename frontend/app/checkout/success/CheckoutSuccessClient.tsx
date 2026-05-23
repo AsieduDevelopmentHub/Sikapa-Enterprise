@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ordersDetail, type OrderDetail } from "@/lib/api/orders";
 import { paystackVerify } from "@/lib/api/payments";
 import { formatGhs } from "@/lib/mock-data";
+import { isPaystackPaymentConfirmed } from "@/lib/paystack-status";
 
 export function CheckoutSuccessClient() {
   const params = useSearchParams();
@@ -55,7 +56,9 @@ export function CheckoutSuccessClient() {
         const v = await paystackVerify(accessToken, paidRef);
         if (cancelled) return;
         if (typeof window !== "undefined") sessionStorage.setItem(doneKey, "1");
-        setStatus(v.status === "success" || v.already_confirmed ? "verified" : "pending");
+        setStatus(
+          isPaystackPaymentConfirmed(v.status, v.already_confirmed) ? "verified" : "pending",
+        );
         await load();
       } catch (e) {
         if (cancelled) return;
