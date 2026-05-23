@@ -22,11 +22,13 @@ import {
   Users,
   Wallet,
   Warehouse,
+  ScrollText,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { pingBackendHealth } from "@/lib/api/client";
+import { canAccessAdminNav } from "@/lib/admin-permissions";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 
 export type AdminNavItem = {
@@ -46,6 +48,7 @@ const NAV_MAIN: AdminNavItem[] = [
   { href: "/system/coupons", label: "Coupons", icon: Ticket },
   { href: "/system/reviews", label: "Reviews", icon: Star },
   { href: "/system/analytics", label: "Analytics", icon: LineChart },
+  { href: "/system/audit", label: "Audit log", icon: ScrollText },
   { href: "/system/search-analytics", label: "Search", icon: Search },
   { href: "/system/payments", label: "Payments", icon: Wallet },
   { href: "/system/staff", label: "Staff", icon: Shield },
@@ -204,7 +207,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </Link>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        {NAV_MAIN.map((item) => (
+        {NAV_MAIN.filter((item) => canAccessAdminNav(user, item.href)).map((item) => (
           <AdminSidebarLink key={item.href} item={item} pathname={pathname} onNavigate={closeMobile} />
         ))}
       </nav>

@@ -6,8 +6,8 @@ from fastapi import Request
 from sqlalchemy import event, text
 from sqlmodel import Session, SQLModel, create_engine, select
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file (do not override CI/test/Render env).
+load_dotenv(override=False)
 
 # Get the backend directory path
 backend_dir = Path(__file__).parent.parent

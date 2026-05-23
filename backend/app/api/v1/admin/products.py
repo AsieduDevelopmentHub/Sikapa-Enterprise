@@ -215,6 +215,95 @@ async def create_product(
     return created
 
 
+@router.get("/low-stock/list", response_model=List[ProductManagementRead])
+async def list_low_stock_products(
+    threshold: int = Query(5, ge=0, le=10_000),
+    limit: int = Query(100, ge=1, le=500),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin_permission("manage_inventory")),
+):
+    """
+    Products at or below `threshold` stock. Default threshold is 5.
+    Useful for admin "stock alerts" dashboards and back-in-stock emails.
+    """
+    stmt = (
+        select(Product)
+        .where(Product.is_active == True, Product.in_stock <= threshold)
+        .order_by(Product.in_stock.asc(), Product.name.asc())
+        .limit(limit)
+    )
+    rows = list(session.exec(stmt).all())
+    return [ProductManagementRead.model_validate(p) for p in rows]
+
+
+@router.get("/low-stock/alerts", response_model=List[StockAlertItem])
+async def list_low_stock_alerts(
+    threshold: int = Query(5, ge=0, le=10_000),
+    limit: int = Query(100, ge=1, le=500),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin_permission("manage_inventory")),
+):
+    """Products and active variants at or below `threshold` (merged, sorted by stock)."""
+    prods = list(
+        session.exec(
+            select(Product)
+            .where(Product.is_active == True, Product.in_stock <= threshold)
+            .order_by(Product.in_stock.asc(), Product.name.asc())
+            .limit(limit)
+        ).all()
+    )
+    pairs = list(
+        session.exec(
+            select(ProductVariant, Product)
+            .join(Product, ProductVariant.product_id == Product.id)
+            .where(
+                Product.is_active == True,
+                ProductVariant.is_active == True,
+                ProductVariant.in_stock <= threshold,
+            )
+            .order_by(
+                ProductVariant.in_stock.asc(),
+                Product.name.asc(),
+                ProductVariant.name.asc(),
+            )
+            .limit(limit)
+        ).all()
+    )
+    out: list[StockAlertItem] = []
+    for p in prods:
+        if p.id is None:
+            continue
+        out.append(
+            StockAlertItem(
+                kind="product",
+                product_id=p.id,
+                variant_id=None,
+                name=p.name,
+                parent_product_name=None,
+                sku=p.sku,
+                in_stock=int(p.in_stock),
+                unit_price=float(p.price),
+            )
+        )
+    for v, p in pairs:
+        if v.id is None or p.id is None:
+            continue
+        out.append(
+            StockAlertItem(
+                kind="variant",
+                product_id=p.id,
+                variant_id=v.id,
+                name=v.name,
+                parent_product_name=p.name,
+                sku=v.sku or p.sku,
+                in_stock=int(v.in_stock),
+                unit_price=float(p.price) + float(v.price_delta),
+            )
+        )
+    out.sort(key=lambda r: (r.in_stock, r.name.lower()))
+    return out[:limit]
+
+
 @router.get("/{product_id}", response_model=ProductManagementRead)
 async def get_product_admin(
     product_id: int,
@@ -317,95 +406,6 @@ async def delete_product(
         request=request,
     )
     cache.delete_pattern("admin:dashboard:*")
-
-
-@router.get("/low-stock/list", response_model=List[ProductManagementRead])
-async def list_low_stock_products(
-    threshold: int = Query(5, ge=0, le=10_000),
-    limit: int = Query(100, ge=1, le=500),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(require_admin_permission("manage_inventory")),
-):
-    """
-    Products at or below `threshold` stock. Default threshold is 5.
-    Useful for admin "stock alerts" dashboards and back-in-stock emails.
-    """
-    stmt = (
-        select(Product)
-        .where(Product.is_active == True, Product.in_stock <= threshold)
-        .order_by(Product.in_stock.asc(), Product.name.asc())
-        .limit(limit)
-    )
-    rows = list(session.exec(stmt).all())
-    return [ProductManagementRead.model_validate(p) for p in rows]
-
-
-@router.get("/low-stock/alerts", response_model=List[StockAlertItem])
-async def list_low_stock_alerts(
-    threshold: int = Query(5, ge=0, le=10_000),
-    limit: int = Query(100, ge=1, le=500),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(require_admin_permission("manage_inventory")),
-):
-    """Products and active variants at or below `threshold` (merged, sorted by stock)."""
-    prods = list(
-        session.exec(
-            select(Product)
-            .where(Product.is_active == True, Product.in_stock <= threshold)
-            .order_by(Product.in_stock.asc(), Product.name.asc())
-            .limit(limit)
-        ).all()
-    )
-    pairs = list(
-        session.exec(
-            select(ProductVariant, Product)
-            .join(Product, ProductVariant.product_id == Product.id)
-            .where(
-                Product.is_active == True,
-                ProductVariant.is_active == True,
-                ProductVariant.in_stock <= threshold,
-            )
-            .order_by(
-                ProductVariant.in_stock.asc(),
-                Product.name.asc(),
-                ProductVariant.name.asc(),
-            )
-            .limit(limit)
-        ).all()
-    )
-    out: list[StockAlertItem] = []
-    for p in prods:
-        if p.id is None:
-            continue
-        out.append(
-            StockAlertItem(
-                kind="product",
-                product_id=p.id,
-                variant_id=None,
-                name=p.name,
-                parent_product_name=None,
-                sku=p.sku,
-                in_stock=int(p.in_stock),
-                unit_price=float(p.price),
-            )
-        )
-    for v, p in pairs:
-        if v.id is None or p.id is None:
-            continue
-        out.append(
-            StockAlertItem(
-                kind="variant",
-                product_id=p.id,
-                variant_id=v.id,
-                name=v.name,
-                parent_product_name=p.name,
-                sku=v.sku or p.sku,
-                in_stock=int(v.in_stock),
-                unit_price=float(p.price) + float(v.price_delta),
-            )
-        )
-    out.sort(key=lambda r: (r.in_stock, r.name.lower()))
-    return out[:limit]
 
 
 @router.post(
