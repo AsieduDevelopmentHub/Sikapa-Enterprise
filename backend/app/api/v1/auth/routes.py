@@ -109,13 +109,35 @@ def login_endpoint(
     session: Session = Depends(get_session)
 ):
     """Login user and return access/refresh tokens."""
-    user = authenticate_user(session, payload.identifier, payload.password)
+    from app.core.audit import AuditLogger
+
+    try:
+        user = authenticate_user(session, payload.identifier, payload.password)
+    except HTTPException as exc:
+        AuditLogger.log_auth_event(
+            session,
+            user_id=None,
+            event_type="login",
+            success=False,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            error_message=str(exc.detail),
+        )
+        raise
     if user.two_fa_enabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="two_factor_required",
         )
     tokens = create_user_tokens(user)
+    AuditLogger.log_auth_event(
+        session,
+        user_id=user.id,
+        event_type="login",
+        success=True,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
     return tokens
 
 
