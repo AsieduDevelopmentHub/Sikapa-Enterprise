@@ -12,6 +12,7 @@ import {
   type OrderDetail,
 } from "@/lib/api/orders";
 import { paystackInitialize, paystackVerify } from "@/lib/api/payments";
+import { isPaystackPaymentConfirmed } from "@/lib/paystack-status";
 import { GHANA_REGIONS } from "@/lib/ghana-shipping";
 import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
 import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline";
@@ -93,9 +94,9 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
         if (cancelled) return;
         if (typeof window !== "undefined") sessionStorage.setItem(doneKey, "1");
         setVerifyMsg(
-          v.status === "success" || v.already_confirmed
+          isPaystackPaymentConfirmed(v.status, v.already_confirmed)
             ? "Payment confirmed. Your receipt is available below."
-            : `Payment status: ${v.status}`
+            : `Payment status: ${v.status}`,
         );
         await load();
         if (typeof window !== "undefined") {

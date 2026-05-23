@@ -17,6 +17,18 @@ def is_production_environment() -> bool:
     return os.getenv("PRODUCTION", "").strip().lower() in {"1", "true", "yes"}
 
 
+def _paystack_secret_configured() -> bool:
+    raw = os.getenv("PAYSTACK_SECRET_KEY", "").strip()
+    if not raw:
+        return False
+    placeholders = {
+        "your-paystack-secret-key-here",
+        "sk_test_xxx",
+        "sk_live_xxx",
+    }
+    return raw.lower() not in placeholders and not raw.startswith("sk_xxx")
+
+
 def validate_production_config_or_raise() -> None:
     """Fail fast when production is enabled but secrets are unsafe."""
     if not is_production_environment():
@@ -33,6 +45,14 @@ def validate_production_config_or_raise() -> None:
             f"{_MIN_SECRET_LEN} characters). Do not use the default placeholder."
         )
 
+    if not _paystack_secret_configured():
+        logger.critical(
+            "Production startup blocked: PAYSTACK_SECRET_KEY is missing or still a placeholder."
+        )
+        raise RuntimeError(
+            "Production requires PAYSTACK_SECRET_KEY (sk_test_… or sk_live_…) from "
+            "https://dashboard.paystack.com/#/settings/developer"
+        )
 
 
 def warn_dev_secret() -> None:
@@ -44,4 +64,9 @@ def warn_dev_secret() -> None:
         logger.warning(
             "Using default SECRET_KEY — JWTs are forgeable by anyone who knows the source. "
             "Set SECRET_KEY in backend/.env for real deployments.",
+        )
+    if not _paystack_secret_configured():
+        logger.warning(
+            "PAYSTACK_SECRET_KEY is not set — checkout will return 503 until you add keys from "
+            "https://dashboard.paystack.com/#/settings/developer",
         )
