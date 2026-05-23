@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminFetchOrders,
@@ -11,7 +11,9 @@ import {
 } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import { AdminRefreshButton } from "@/components/admin/AdminRefreshButton";
 import { AdminPaymentsPageSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 export default function AdminPaymentsPage() {
   const { accessToken } = useAuth();
@@ -22,8 +24,9 @@ export default function AdminPaymentsPage() {
   const [query, setQuery] = useState("");
   const [ready, setReady] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
+    if (!opts?.silent) setReady(false);
     try {
       const [transactions, orders, users] = await Promise.all([
         adminFetchTransactions(accessToken, { limit: 100 }),
@@ -48,9 +51,7 @@ export default function AdminPaymentsPage() {
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { reload } = useAdminLiveLoad(load, [accessToken]);
 
   const visibleRows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -77,14 +78,19 @@ export default function AdminPaymentsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-serif text-page-title font-semibold">Payments</h1>
-          <p className="text-small text-sikapa-text-secondary">Paystack transaction log linked to orders.</p>
+          <p className="text-small text-sikapa-text-secondary">
+            Paystack transaction log linked to orders. Unpaid checkouts appear under Orders until payment is initialized.
+          </p>
         </div>
-        <AdminSearchInput
+        <div className="flex flex-col gap-2 sm:items-end">
+          <AdminRefreshButton onClick={() => reload()} loading={!ready} />
+          <AdminSearchInput
           value={query}
           onChange={setQuery}
           placeholder="Search reference, order, customer…"
           hint={query ? `${visibleRows.length} of ${rows.length} shown` : undefined}
         />
+        </div>
       </div>
       {err && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800">{err}</p>}
       {!ready && !err && <AdminPaymentsPageSkeleton />}

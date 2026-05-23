@@ -25,14 +25,7 @@ async def get_dashboard_metrics(
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("view_analytics")),
 ):
-    """Get dashboard metrics and analytics (cached for 5 mins)."""
-    from app.core.cache import cache
-    
-    cache_key = f"admin:dashboard:{days}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
+    """Get dashboard metrics and analytics (always read fresh from the database)."""
     # Date range
     start_date = datetime.utcnow() - timedelta(days=days)
     
@@ -119,10 +112,7 @@ async def get_dashboard_metrics(
         top_products=top_products,
         period_days=days,
     )
-    
-    # Short cache (30s) so admin sees fresh metrics within seconds of changes;
-    # all relevant mutations also call cache.delete_pattern("admin:dashboard:*").
-    cache.set(cache_key, result.model_dump(), ttl=30)
+
     return result
 
 

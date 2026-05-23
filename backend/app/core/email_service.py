@@ -54,20 +54,23 @@ class EmailService:
             )
             return "queued-in-background"
 
-        # 2. Fallback: Celery (if infrastructure exists)
-        try:
-            send_email_task.delay(
-                to_email=to_email,
-                subject=subject,
-                html_content=html_content,
-                from_email=from_email,
-            )
-            return "queued-in-celery"
-        except Exception as e:
-            # 3. Last Resort: Immediate sync (blocks request)
-            import logging
-            logging.getLogger(__name__).warning("Celery failed, sending synchronously: %s", e)
-            return send_email_immediate(to_email, subject, html_content, from_email)
+        # 2. Optional Celery (only when USE_CELERY=true and a worker is running)
+        use_celery = os.getenv("USE_CELERY", "false").lower() == "true"
+        if use_celery:
+            try:
+                send_email_task.delay(
+                    to_email=to_email,
+                    subject=subject,
+                    html_content=html_content,
+                    from_email=from_email,
+                )
+                return "queued-in-celery"
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("Celery failed, sending synchronously: %s", e)
+
+        # 3. Immediate sync (Render web service without Celery worker)
+        return send_email_immediate(to_email, subject, html_content, from_email)
 
     @staticmethod
     def send_welcome_email(email: str, first_name: str | None = None, background_tasks: BackgroundTasks | None = None) -> bool:

@@ -18,6 +18,8 @@ import { pingBackendHealth } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
 import { RevenueTrendChart } from "@/components/admin/charts/RevenueTrendChart";
 import { OrderStatusDonut } from "@/components/admin/charts/OrderStatusDonut";
+import { AdminRefreshButton } from "@/components/admin/AdminRefreshButton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 import {
   Skeleton,
   SkeletonChart,
@@ -48,9 +50,9 @@ export function AdminDashboardContent() {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const [dRes, revRes, ordersRes, alertsRes] = await Promise.allSettled([
@@ -98,13 +100,11 @@ export function AdminDashboardContent() {
     }
   }, [accessToken, days]);
 
+  const { reload } = useAdminLiveLoad(load, [accessToken, days]);
+
   useEffect(() => {
     pingBackendHealth();
   }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   return (
     <div>
@@ -116,6 +116,7 @@ export function AdminDashboardContent() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <AdminRefreshButton onClick={() => reload()} loading={loading} />
           {([7, 30, 90] as const).map((d) => (
             <button
               key={d}
