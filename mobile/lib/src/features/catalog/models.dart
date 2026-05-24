@@ -75,6 +75,37 @@ class Product {
   }
 }
 
+class ProductGalleryImage {
+  ProductGalleryImage({
+    required this.id,
+    required this.productId,
+    required this.imageUrl,
+    this.altText,
+    this.isPrimary = false,
+    this.sortOrder = 0,
+  });
+
+  final int id;
+  final int productId;
+  final String imageUrl;
+  final String? altText;
+  final bool isPrimary;
+  final int sortOrder;
+
+  String get displayUrl => resolveImageUrl(imageUrl);
+
+  factory ProductGalleryImage.fromJson(Map<String, dynamic> json) {
+    return ProductGalleryImage(
+      id: (json['id'] as num).toInt(),
+      productId: (json['product_id'] as num).toInt(),
+      imageUrl: json['image_url'] as String? ?? '',
+      altText: json['alt_text'] as String?,
+      isPrimary: json['is_primary'] as bool? ?? false,
+      sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class ProductPage {
   ProductPage({
     required this.total,

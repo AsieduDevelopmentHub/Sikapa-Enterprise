@@ -35,27 +35,3 @@ class ProductVariant {
     description: json['description'] as String?,
   );
 }
-
-class ProductGalleryImage {
-  ProductGalleryImage({
-    required this.id,
-    required this.imageUrl,
-    this.isPrimary = false,
-    this.altText,
-  });
-
-  final int id;
-  final String imageUrl;
-  final bool isPrimary;
-  final String? altText;
-
-  String get displayUrl => resolveImageUrl(imageUrl);
-
-  factory ProductGalleryImage.fromJson(Map<String, dynamic> json) =>
-      ProductGalleryImage(
-        id: (json['id'] as num).toInt(),
-        imageUrl: json['image_url'] as String,
-        isPrimary: json['is_primary'] as bool? ?? false,
-        altText: json['alt_text'] as String?,
-      );
-}

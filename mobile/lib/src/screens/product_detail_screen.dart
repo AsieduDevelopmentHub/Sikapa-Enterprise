@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,8 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../core/api/api_exception.dart';
 import '../core/theme.dart';
+import '../features/catalog/models.dart';
 import '../features/catalog/variant_models.dart';
+import '../features/reviews/models.dart';
 import '../providers.dart';
+import '../widgets/product_image_carousel.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.productId});
@@ -25,6 +27,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final productAsync = ref.watch(productDetailProvider(widget.productId));
     final variantsAsync = ref.watch(productVariantsProvider(widget.productId));
+    final imagesAsync = ref.watch(productImagesProvider(widget.productId));
+    final reviewsAsync = ref.watch(productReviewsProvider(widget.productId));
     final fmt = NumberFormat.simpleCurrency(name: 'GHS', decimalDigits: 2);
 
     return Scaffold(
@@ -58,9 +62,15 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           }
 
           final unitPrice = p.price + (selected?.priceDelta ?? 0);
-          final imageUrl = (selected?.imageUrl?.isNotEmpty == true)
+          final galleryUrls = _buildGalleryUrls(
+            p,
+            imagesAsync.value ?? const [],
+            selected,
+          );
+          final heroUrl = (selected?.imageUrl?.isNotEmpty == true)
               ? selected!.displayImage
               : p.displayImage;
+          final carouselUrls = galleryUrls.isNotEmpty ? galleryUrls : [heroUrl];
           final canAdd =
               p.isInStock &&
               (variants.isEmpty || (selected?.isInStock ?? false));
@@ -95,12 +105,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
-                  background: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, _, _) =>
-                        Container(color: SikapaColors.graySoft),
-                  ),
+                  background: ProductImageCarousel(imageUrls: carouselUrls),
                 ),
               ),
               SliverToBoxAdapter(
@@ -180,6 +185,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       const SizedBox(height: 24),
+                      _ReviewsBlock(
+                        productId: widget.productId,
+                        reviewsAsync: reviewsAsync,
+                        authSignedIn: auth.isSignedIn,
+                      ),
+                      const SizedBox(height: 24),
                       Row(
                         children: [
                           Expanded(
@@ -205,10 +216,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               onPressed: !canAdd
                                   ? null
                                   : () async {
-                                      if (!auth.isSignedIn) {
-                                        context.push('/login');
-                                        return;
-                                      }
                                       try {
                                         await ref
                                             .read(cartProvider.notifier)
@@ -220,8 +227,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Added to cart'),
+                                            SnackBar(
+                                              content: Text(
+                                                auth.isSignedIn
+                                                    ? 'Added to cart'
+                                                    : 'Saved to cart — sign in at checkout',
+                                              ),
                                             ),
                                           );
                                         }
@@ -246,6 +257,237 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  List<String> _buildGalleryUrls(
+    Product p,
+    List<ProductGalleryImage> gallery,
+    ProductVariant? selected,
+  ) {
+    final urls = <String>[];
+    if (selected?.displayImage.isNotEmpty == true) {
+      urls.add(selected!.displayImage);
+    } else if (p.displayImage.isNotEmpty) {
+      urls.add(p.displayImage);
+    }
+    for (final img in gallery) {
+      final u = img.displayUrl;
+      if (u.isNotEmpty && !urls.contains(u)) urls.add(u);
+    }
+    return urls;
+  }
+}
+
+class _ReviewsBlock extends ConsumerWidget {
+  const _ReviewsBlock({
+    required this.productId,
+    required this.reviewsAsync,
+    required this.authSignedIn,
+  });
+
+  final int productId;
+  final AsyncValue<List<Review>> reviewsAsync;
+  final bool authSignedIn;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eligibility = ref.watch(reviewEligibilityProvider(productId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Reviews', style: Theme.of(context).textTheme.titleLarge),
+            const Spacer(),
+            if (authSignedIn && (eligibility.value?.canReview ?? false))
+              TextButton(
+                onPressed: () => _WriteReviewSheet.show(context, productId),
+                child: const Text('Write a review'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        reviewsAsync.when(
+          loading: () => const LinearProgressIndicator(minHeight: 2),
+          error: (_, _) => const Text('Could not load reviews.'),
+          data: (reviews) {
+            if (reviews.isEmpty) {
+              return Text(
+                'No reviews yet.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: SikapaColors.textMuted),
+              );
+            }
+            return Column(
+              children: reviews
+                  .take(8)
+                  .map((r) => _ReviewTile(review: r))
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewTile extends StatelessWidget {
+  const _ReviewTile({required this.review});
+  final Review review;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ...List.generate(
+                5,
+                (i) => Icon(
+                  i < review.rating ? Icons.star : Icons.star_border,
+                  size: 14,
+                  color: SikapaColors.gold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  review.reviewerName ?? 'Customer',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(review.title, style: Theme.of(context).textTheme.titleSmall),
+          if (review.content != null && review.content!.trim().isNotEmpty)
+            Text(
+              review.content!,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WriteReviewSheet extends ConsumerStatefulWidget {
+  const _WriteReviewSheet({required this.productId});
+  final int productId;
+
+  static Future<void> show(BuildContext context, int productId) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _WriteReviewSheet(productId: productId),
+    );
+  }
+
+  @override
+  ConsumerState<_WriteReviewSheet> createState() => _WriteReviewSheetState();
+}
+
+class _WriteReviewSheetState extends ConsumerState<_WriteReviewSheet> {
+  final _titleCtrl = TextEditingController();
+  final _contentCtrl = TextEditingController();
+  int _rating = 5;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _contentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final title = _titleCtrl.text.trim();
+    final content = _contentCtrl.text.trim();
+    if (title.isEmpty || content.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(reviewsServiceProvider)
+          .create(
+            productId: widget.productId,
+            rating: _rating,
+            title: title,
+            content: content,
+          );
+      ref.invalidate(productReviewsProvider(widget.productId));
+      ref.invalidate(reviewEligibilityProvider(widget.productId));
+      ref.invalidate(productDetailProvider(widget.productId));
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thank you for your review')),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Write a review', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final star = i + 1;
+              return IconButton(
+                icon: Icon(
+                  star <= _rating ? Icons.star : Icons.star_border,
+                  color: SikapaColors.gold,
+                ),
+                onPressed: () => setState(() => _rating = star),
+              );
+            }),
+          ),
+          TextField(
+            controller: _titleCtrl,
+            decoration: const InputDecoration(labelText: 'Title'),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _contentCtrl,
+            decoration: const InputDecoration(labelText: 'Your review'),
+            maxLines: 4,
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: _busy ? null : _submit,
+            child: _busy
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Submit'),
+          ),
+        ],
       ),
     );
   }

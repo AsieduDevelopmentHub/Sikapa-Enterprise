@@ -85,6 +85,11 @@ class AccountScreen extends ConsumerWidget {
             onTap: () => context.push('/orders'),
           ),
           _Tile(
+            icon: Icons.assignment_return_outlined,
+            title: 'Returns & refunds',
+            onTap: () => context.push('/returns'),
+          ),
+          _Tile(
             icon: Icons.local_shipping_outlined,
             title: 'Shipping address',
             onTap: () => context.push('/account/shipping-address'),
