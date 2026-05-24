@@ -10,7 +10,7 @@ crimson `#941A20`, gold `#C8A96A`, cream `#F7F4F1`).
 
 | Concern | Choice |
 |---------|--------|
-| Framework | Flutter 3.41.x / Dart 3.11.x |
+| Framework | Flutter 3.44.x / Dart 3.11.x |
 | State | `flutter_riverpod` |
 | Routing | `go_router` |
 | HTTP | `dio` |
@@ -70,7 +70,7 @@ mobile/
 
 ### Prerequisites
 
-- Flutter 3.41+ (`flutter --version`)
+- Flutter 3.44+ (`flutter --version`)
 - Android Studio + a connected Android device or AVD, **or** Xcode + an iOS simulator/device
 - The FastAPI backend running locally on `http://localhost:8000` (see `../backend/README.md`)
 
