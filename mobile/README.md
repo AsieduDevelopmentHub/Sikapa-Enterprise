@@ -206,10 +206,13 @@ Also shipped (Phases 2–3):
 - Google OAuth WebView when `SIKAPA_GOOGLE_OAUTH_ENABLED=true` (set `SIKAPA_FRONTEND_URL` to your SPA origin)
 - Profile edit, idempotency keys on checkout
 
-Deferred (Phase 4+):
+Shipped (Phase 4): dark theme, tablet layouts, help/FAQ, recently viewed, shipped-order local notifications.
 
-- Push notifications, tablet layouts, dark theme
-- Admin features (intentionally out of scope — admin runs on web only)
+**Admin (mobile):** signed-in admins open **Account → Admin portal** (`/admin`) for orders, products, returns, customers, inventory, and more. Granular staff permissions match the web. Complex edits (new product, categories, staff roles) remain on web `/system`.
+
+Deferred:
+
+- FCM / backend push (local shipped notification only today)
 
 ## Cross-references
 
