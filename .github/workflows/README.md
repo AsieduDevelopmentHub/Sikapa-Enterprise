@@ -4,10 +4,17 @@ Mirror CI on your machine so pushes do not surprise you on GitHub.
 
 ## Quick command (Windows)
 
-From the repo root:
+From the repo root (backend uses **`backend/venv`**, not global Python):
 
 ```powershell
+# One-time: cd backend; python -m venv venv; .\venv\Scripts\activate; pip install -r requirements.txt
 .\scripts\ci-local.ps1
+```
+
+If your venv lives elsewhere:
+
+```powershell
+.\scripts\ci-local.ps1 -BackendVenv "C:\path\to\backend\venv\Scripts\python.exe"
 ```
 
 | Flag | Effect |
@@ -24,7 +31,7 @@ From the repo root:
 
 | Job | Local equivalent |
 |-----|------------------|
-| Backend CI | `backend`: `pytest` with coverage ≥ 50% (`pyproject.toml`) |
+| Backend CI | `backend/venv`: `pytest` with coverage ≥ 50% (`pyproject.toml`) |
 | Frontend CI | `frontend`: `npm ci`, `lint`, `build`, `test` |
 
 ### `mobile-build.yml` (Android job)

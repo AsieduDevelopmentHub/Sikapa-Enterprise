@@ -11,7 +11,9 @@ param(
     [switch]$MobileOnly,
     [switch]$IncludeFrontend,
     [switch]$SkipAndroidBuild,
-    [string]$MobileApiBase = "https://sikapa-backend.onrender.com/api/v1"
+    [string]$MobileApiBase = "https://sikapa-backend.onrender.com/api/v1",
+    # Backend venv (default: backend/venv per backend/README.md). Use backend/.venv if that is your layout.
+    [string]$BackendVenv = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,9 +33,29 @@ function Invoke-Step($name, [scriptblock]$Block) {
     }
 }
 
+function Resolve-BackendPython {
+    param([string]$Override)
+    if ($Override -and (Test-Path $Override)) {
+        return (Resolve-Path $Override).Path
+    }
+    $candidates = @(
+        (Join-Path $Root "backend\venv\Scripts\python.exe"),
+        (Join-Path $Root "backend\.venv\Scripts\python.exe")
+    )
+    foreach ($c in $candidates) {
+        if (Test-Path $c) { return (Resolve-Path $c).Path }
+    }
+    throw "Backend venv not found. Create one: cd backend; python -m venv venv; .\venv\Scripts\activate; pip install -r requirements.txt"
+}
+
 $runBackend = -not $MobileOnly
 $runMobile = -not $BackendOnly
 $failed = @()
+$BackendPython = $null
+if ($runBackend) {
+    $BackendPython = Resolve-BackendPython -Override $BackendVenv
+    Write-Host "Using backend Python: $BackendPython" -ForegroundColor DarkGray
+}
 
 if ($runBackend) {
     try {
@@ -52,9 +74,9 @@ if ($runBackend) {
             $env:DEBUG = "false"
             $env:TESTING = "true"
             $env:PAYSTACK_SECRET_KEY = ""
-            python -m pip install --upgrade pip -q
-            python -m pip install -r requirements.txt -q
-            python -m pytest tests/ -v --tb=short --cov=app --cov-report=xml
+            # Use project venv only — do not install into global Python.
+            & $BackendPython -m pip install -r requirements.txt -q
+            & $BackendPython -m pytest tests/ -v --tb=short --cov=app --cov-report=xml
         }
     } catch {
         $failed += "Backend: $_"
