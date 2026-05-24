@@ -39,7 +39,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       _error = null;
     });
     try {
-      await ref.read(authProvider.notifier).register(
+      await ref
+          .read(authProvider.notifier)
+          .register(
             username: _username.text.trim(),
             name: _name.text.trim(),
             password: _password.text,
@@ -65,18 +67,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text('Join Sikapa', style: Theme.of(context).textTheme.headlineLarge),
+              Text(
+                'Join Sikapa',
+                style: Theme.of(context).textTheme.headlineLarge,
+              ),
               const SizedBox(height: 6),
-              Text('Username and full name are required. Email is optional but recommended for receipts.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: SikapaColors.textMuted,
-                      )),
+              Text(
+                'Username and full name are required. Email is optional but recommended for receipts.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: SikapaColors.textMuted),
+              ),
               const SizedBox(height: 24),
               TextFormField(
                 controller: _username,
                 decoration: const InputDecoration(labelText: 'Username'),
                 autocorrect: false,
-                validator: (v) => (v ?? '').trim().length < 3 ? 'At least 3 characters' : null,
+                validator: (v) => (v ?? '').trim().length < 3
+                    ? 'At least 3 characters'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -87,7 +96,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _email,
-                decoration: const InputDecoration(labelText: 'Email (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Email (optional)',
+                ),
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
               ),
@@ -97,12 +108,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 decoration: InputDecoration(
                   labelText: 'Password',
                   suffixIcon: IconButton(
-                    icon: Icon(_showPw ? Icons.visibility_off : Icons.visibility),
+                    icon: Icon(
+                      _showPw ? Icons.visibility_off : Icons.visibility,
+                    ),
                     onPressed: () => setState(() => _showPw = !_showPw),
                   ),
                 ),
                 obscureText: !_showPw,
-                validator: (v) => (v ?? '').length < 8 ? 'At least 8 characters' : null,
+                validator: (v) =>
+                    (v ?? '').length < 8 ? 'At least 8 characters' : null,
               ),
               if (_error != null)
                 Container(
@@ -112,14 +126,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     color: const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(_error!, style: const TextStyle(color: Color(0xFF991B1B))),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Color(0xFF991B1B)),
+                  ),
                 ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _busy ? null : _submit,
                 child: _busy
                     ? const SizedBox(
-                        width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Text('Create account'),
               ),
             ],

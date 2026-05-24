@@ -21,7 +21,11 @@ class WishlistScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.favorite_border, size: 56, color: SikapaColors.textMuted),
+                const Icon(
+                  Icons.favorite_border,
+                  size: 56,
+                  color: SikapaColors.textMuted,
+                ),
                 const SizedBox(height: 12),
                 const Text('Sign in to save items to your wishlist.'),
                 const SizedBox(height: 16),
@@ -43,7 +47,9 @@ class WishlistScreen extends ConsumerWidget {
         body: const Center(
           child: Padding(
             padding: EdgeInsets.all(24),
-            child: Text('No saved items yet. Tap the heart on any product to save it.'),
+            child: Text(
+              'No saved items yet. Tap the heart on any product to save it.',
+            ),
           ),
         ),
       );

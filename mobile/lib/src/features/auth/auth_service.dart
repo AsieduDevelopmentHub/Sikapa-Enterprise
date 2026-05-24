@@ -15,29 +15,41 @@ class AuthService {
 
   Future<TokenResponse> login(String identifier, String password) async {
     try {
-      final res = await _api.post<dynamic>(V1.authLogin, body: {
-        'identifier': identifier,
-        'password': password,
-      });
-      final tokens = TokenResponse.fromJson((res as Map).cast<String, dynamic>());
-      await _api.tokens.write(access: tokens.accessToken, refresh: tokens.refreshToken);
+      final res = await _api.post<dynamic>(
+        V1.authLogin,
+        body: {'identifier': identifier, 'password': password},
+      );
+      final tokens = TokenResponse.fromJson(
+        (res as Map).cast<String, dynamic>(),
+      );
+      await _api.tokens.write(
+        access: tokens.accessToken,
+        refresh: tokens.refreshToken,
+      );
       return tokens;
     } on ApiException catch (e) {
-      if (e.statusCode == 403 && e.message.toLowerCase().contains('two_factor_required')) {
+      if (e.statusCode == 403 &&
+          e.message.toLowerCase().contains('two_factor_required')) {
         throw const TwoFactorRequiredException();
       }
       rethrow;
     }
   }
 
-  Future<TokenResponse> loginWith2fa(String identifier, String password, String code) async {
-    final res = await _api.post<dynamic>(V1.authLogin2fa, body: {
-      'identifier': identifier,
-      'password': password,
-      'code': code,
-    });
+  Future<TokenResponse> loginWith2fa(
+    String identifier,
+    String password,
+    String code,
+  ) async {
+    final res = await _api.post<dynamic>(
+      V1.authLogin2fa,
+      body: {'identifier': identifier, 'password': password, 'code': code},
+    );
     final tokens = TokenResponse.fromJson((res as Map).cast<String, dynamic>());
-    await _api.tokens.write(access: tokens.accessToken, refresh: tokens.refreshToken);
+    await _api.tokens.write(
+      access: tokens.accessToken,
+      refresh: tokens.refreshToken,
+    );
     return tokens;
   }
 
@@ -47,12 +59,15 @@ class AuthService {
     required String password,
     String? email,
   }) async {
-    await _api.post<dynamic>(V1.authRegister, body: {
-      'username': username,
-      'name': name,
-      'password': password,
-      if (email != null && email.trim().isNotEmpty) 'email': email,
-    });
+    await _api.post<dynamic>(
+      V1.authRegister,
+      body: {
+        'username': username,
+        'name': name,
+        'password': password,
+        if (email != null && email.trim().isNotEmpty) 'email': email,
+      },
+    );
   }
 
   Future<UserProfile> profile() async {
@@ -68,12 +83,17 @@ class AuthService {
   Future<void> logout() async {
     try {
       await _api.post<dynamic>(V1.authLogout, auth: true);
-    } catch (_) {/* clear locally regardless */}
+    } catch (_) {
+      /* clear locally regardless */
+    }
     await _api.tokens.clear();
   }
 
   Future<void> requestPasswordReset(String email) async {
-    await _api.post<dynamic>(V1.authPasswordResetRequest, body: {'email': email});
+    await _api.post<dynamic>(
+      V1.authPasswordResetRequest,
+      body: {'email': email},
+    );
   }
 
   Future<void> confirmPasswordReset(String token, String newPassword) async {

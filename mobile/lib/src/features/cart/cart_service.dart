@@ -13,17 +13,20 @@ class CartService {
   }
 
   Future<Cart> add(int productId, {int quantity = 1}) async {
-    await _api.post<dynamic>(V1.cartAddItem, auth: true, body: {
-      'product_id': productId,
-      'quantity': quantity,
-    });
+    await _api.post<dynamic>(
+      V1.cartAddItem,
+      auth: true,
+      body: {'product_id': productId, 'quantity': quantity},
+    );
     return list();
   }
 
   Future<Cart> updateQuantity(int itemId, int quantity) async {
-    await _api.put<dynamic>(V1.cartUpdateItem(itemId), auth: true, body: {
-      'quantity': quantity,
-    });
+    await _api.put<dynamic>(
+      V1.cartUpdateItem(itemId),
+      auth: true,
+      body: {'quantity': quantity},
+    );
     return list();
   }
 

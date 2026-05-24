@@ -42,9 +42,14 @@ class CatalogService {
     return ProductPage(total: 0, skip: skip, limit: limit, items: const []);
   }
 
-  Future<ProductPage> search(String query, {int skip = 0, int limit = 20}) async {
+  Future<ProductPage> search(
+    String query, {
+    int skip = 0,
+    int limit = 20,
+  }) async {
     final q = query.trim();
-    if (q.isEmpty) return ProductPage(total: 0, skip: skip, limit: limit, items: const []);
+    if (q.isEmpty)
+      return ProductPage(total: 0, skip: skip, limit: limit, items: const []);
     final res = await _api.get<dynamic>(
       V1.productsSearch,
       query: {'q': q, 'skip': skip, 'limit': limit},

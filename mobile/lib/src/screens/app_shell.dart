@@ -10,11 +10,36 @@ class AppShell extends ConsumerWidget {
   final Widget child;
 
   static const _tabs = [
-    _Tab(label: 'Home', icon: Icons.home_outlined, active: Icons.home, path: '/'),
-    _Tab(label: 'Shop', icon: Icons.storefront_outlined, active: Icons.storefront, path: '/shop'),
-    _Tab(label: 'Cart', icon: Icons.shopping_bag_outlined, active: Icons.shopping_bag, path: '/cart'),
-    _Tab(label: 'Wishlist', icon: Icons.favorite_outline, active: Icons.favorite, path: '/wishlist'),
-    _Tab(label: 'Account', icon: Icons.person_outline, active: Icons.person, path: '/account'),
+    _Tab(
+      label: 'Home',
+      icon: Icons.home_outlined,
+      active: Icons.home,
+      path: '/',
+    ),
+    _Tab(
+      label: 'Shop',
+      icon: Icons.storefront_outlined,
+      active: Icons.storefront,
+      path: '/shop',
+    ),
+    _Tab(
+      label: 'Cart',
+      icon: Icons.shopping_bag_outlined,
+      active: Icons.shopping_bag,
+      path: '/cart',
+    ),
+    _Tab(
+      label: 'Wishlist',
+      icon: Icons.favorite_outline,
+      active: Icons.favorite,
+      path: '/wishlist',
+    ),
+    _Tab(
+      label: 'Account',
+      icon: Icons.person_outline,
+      active: Icons.person,
+      path: '/account',
+    ),
   ];
 
   @override
@@ -55,15 +80,22 @@ class AppShell extends ConsumerWidget {
                   ? Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        Icon(currentIndex == i ? _tabs[i].active : _tabs[i].icon),
+                        Icon(
+                          currentIndex == i ? _tabs[i].active : _tabs[i].icon,
+                        ),
                         Positioned(
                           right: -8,
                           top: -4,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 2,
+                            ),
                             decoration: const BoxDecoration(
                               color: SikapaColors.crimson,
-                              borderRadius: BorderRadius.all(Radius.circular(8)),
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(8),
+                              ),
                             ),
                             child: Text(
                               cartCount > 99 ? '99+' : '$cartCount',
@@ -87,7 +119,12 @@ class AppShell extends ConsumerWidget {
 }
 
 class _Tab {
-  const _Tab({required this.label, required this.icon, required this.active, required this.path});
+  const _Tab({
+    required this.label,
+    required this.icon,
+    required this.active,
+    required this.path,
+  });
   final String label;
   final IconData icon;
   final IconData active;

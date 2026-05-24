@@ -25,11 +25,21 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return client;
 });
 
-final authServiceProvider = Provider((ref) => AuthService(ref.read(apiClientProvider)));
-final catalogServiceProvider = Provider((ref) => CatalogService(ref.read(apiClientProvider)));
-final cartServiceProvider = Provider((ref) => CartService(ref.read(apiClientProvider)));
-final wishlistServiceProvider = Provider((ref) => WishlistService(ref.read(apiClientProvider)));
-final ordersServiceProvider = Provider((ref) => OrdersService(ref.read(apiClientProvider)));
+final authServiceProvider = Provider(
+  (ref) => AuthService(ref.read(apiClientProvider)),
+);
+final catalogServiceProvider = Provider(
+  (ref) => CatalogService(ref.read(apiClientProvider)),
+);
+final cartServiceProvider = Provider(
+  (ref) => CartService(ref.read(apiClientProvider)),
+);
+final wishlistServiceProvider = Provider(
+  (ref) => WishlistService(ref.read(apiClientProvider)),
+);
+final ordersServiceProvider = Provider(
+  (ref) => OrdersService(ref.read(apiClientProvider)),
+);
 
 // ─────────────────────── Maintenance state ─────────────────────────────────
 
@@ -46,7 +56,12 @@ class AuthState {
 
   bool get isSignedIn => user != null;
 
-  AuthState copyWith({UserProfile? user, bool? loading, bool? bootstrapping, bool clearUser = false}) {
+  AuthState copyWith({
+    UserProfile? user,
+    bool? loading,
+    bool? bootstrapping,
+    bool clearUser = false,
+  }) {
     return AuthState(
       user: clearUser ? null : (user ?? this.user),
       loading: loading ?? this.loading,
@@ -106,7 +121,10 @@ class AuthController extends StateNotifier<AuthState> {
   /// Complete the second factor of a sign-in. Called from the 2FA prompt
   /// screen after the initial password attempt returned `two_factor_required`.
   Future<void> loginWith2fa(
-      String identifier, String password, String code) async {
+    String identifier,
+    String password,
+    String code,
+  ) async {
     state = state.copyWith(loading: true);
     try {
       await _ref
@@ -129,7 +147,9 @@ class AuthController extends StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(loading: true);
     try {
-      await _ref.read(authServiceProvider).register(
+      await _ref
+          .read(authServiceProvider)
+          .register(
             username: username,
             name: name,
             password: password,
@@ -158,7 +178,9 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       final user = await _ref.read(authServiceProvider).profile();
       state = state.copyWith(user: user);
-    } catch (_) {/* keep cached */}
+    } catch (_) {
+      /* keep cached */
+    }
   }
 }
 
@@ -172,7 +194,10 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   return ref.read(catalogServiceProvider).categories();
 });
 
-final productsProvider = FutureProvider.family<ProductPage, ProductsQuery>((ref, q) {
+final productsProvider = FutureProvider.family<ProductPage, ProductsQuery>((
+  ref,
+  q,
+) {
   final svc = ref.read(catalogServiceProvider);
   if (q.search != null && q.search!.trim().isNotEmpty) {
     return svc.search(q.search!.trim(), skip: q.skip, limit: q.limit);
@@ -186,7 +211,10 @@ final productsProvider = FutureProvider.family<ProductPage, ProductsQuery>((ref,
   );
 });
 
-final productDetailProvider = FutureProvider.family<Product, int>((ref, id) async {
+final productDetailProvider = FutureProvider.family<Product, int>((
+  ref,
+  id,
+) async {
   return ref.read(catalogServiceProvider).detail(id);
 });
 
@@ -218,7 +246,8 @@ class ProductsQuery {
       other.search == search;
 
   @override
-  int get hashCode => Object.hash(skip, limit, sortBy, sortOrder, categoryId, search);
+  int get hashCode =>
+      Object.hash(skip, limit, sortBy, sortOrder, categoryId, search);
 }
 
 // ─────────────────────── Cart + wishlist ───────────────────────────────────
@@ -253,14 +282,22 @@ class CartController extends StateNotifier<AsyncValue<Cart>> {
 
   Future<void> add(int productId, {int quantity = 1}) async {
     if (!_ref.read(authProvider).isSignedIn) {
-      throw ApiException(statusCode: 401, message: 'Sign in to add to cart', unauthorized: true);
+      throw ApiException(
+        statusCode: 401,
+        message: 'Sign in to add to cart',
+        unauthorized: true,
+      );
     }
-    final cart = await _ref.read(cartServiceProvider).add(productId, quantity: quantity);
+    final cart = await _ref
+        .read(cartServiceProvider)
+        .add(productId, quantity: quantity);
     state = AsyncValue.data(cart);
   }
 
   Future<void> updateQuantity(int itemId, int quantity) async {
-    final cart = await _ref.read(cartServiceProvider).updateQuantity(itemId, quantity);
+    final cart = await _ref
+        .read(cartServiceProvider)
+        .updateQuantity(itemId, quantity);
     state = AsyncValue.data(cart);
   }
 
@@ -316,9 +353,10 @@ class WishlistController extends StateNotifier<AsyncValue<Set<int>>> {
   bool isWishlisted(int productId) => state.value?.contains(productId) ?? false;
 }
 
-final wishlistProvider = StateNotifierProvider<WishlistController, AsyncValue<Set<int>>>(
-  (ref) => WishlistController(ref),
-);
+final wishlistProvider =
+    StateNotifierProvider<WishlistController, AsyncValue<Set<int>>>(
+      (ref) => WishlistController(ref),
+    );
 
 // ─────────────────────── Orders ────────────────────────────────────────────
 

@@ -9,7 +9,8 @@ class MaintenanceScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final msg = ref.watch(maintenanceMessageProvider) ??
+    final msg =
+        ref.watch(maintenanceMessageProvider) ??
         "Sikapa is undergoing scheduled maintenance. Please check back shortly.";
     return Scaffold(
       backgroundColor: SikapaColors.cream,
@@ -40,8 +41,8 @@ class MaintenanceScreen extends ConsumerWidget {
                   msg,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: SikapaColors.textSecondary,
-                      ),
+                    color: SikapaColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
