@@ -206,4 +206,125 @@ class SikapaTheme {
       ),
     );
   }
+
+  /// Dark palette aligned with web `dark:` Tailwind classes (zinc-950 surfaces).
+  static ThemeData dark() {
+    const body = Color(0xFFE4E4E7);
+    const heading = Color(0xFFF4F4F5);
+    final scheme = const ColorScheme.dark().copyWith(
+      primary: SikapaColors.gold,
+      onPrimary: SikapaColors.zinc950,
+      secondary: SikapaColors.gold,
+      onSecondary: heading,
+      surface: SikapaColors.zinc900,
+      onSurface: heading,
+      surfaceContainerHighest: SikapaColors.zinc800,
+      surfaceTint: Colors.transparent,
+      error: const Color(0xFFF87171),
+    );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: SikapaColors.zinc950,
+      brightness: Brightness.dark,
+      textTheme: _textTheme(body, heading),
+      appBarTheme: AppBarTheme(
+        backgroundColor: SikapaColors.zinc900,
+        foregroundColor: heading,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
+        centerTitle: false,
+        titleTextStyle: GoogleFonts.cormorantGaramond(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          color: heading,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: SikapaColors.gold,
+          foregroundColor: SikapaColors.zinc950,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: GoogleFonts.dmSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: SikapaColors.crimson,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: heading,
+          side: const BorderSide(color: SikapaColors.zinc800),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: SikapaColors.zinc900,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: SikapaColors.zinc800),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: SikapaColors.zinc800),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: SikapaColors.gold, width: 1.5),
+        ),
+        labelStyle: GoogleFonts.dmSans(
+          color: SikapaColors.textMuted,
+          fontSize: 14,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: SikapaColors.zinc900,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0x1AFFFFFF)),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: SikapaColors.zinc800,
+        thickness: 1,
+        space: 1,
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: SikapaColors.zinc900,
+        selectedItemColor: SikapaColors.gold,
+        unselectedItemColor: SikapaColors.textMuted,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: SikapaColors.zinc800,
+        contentTextStyle: GoogleFonts.dmSans(color: heading, fontSize: 14),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 }

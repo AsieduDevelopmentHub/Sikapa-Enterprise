@@ -45,14 +45,16 @@ Android-first, iOS-ready. Goal: **shopper parity** with the Next.js storefront (
 | Idempotency-Key on order create + Paystack init | Done |
 | Deep links: `sikapa://reset-password`, `sikapa://verify-email` | Done |
 
-## Phase 4 — iOS + polish
+## Phase 4 — iOS + polish ✅
 
-- iOS signing + TestFlight pipeline (unsigned CI build already exists)
-- Tablet / large-screen layouts
-- Dark theme (match web `ThemeContext`)
-- Help / FAQ (in-app WebView or static screens)
-- Recently viewed products (local)
-- Push notifications (order shipped)
+| Item | Status |
+|------|--------|
+| iOS TestFlight workflow (optional secrets; unsigned IPA on tags) | Done |
+| Tablet / large-screen layouts (responsive grid + max width) | Done |
+| Dark theme (light / dark / system, matches web ThemeContext) | Done |
+| Help / FAQ (static topics + optional web via `SIKAPA_FRONTEND_URL`) | Done |
+| Recently viewed products (local SharedPreferences) | Done |
+| Shipped-order local notifications (status diff; FCM deferred) | Done |
 
 ## Explicitly out of scope (web/admin)
 

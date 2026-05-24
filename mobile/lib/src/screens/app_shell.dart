@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/responsive.dart';
 import '../core/theme.dart';
 import '../providers.dart';
 
@@ -69,7 +70,7 @@ class AppShell extends ConsumerWidget {
     final cartCount = ref.watch(cartProvider).value?.totalQuantity ?? 0;
 
     return Scaffold(
-      body: child,
+      body: ResponsiveContent(child: child),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         onTap: (i) => context.go(_tabs[i].path),
