@@ -164,6 +164,17 @@ The mobile client uses the **same** `/api/v1/*` endpoints the Next.js web app do
 - **Cold-start ping.** On launch, the app fires a `/health` request (Render free tier wake-up).
   Failures are silent.
 
+## Local CI before push
+
+From repo root (uses `backend/venv`, not global Python):
+
+```powershell
+.\scripts\ci-local.ps1 -SkipAndroidBuild   # fast while iterating
+.\scripts\ci-local.ps1                     # includes Android release builds
+```
+
+See [`.github/workflows/README.md`](../.github/workflows/README.md).
+
 ## Full development plan
 
 See **[MOBILE_ROADMAP.md](./MOBILE_ROADMAP.md)** for phased Android-first parity with the web storefront (UI/UX, API coverage, iOS).

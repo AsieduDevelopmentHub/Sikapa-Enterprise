@@ -4,7 +4,7 @@ Authentication API routes - all endpoints for user auth flows.
 import os
 from urllib.parse import quote, urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request, BackgroundTasks, Body
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session
 
@@ -257,7 +257,7 @@ def google_oauth_verify_2fa(
 
 @router.post("/logout")
 def logout_endpoint(
-    payload: LogoutRequest,
+    payload: LogoutRequest = Body(default_factory=LogoutRequest),
     current_user: User = Depends(get_current_active_user),
     authorization: str = Header(None),
     session: Session = Depends(get_session),
