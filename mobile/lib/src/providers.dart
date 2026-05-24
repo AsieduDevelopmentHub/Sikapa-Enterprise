@@ -10,6 +10,8 @@ import 'features/cart/cart_service.dart';
 import 'features/cart/models.dart';
 import 'features/catalog/catalog_service.dart';
 import 'features/catalog/models.dart';
+import 'features/catalog/variant_models.dart';
+import 'features/orders/shipping_models.dart';
 import 'features/orders/models.dart';
 import 'features/orders/orders_service.dart';
 import 'features/wishlist/wishlist_service.dart';
@@ -283,7 +285,11 @@ class CartController extends StateNotifier<AsyncValue<Cart>> {
     }
   }
 
-  Future<void> add(int productId, {int quantity = 1}) async {
+  Future<void> add(
+    int productId, {
+    int quantity = 1,
+    int? variantId,
+  }) async {
     if (!_ref.read(authProvider).isSignedIn) {
       throw ApiException(
         statusCode: 401,
@@ -291,9 +297,11 @@ class CartController extends StateNotifier<AsyncValue<Cart>> {
         unauthorized: true,
       );
     }
-    final cart = await _ref
-        .read(cartServiceProvider)
-        .add(productId, quantity: quantity);
+    final cart = await _ref.read(cartServiceProvider).add(
+      productId,
+      quantity: quantity,
+      variantId: variantId,
+    );
     state = AsyncValue.data(cart);
   }
 
@@ -371,3 +379,12 @@ final ordersProvider = FutureProvider<List<Order>>((ref) async {
 final orderDetailProvider = FutureProvider.family<Order, int>((ref, id) async {
   return ref.read(ordersServiceProvider).detail(id);
 });
+
+final shippingOptionsProvider = FutureProvider<ShippingOptions>((ref) async {
+  return ref.read(ordersServiceProvider).shippingOptions();
+});
+
+final productVariantsProvider =
+    FutureProvider.family<List<ProductVariant>, int>((ref, productId) async {
+      return ref.read(catalogServiceProvider).variants(productId);
+    });

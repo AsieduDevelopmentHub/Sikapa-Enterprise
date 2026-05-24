@@ -12,11 +12,19 @@ class CartService {
     return Cart.empty();
   }
 
-  Future<Cart> add(int productId, {int quantity = 1}) async {
+  Future<Cart> add(
+    int productId, {
+    int quantity = 1,
+    int? variantId,
+  }) async {
     await _api.post<dynamic>(
       V1.cartAddItem,
       auth: true,
-      body: {'product_id': productId, 'quantity': quantity},
+      body: {
+        'product_id': productId,
+        'quantity': quantity,
+        if (variantId != null) 'variant_id': variantId,
+      },
     );
     return list();
   }
