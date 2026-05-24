@@ -24,9 +24,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final productAsync = ref.watch(productDetailProvider(widget.productId));
-    final variantsAsync = ref.watch(
-      productVariantsProvider(widget.productId),
-    );
+    final variantsAsync = ref.watch(productVariantsProvider(widget.productId));
     final fmt = NumberFormat.simpleCurrency(name: 'GHS', decimalDigits: 2);
 
     return Scaffold(
@@ -51,7 +49,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               selected == null &&
               _selectedVariantId == null) {
             final firstInStock = variants.where((v) => v.isInStock).toList();
-            final pick = firstInStock.isNotEmpty ? firstInStock.first : variants.first;
+            final pick = firstInStock.isNotEmpty
+                ? firstInStock.first
+                : variants.first;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) setState(() => _selectedVariantId = pick.id);
             });
@@ -61,7 +61,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           final imageUrl = (selected?.imageUrl?.isNotEmpty == true)
               ? selected!.displayImage
               : p.displayImage;
-          final canAdd = p.isInStock &&
+          final canAdd =
+              p.isInStock &&
               (variants.isEmpty || (selected?.isInStock ?? false));
 
           final saved =

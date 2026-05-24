@@ -285,11 +285,7 @@ class CartController extends StateNotifier<AsyncValue<Cart>> {
     }
   }
 
-  Future<void> add(
-    int productId, {
-    int quantity = 1,
-    int? variantId,
-  }) async {
+  Future<void> add(int productId, {int quantity = 1, int? variantId}) async {
     if (!_ref.read(authProvider).isSignedIn) {
       throw ApiException(
         statusCode: 401,
@@ -297,11 +293,9 @@ class CartController extends StateNotifier<AsyncValue<Cart>> {
         unauthorized: true,
       );
     }
-    final cart = await _ref.read(cartServiceProvider).add(
-      productId,
-      quantity: quantity,
-      variantId: variantId,
-    );
+    final cart = await _ref
+        .read(cartServiceProvider)
+        .add(productId, quantity: quantity, variantId: variantId);
     state = AsyncValue.data(cart);
   }
 

@@ -75,47 +75,47 @@ class OrdersScreen extends ConsumerWidget {
                   onTap: () => context.push('/orders/${o.id}'),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: SikapaColors.graySoft),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Order #${o.id}',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${dateFmt.format(o.createdAt)}  •  ${o.status}',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: SikapaColors.textMuted),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              fmt.format(o.total),
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(
-                                    color: SikapaColors.crimson,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                          ],
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: SikapaColors.graySoft),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Order #${o.id}',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${dateFmt.format(o.createdAt)}  •  ${o.status}',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: SikapaColors.textMuted),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                fmt.format(o.total),
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(
+                                      color: SikapaColors.crimson,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: SikapaColors.textMuted,
-                      ),
-                    ],
+                        const Icon(
+                          Icons.chevron_right,
+                          color: SikapaColors.textMuted,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
                 );
               },
             ),

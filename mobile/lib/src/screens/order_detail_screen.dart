@@ -60,7 +60,9 @@ class OrderDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(order.shippingAddress!),
                   if ((order.shippingCity ?? '').isNotEmpty)
-                    Text('${order.shippingCity}, ${order.shippingRegion ?? ''}'),
+                    Text(
+                      '${order.shippingCity}, ${order.shippingRegion ?? ''}',
+                    ),
                   if ((order.shippingProvider ?? '').isNotEmpty)
                     Text('Courier: ${order.shippingProvider}'),
                 ],
@@ -69,10 +71,7 @@ class OrderDetailScreen extends ConsumerWidget {
                   Text('Tracking: ${order.trackingNumber}'),
                 ],
                 const SizedBox(height: 20),
-                Text(
-                  'Items',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('Items', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 ...order.items.map(
                   (line) => Container(
@@ -113,11 +112,7 @@ class OrderDetailScreen extends ConsumerWidget {
                   _TotalRow('Subtotal', fmt.format(order.subtotalAmount!)),
                 if (order.deliveryFee > 0)
                   _TotalRow('Delivery', fmt.format(order.deliveryFee)),
-                _TotalRow(
-                  'Total',
-                  fmt.format(order.total),
-                  emphasized: true,
-                ),
+                _TotalRow('Total', fmt.format(order.total), emphasized: true),
                 if (unpaid) ...[
                   const SizedBox(height: 20),
                   FilledButton.icon(
@@ -143,7 +138,9 @@ class OrderDetailScreen extends ConsumerWidget {
       );
       if (!context.mounted) return;
       final reference = await Navigator.of(context).push<String?>(
-        MaterialPageRoute(builder: (_) => PaystackWebView(authorizationUrl: url)),
+        MaterialPageRoute(
+          builder: (_) => PaystackWebView(authorizationUrl: url),
+        ),
       );
       if (reference != null && reference.isNotEmpty) {
         try {
@@ -181,7 +178,10 @@ class _TotalRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [Text(label), Text(value, style: style)],
+        children: [
+          Text(label),
+          Text(value, style: style),
+        ],
       ),
     );
   }
