@@ -184,9 +184,9 @@ class _AdminProductFormScreenState
                         context.go('/admin/products');
                       } catch (e) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('$e')),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('$e')));
                       } finally {
                         if (context.mounted) setState(() => _busy = false);
                       }
