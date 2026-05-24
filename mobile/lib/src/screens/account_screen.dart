@@ -78,7 +78,33 @@ class AccountScreen extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          if (!user.emailVerified)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF4E5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: SikapaColors.gold),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text('Verify your email to unlock all features.'),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push('/verify-email'),
+                    child: const Text('Verify'),
+                  ),
+                ],
+              ),
+            ),
           const Divider(),
+          _Tile(
+            icon: Icons.edit_outlined,
+            title: 'Edit profile',
+            onTap: () => context.push('/account/profile'),
+          ),
           _Tile(
             icon: Icons.receipt_long_outlined,
             title: 'My orders',
@@ -102,16 +128,21 @@ class AccountScreen extends ConsumerWidget {
           _Tile(
             icon: Icons.lock_outline,
             title: 'Change password',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Use “Forgot password?” on the sign-in screen to receive a reset email.',
-                  ),
-                ),
-              );
-            },
+            onTap: () => context.push('/account/change-password'),
           ),
+          _Tile(
+            icon: Icons.security_outlined,
+            title: user.twoFaEnabled
+                ? 'Two-factor authentication (on)'
+                : 'Two-factor authentication',
+            onTap: () => context.push('/account/two-fa'),
+          ),
+          if (!user.emailVerified)
+            _Tile(
+              icon: Icons.mark_email_unread_outlined,
+              title: 'Verify email',
+              onTap: () => context.push('/verify-email'),
+            ),
           _Tile(
             icon: Icons.help_outline,
             title: 'Help & support',

@@ -21,6 +21,29 @@ class TokenResponse {
   }
 }
 
+class TwoFASetupResponse {
+  TwoFASetupResponse({
+    required this.secret,
+    required this.qrCode,
+    required this.backupCodes,
+  });
+
+  final String secret;
+  final String qrCode;
+  final List<String> backupCodes;
+
+  factory TwoFASetupResponse.fromJson(Map<String, dynamic> json) {
+    final codes = json['backup_codes'];
+    return TwoFASetupResponse(
+      secret: json['secret'] as String? ?? '',
+      qrCode: json['qr_code'] as String? ?? '',
+      backupCodes: codes is List
+          ? codes.map((e) => '$e').toList()
+          : const <String>[],
+    );
+  }
+}
+
 class UserProfile {
   UserProfile({
     required this.id,

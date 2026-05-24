@@ -6,18 +6,24 @@ import 'providers.dart';
 import 'screens/account_screen.dart';
 import 'screens/app_shell.dart';
 import 'screens/cart_screen.dart';
+import 'screens/change_password_screen.dart';
 import 'screens/checkout_screen.dart';
+import 'screens/google_oauth_2fa_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_2fa_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/orders_screen.dart';
-import 'screens/returns_screen.dart';
+import 'screens/password_reset_confirm_screen.dart';
 import 'screens/password_reset_screen.dart';
 import 'screens/product_detail_screen.dart';
+import 'screens/profile_edit_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/returns_screen.dart';
 import 'screens/shipping_address_screen.dart';
 import 'screens/shop_screen.dart';
+import 'screens/two_fa_screen.dart';
+import 'screens/verify_email_screen.dart';
 import 'screens/wishlist_screen.dart';
 
 /// Rebuilds routes when auth state changes (sign-in / sign-out).
@@ -46,6 +52,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         '/wishlist',
         '/orders',
         '/account/shipping-address',
+        '/account/change-password',
+        '/account/profile',
+        '/account/two-fa',
       ];
       final needsAuth = protected.any(
         (p) => path == p || path.startsWith('$p/'),
@@ -101,15 +110,48 @@ final routerProvider = Provider<GoRouter>((ref) {
           return const LoginScreen();
         },
       ),
+      GoRoute(
+        path: '/auth/google/2fa',
+        builder: (_, state) {
+          final token = state.uri.queryParameters['pending'] ?? '';
+          return GoogleOauth2faScreen(pendingToken: token);
+        },
+      ),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(
         path: '/password-reset',
         builder: (_, _) => const PasswordResetScreen(),
       ),
       GoRoute(
+        path: '/password-reset/confirm',
+        builder: (_, state) {
+          return PasswordResetConfirmScreen(
+            initialToken: state.uri.queryParameters['token'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (_, state) {
+          return VerifyEmailScreen(
+            initialEmail: state.uri.queryParameters['email'],
+            initialCode: state.uri.queryParameters['code'],
+          );
+        },
+      ),
+      GoRoute(
         path: '/account/shipping-address',
         builder: (_, _) => const ShippingAddressScreen(),
       ),
+      GoRoute(
+        path: '/account/change-password',
+        builder: (_, _) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/account/profile',
+        builder: (_, _) => const ProfileEditScreen(),
+      ),
+      GoRoute(path: '/account/two-fa', builder: (_, _) => const TwoFaScreen()),
       GoRoute(path: '/checkout', builder: (_, _) => const CheckoutScreen()),
       GoRoute(path: '/returns', builder: (_, _) => const ReturnsScreen()),
     ],

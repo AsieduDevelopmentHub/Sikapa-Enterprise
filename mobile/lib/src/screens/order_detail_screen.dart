@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../core/api/api_exception.dart';
+import '../core/idempotency.dart';
 import '../core/theme.dart';
 import '../providers.dart';
 import '../widgets/order_status_chip.dart';
@@ -152,6 +153,7 @@ class OrderDetailScreen extends ConsumerWidget {
       final url = await orders.initiatePaystack(
         orderId: id,
         callbackUrl: paystackReturnUrl,
+        idempotencyKey: newIdempotencyKey(),
       );
       if (!context.mounted) return;
       final reference = await Navigator.of(context).push<String?>(

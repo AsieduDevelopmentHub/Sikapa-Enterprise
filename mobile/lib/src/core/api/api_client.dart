@@ -50,24 +50,75 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? query,
     bool auth = false,
+    Map<String, String>? headers,
   }) {
-    return _request<T>('GET', path, queryParameters: query, auth: auth);
+    return _request<T>(
+      'GET',
+      path,
+      queryParameters: query,
+      auth: auth,
+      extraHeaders: headers,
+    );
   }
 
-  Future<T> post<T>(String path, {Object? body, bool auth = false}) {
-    return _request<T>('POST', path, data: body, auth: auth);
+  Future<T> post<T>(
+    String path, {
+    Object? body,
+    bool auth = false,
+    Map<String, String>? headers,
+  }) {
+    return _request<T>(
+      'POST',
+      path,
+      data: body,
+      auth: auth,
+      extraHeaders: headers,
+    );
   }
 
-  Future<T> put<T>(String path, {Object? body, bool auth = false}) {
-    return _request<T>('PUT', path, data: body, auth: auth);
+  Future<T> put<T>(
+    String path, {
+    Object? body,
+    bool auth = false,
+    Map<String, String>? headers,
+  }) {
+    return _request<T>(
+      'PUT',
+      path,
+      data: body,
+      auth: auth,
+      extraHeaders: headers,
+    );
   }
 
-  Future<T> patch<T>(String path, {Object? body, bool auth = false}) {
-    return _request<T>('PATCH', path, data: body, auth: auth);
+  Future<T> patch<T>(
+    String path, {
+    Object? body,
+    bool auth = false,
+    Map<String, String>? headers,
+  }) {
+    return _request<T>(
+      'PATCH',
+      path,
+      data: body,
+      auth: auth,
+      extraHeaders: headers,
+    );
   }
 
-  Future<T> delete<T>(String path, {Object? body, bool auth = false}) {
-    return _request<T>('DELETE', path, data: body, auth: auth);
+  Future<T> delete<T>(
+    String path, {
+    Object? body,
+    bool auth = false,
+    Map<String, String>? headers,
+  }) {
+    return _request<T>(
+      'DELETE',
+      path,
+      data: body,
+      auth: auth,
+      extraHeaders: headers,
+    );
   }
 
   /// Wake a cold backend (Render free tier) by hitting `/health`. Failures are
@@ -91,9 +142,10 @@ class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     bool auth = false,
+    Map<String, String>? extraHeaders,
   }) async {
     Future<Response<dynamic>> doFetch() async {
-      final headers = <String, String>{};
+      final headers = <String, String>{...?extraHeaders};
       if (auth) {
         final stored = await _tokenStore.read();
         final token = stored.access;

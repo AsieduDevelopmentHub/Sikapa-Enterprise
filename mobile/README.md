@@ -197,12 +197,18 @@ Implemented:
   with a guided CTA when the saved shipping address is missing
 - Maintenance mode parity with the web `/maintenance` page
 
-Deferred (TODO, not blocking shoppers):
+Also shipped (Phases 2–3):
 
-- Google OAuth sign-in (web flow already works via the backend; mobile needs `flutter_appauth` + URL scheme)
-- In-app password reset confirmation (deep link from email opens the web reset page)
-- Reviews + returns
-- Push notifications, deep links
+- Reviews, returns, guest cart, shop filters, order filters
+- Password change + reset confirm (`sikapa://reset-password?token=…`)
+- Email verify + resend (`sikapa://verify-email?email=…&code=…`)
+- 2FA setup/disable (QR from `/auth/2fa/setup`)
+- Google OAuth WebView when `SIKAPA_GOOGLE_OAUTH_ENABLED=true` (set `SIKAPA_FRONTEND_URL` to your SPA origin)
+- Profile edit, idempotency keys on checkout
+
+Deferred (Phase 4+):
+
+- Push notifications, tablet layouts, dark theme
 - Admin features (intentionally out of scope — admin runs on web only)
 
 ## Cross-references

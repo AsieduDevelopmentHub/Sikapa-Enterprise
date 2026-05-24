@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/api/api_client.dart';
 import 'core/api/api_exception.dart';
 import 'features/auth/auth_service.dart';
-import 'features/auth/models.dart';
 import 'features/cart/cart_service.dart';
 import 'features/cart/guest_cart_store.dart';
 import 'features/cart/models.dart';
@@ -197,6 +196,32 @@ class AuthController extends StateNotifier<AuthState> {
       state = state.copyWith(user: user);
     } catch (_) {
       /* keep cached */
+    }
+  }
+
+  Future<void> completeGoogleOAuth(GoogleOAuthTokens tokens) async {
+    state = state.copyWith(loading: true);
+    try {
+      await _ref.read(authServiceProvider).persistOAuthTokens(tokens);
+      final user = await _ref.read(authServiceProvider).profile();
+      state = AuthState(user: user, bootstrapping: false);
+      await _ref.read(cartProvider.notifier).mergeGuestCart();
+      _ref.invalidate(wishlistProvider);
+    } finally {
+      if (mounted) state = state.copyWith(loading: false);
+    }
+  }
+
+  Future<void> completeGoogleOAuth2fa(String pendingToken, String code) async {
+    state = state.copyWith(loading: true);
+    try {
+      await _ref.read(authServiceProvider).googleVerify2fa(pendingToken, code);
+      final user = await _ref.read(authServiceProvider).profile();
+      state = AuthState(user: user, bootstrapping: false);
+      await _ref.read(cartProvider.notifier).mergeGuestCart();
+      _ref.invalidate(wishlistProvider);
+    } finally {
+      if (mounted) state = state.copyWith(loading: false);
     }
   }
 }

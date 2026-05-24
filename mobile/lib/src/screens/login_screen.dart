@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/api/api_exception.dart';
+import '../core/env.dart';
 import '../core/theme.dart';
 import '../features/auth/auth_service.dart';
 import '../providers.dart';
+import '../widgets/google_oauth_webview.dart';
 import 'login_2fa_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -28,6 +30,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _idCtrl.dispose();
     _pwCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _googleSignIn() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final result = await Navigator.of(context).push<Object?>(
+        MaterialPageRoute(builder: (_) => const GoogleOAuthWebView()),
+      );
+      if (!mounted || result == null) return;
+      if (result is GoogleOAuthError) {
+        setState(() => _error = result.message);
+        return;
+      }
+      if (result is GoogleOAuth2faPending) {
+        context.push(
+          '/auth/google/2fa?pending=${Uri.encodeComponent(result.pendingToken)}',
+        );
+        return;
+      }
+      if (result is GoogleOAuthTokens) {
+        await ref.read(authProvider.notifier).completeGoogleOAuth(result);
+        if (mounted) context.go('/');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -141,6 +172,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       )
                     : const Text('Sign in'),
               ),
+              if (AppEnv.googleOAuthEnabled) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _googleSignIn,
+                  icon: const Icon(Icons.g_mobiledata, size: 28),
+                  label: const Text('Continue with Google'),
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../core/api/api_exception.dart';
+import '../core/idempotency.dart';
 import '../core/shipping_address.dart';
 import '../core/theme.dart';
 import '../features/auth/models.dart';
@@ -62,10 +63,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       };
 
       final orders = ref.read(ordersServiceProvider);
-      final order = await orders.create(body);
+      final orderKey = newIdempotencyKey();
+      final payKey = newIdempotencyKey();
+      final order = await orders.create(body, idempotencyKey: orderKey);
       final authorizationUrl = await orders.initiatePaystack(
         orderId: order.id,
         callbackUrl: paystackReturnUrl,
+        idempotencyKey: payKey,
       );
 
       if (!mounted) return;
