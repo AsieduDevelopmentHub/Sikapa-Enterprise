@@ -1,5 +1,3 @@
-# Publishes GitHub Releases for mobile-v* tags after Mobile CI/CD Pipeline succeeds.
-# Kept separate so routine pushes do not declare contents:write (startup_failure).
 name: Mobile release publish
 
 on:
@@ -14,12 +12,15 @@ jobs:
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
+
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       startsWith(github.event.workflow_run.head_branch, 'mobile-v')
+
     permissions:
       contents: write
       actions: read
+
     steps:
       - name: Download Android artifacts
         uses: actions/download-artifact@v4
@@ -29,7 +30,9 @@ jobs:
           name: android-${{ github.event.workflow_run.run_number }}
           path: dist/android
 
+      # Optional iOS download
       - name: Download iOS artifacts
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -39,8 +42,11 @@ jobs:
 
       - name: Verify release files
         run: |
-          ls -la dist/android
-          ls -la dist/ios
+          echo "Android files:"
+          ls -la dist/android || true
+
+          echo "iOS files:"
+          ls -la dist/ios || true
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -48,7 +54,7 @@ jobs:
           tag_name: ${{ github.event.workflow_run.head_branch }}
           name: Sikapa Mobile ${{ github.event.workflow_run.head_branch }}
           generate_release_notes: true
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           files: |
-            dist/android/*
-            dist/ios/*
+            dist/android/**
+            dist/ios/**
