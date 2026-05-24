@@ -19,7 +19,7 @@ class CartService {
       body: {
         'product_id': productId,
         'quantity': quantity,
-        if (variantId != null) 'variant_id': variantId,
+        'variant_id': ?variantId,
       },
     );
     return list();
