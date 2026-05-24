@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Backend keep-alive</title>
+    <style>
+      :root {
+        --bg: #0f1419;
+        --card: #1a222c;
+        --text: #e8eaed;
+        --muted: #9aa0a6;
+        --ok: #34a853;
+        --warn: #f9ab00;
+        --err: #ea4335;
+        --accent: #c8a96a;
+        --border: rgba(255, 255, 255, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem;
+      }
+      h1 {
+        font-size: 1.35rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin: 0 0 1.25rem;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      button {
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.45rem 0.85rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+      }
+      button.primary {
+        background: var(--accent);
+        color: #1a1208;
+        border-color: transparent;
+      }
+      .meta {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-bottom: 1rem;
+      }
+      .meta strong {
+        color: var(--text);
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      li {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+      }
+      .row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+      .name {
+        font-weight: 600;
+        font-size: 0.9375rem;
+      }
+      .url {
+        font-size: 0.7rem;
+        color: var(--muted);
+        word-break: break-all;
+        margin-top: 0.15rem;
+      }
+      .badge {
+        flex-shrink: 0;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.2rem 0.45rem;
+        border-radius: 4px;
+      }
+      .badge.ok {
+        background: rgba(52, 168, 83, 0.2);
+        color: var(--ok);
+      }
+      .badge.wake {
+        background: rgba(249, 171, 0, 0.15);
+        color: var(--warn);
+      }
+      .badge.err {
+        background: rgba(234, 67, 53, 0.15);
+        color: var(--err);
+      }
+      .badge.idle {
+        background: rgba(154, 160, 166, 0.15);
+        color: var(--muted);
+      }
+      .detail {
+        margin-top: 0.35rem;
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+      footer {
+        margin-top: 1.5rem;
+        font-size: 0.7rem;
+        color: var(--muted);
+      }
+      footer code {
+        font-size: 0.68rem;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 0.1rem 0.3rem;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Backend keep-alive</h1>
+      <p class="sub">Pings your APIs every 45 seconds so Render free tier stays warm. Keep this tab open.</p>
+
+      <div class="toolbar">
+        <button type="button" class="primary" id="btn-toggle">Pause</button>
+        <button type="button" id="btn-now">Ping now</button>
+      </div>
+
+      <p class="meta">
+        Interval: <strong id="interval-label">45s</strong> · Next ping:
+        <strong id="next-label">—</strong> · Round: <strong id="round-label">0</strong>
+      </p>
+
+      <ul id="list"></ul>
+
+      <footer>
+        Edit <code>ENDPOINTS</code> in this file to add backends. For 24/7 without a browser tab, use
+        <code>.github/workflows/render-keepalive.yml</code> (every 10 min).
+      </footer>
+    </div>
+
+    <script>
+      const ENDPOINTS = [
+        { name: "Sikapa API", url: "https://sikapa-backend.onrender.com/health" },
+        // { name: "Project B", url: "https://other.onrender.com/health" },
+      ];
+
+      const INTERVAL_MS = 45_000;
+
+      const state = ENDPOINTS.map((e) => ({
+        ...e,
+        status: "idle",
+        detail: "Waiting…",
+        lastAt: null,
+      }));
+
+      let running = true;
+      let round = 0;
+      let timerId = null;
+      let nextAt = null;
+
+      const $list = document.getElementById("list");
+      const $toggle = document.getElementById("btn-toggle");
+      const $next = document.getElementById("next-label");
+      const $round = document.getElementById("round-label");
+
+      document.getElementById("interval-label").textContent =
+        INTERVAL_MS >= 1000 ? Math.round(INTERVAL_MS / 1000) + "s" : INTERVAL_MS + "ms";
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function badgeLabel(status) {
+        if (status === "ok") return "OK";
+        if (status === "wake") return "Wake";
+        if (status === "err") return "Error";
+        return "Idle";
+      }
+
+      function formatTime() {
+        return new Date().toLocaleTimeString();
+      }
+
+      function render() {
+        $list.innerHTML = state
+          .map(
+            (row) => `
+          <li>
+            <div class="row">
+              <div>
+                <div class="name">${escapeHtml(row.name)}</div>
+                <div class="url">${escapeHtml(row.url)}</div>
+              </div>
+              <span class="badge ${row.status}">${badgeLabel(row.status)}</span>
+            </div>
+            <div class="detail">${escapeHtml(row.detail)}</div>
+          </li>`
+          )
+          .join("");
+        $round.textContent = String(round);
+      }
+
+      function scheduleNext() {
+        if (!running) {
+          $next.textContent = "paused";
+          return;
+        }
+        nextAt = Date.now() + INTERVAL_MS;
+        updateCountdown();
+        timerId = window.setTimeout(() => {
+          void runRound();
+        }, INTERVAL_MS);
+      }
+
+      function updateCountdown() {
+        if (!running || !nextAt) {
+          $next.textContent = running ? "—" : "paused";
+          return;
+        }
+        const sec = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
+        $next.textContent = sec + "s";
+      }
+
+      setInterval(updateCountdown, 500);
+
+      async function pingOne(row) {
+        const started = performance.now();
+        try {
+          const res = await fetch(row.url, {
+            method: "GET",
+            cache: "no-store",
+            mode: "cors",
+          });
+          const ms = Math.round(performance.now() - started);
+          if (res.ok) {
+            row.status = "ok";
+            row.detail = `HTTP ${res.status} · ${ms}ms · ${formatTime()}`;
+          } else {
+            row.status = "wake";
+            row.detail = `HTTP ${res.status} · ${ms}ms · ${formatTime()}`;
+          }
+        } catch {
+          try {
+            await fetch(row.url, { method: "GET", cache: "no-store", mode: "no-cors" });
+            row.status = "wake";
+            row.detail = `Wake ping sent (no-cors) · ${formatTime()}`;
+          } catch (e2) {
+            row.status = "err";
+            row.detail = `Failed · ${e2 instanceof Error ? e2.message : "network error"}`;
+          }
+        }
+        row.lastAt = new Date();
+      }
+
+      async function runRound() {
+        if (timerId) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+        round += 1;
+        await Promise.all(state.map((row) => pingOne(row)));
+        render();
+        scheduleNext();
+      }
+
+      $toggle.addEventListener("click", () => {
+        running = !running;
+        $toggle.textContent = running ? "Pause" : "Resume";
+        if (timerId) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+        if (running) {
+          void runRound();
+        } else {
+          $next.textContent = "paused";
+        }
+      });
+
+      document.getElementById("btn-now").addEventListener("click", () => {
+        if (timerId) clearTimeout(timerId);
+        void runRound();
+      });
+
+      render();
+      void runRound();
+    </script>
+  </body>
+</html>
