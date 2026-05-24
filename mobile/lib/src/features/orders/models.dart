@@ -1,5 +1,6 @@
 class OrderLine {
   OrderLine({
+    required this.id,
     required this.productId,
     required this.productName,
     required this.quantity,
@@ -8,6 +9,7 @@ class OrderLine {
     this.productImageUrl,
   });
 
+  final int id;
   final int productId;
   final String productName;
   final int quantity;
@@ -18,6 +20,7 @@ class OrderLine {
   double get lineTotal => unitPrice * quantity;
 
   factory OrderLine.fromJson(Map<String, dynamic> json) => OrderLine(
+    id: (json['id'] as num?)?.toInt() ?? 0,
     productId: (json['product_id'] as num?)?.toInt() ?? 0,
     productName:
         (json['product_name'] as String?) ??

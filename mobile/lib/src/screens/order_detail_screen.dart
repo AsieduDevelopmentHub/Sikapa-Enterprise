@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../core/api/api_exception.dart';
@@ -7,6 +8,7 @@ import '../core/theme.dart';
 import '../providers.dart';
 import '../widgets/order_status_chip.dart';
 import '../widgets/paystack_webview.dart';
+import '../widgets/return_request_sheet.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -121,6 +123,21 @@ class OrderDetailScreen extends ConsumerWidget {
                     label: const Text('Pay now'),
                   ),
                 ],
+                if (!unpaid &&
+                    order.status.toLowerCase() != 'cancelled' &&
+                    order.items.any((l) => l.id > 0)) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => ReturnRequestSheet.show(context, order),
+                    icon: const Icon(Icons.assignment_return_outlined),
+                    label: const Text('Request a return'),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => context.push('/returns'),
+                  child: const Text('View all my returns'),
+                ),
               ],
             ),
           );
