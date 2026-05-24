@@ -48,7 +48,7 @@ iOS job runs only on `mobile-v*` tags or `workflow_dispatch` — not part of def
 
 ### `mobile-release.yml`
 
-Publishes GitHub Release after `mobile-build` succeeds on a tag. No separate local run.
+Tag pushes publish a GitHub Release in the same workflow as the build (`publish_release` job in `mobile-build.yml`). Use `mobile-release.yml` only via **workflow_dispatch** to manually attach artifacts if a tag build succeeded but no release appeared.
 
 ## Agent / developer habit
 

@@ -1,22 +1,31 @@
 name: Mobile release publish
 
+# Manual fallback when a tag build succeeded but release publish did not run.
+# Normal releases: publish_release job in mobile-build.yml (same workflow as the build).
+
 on:
-  workflow_run:
-    workflows: [Mobile CI/CD Pipeline]
-    types: [completed]
+  workflow_dispatch:
+    inputs:
+      workflow_run_id:
+        description: "Actions run ID from the URL (e.g. 26375742006)"
+        required: true
+        type: string
+      artifact_run_number:
+        description: "Run # from that workflow (artifact name android-N)"
+        required: true
+        type: string
+      tag_name:
+        description: "Git tag (e.g. mobile-v1.1.0)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   release:
-    name: Publish GitHub Release
+    name: Publish GitHub Release (manual)
     runs-on: ubuntu-latest
-
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'mobile-v')
-
     permissions:
       contents: write
       actions: read
@@ -26,39 +35,30 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: android-${{ github.event.workflow_run.run_number }}
+          run-id: ${{ inputs.workflow_run_id }}
+          name: android-${{ inputs.artifact_run_number }}
           path: dist/android
 
-      # Optional iOS download
       - name: Download iOS artifacts
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: ios-${{ github.event.workflow_run.run_number }}
+          run-id: ${{ inputs.workflow_run_id }}
+          name: ios-${{ inputs.artifact_run_number }}
           path: dist/ios
-
-      - name: Verify release files
-        run: |
-          echo "Android files:"
-          ls -la dist/android || true
-
-          echo "iOS files:"
-          ls -la dist/ios || true
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.workflow_run.head_branch }}
-          name: Sikapa Mobile ${{ github.event.workflow_run.head_branch }}
+          tag_name: ${{ inputs.tag_name }}
+          name: Sikapa Mobile ${{ inputs.tag_name }}
           generate_release_notes: false
-          body: |
-            Sikapa Mobile release (Android APK/AAB; unsigned iOS IPA when the macOS job runs).
-
-            See [mobile/MOBILE_ROADMAP.md](https://github.com/AsieduDevelopmentHub/Sikapa-Enterprise/blob/main/mobile/MOBILE_ROADMAP.md) for feature scope.
           fail_on_unmatched_files: false
+          body: |
+            Sikapa Mobile release (Android APK/AAB; unsigned iOS IPA when available).
+
+            Published manually from workflow run ${{ inputs.workflow_run_id }}.
           files: |
             dist/android/**
             dist/ios/**
