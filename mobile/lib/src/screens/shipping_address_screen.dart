@@ -19,8 +19,7 @@ class ShippingAddressScreen extends ConsumerStatefulWidget {
       _ShippingAddressScreenState();
 }
 
-class _ShippingAddressScreenState
-    extends ConsumerState<ShippingAddressScreen> {
+class _ShippingAddressScreenState extends ConsumerState<ShippingAddressScreen> {
   final _form = GlobalKey<FormState>();
   final _contactName = TextEditingController();
   final _contactPhone = TextEditingController();
@@ -81,9 +80,9 @@ class _ShippingAddressScreenState
       await ref.read(authServiceProvider).updateProfile(body);
       await ref.read(authProvider.notifier).refreshProfile();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Shipping address saved.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Shipping address saved.')));
       if (context.canPop()) {
         context.pop();
       } else {
@@ -110,8 +109,11 @@ class _ShippingAddressScreenState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.lock_outline,
-                    size: 56, color: SikapaColors.textMuted),
+                const Icon(
+                  Icons.lock_outline,
+                  size: 56,
+                  color: SikapaColors.textMuted,
+                ),
                 const SizedBox(height: 12),
                 const Text('Sign in to manage your shipping address.'),
                 const SizedBox(height: 16),
@@ -135,22 +137,23 @@ class _ShippingAddressScreenState
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text('Where should we deliver?',
-                  style: Theme.of(context).textTheme.headlineMedium),
+              Text(
+                'Where should we deliver?',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
               const SizedBox(height: 6),
               Text(
                 'This address is reused for every order. You can update it any time.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SikapaColors.textMuted,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: SikapaColors.textMuted),
               ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: _contactName,
                 decoration: const InputDecoration(labelText: 'Recipient name'),
                 textInputAction: TextInputAction.next,
-                validator: (v) =>
-                    (v ?? '').trim().isEmpty ? 'Required' : null,
+                validator: (v) => (v ?? '').trim().isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -169,16 +172,14 @@ class _ShippingAddressScreenState
                   hintText: 'e.g. Greater Accra',
                 ),
                 textInputAction: TextInputAction.next,
-                validator: (v) =>
-                    (v ?? '').trim().isEmpty ? 'Required' : null,
+                validator: (v) => (v ?? '').trim().isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _city,
                 decoration: const InputDecoration(labelText: 'City / Town'),
                 textInputAction: TextInputAction.next,
-                validator: (v) =>
-                    (v ?? '').trim().isEmpty ? 'Required' : null,
+                validator: (v) => (v ?? '').trim().isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -188,8 +189,7 @@ class _ShippingAddressScreenState
                   hintText: 'House number and street name',
                 ),
                 textInputAction: TextInputAction.next,
-                validator: (v) =>
-                    (v ?? '').trim().isEmpty ? 'Required' : null,
+                validator: (v) => (v ?? '').trim().isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -216,8 +216,10 @@ class _ShippingAddressScreenState
                     color: const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(_error!,
-                      style: const TextStyle(color: Color(0xFF991B1B))),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Color(0xFF991B1B)),
+                  ),
                 ),
               ],
               const SizedBox(height: 20),
@@ -228,7 +230,9 @@ class _ShippingAddressScreenState
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Text('Save address'),
               ),

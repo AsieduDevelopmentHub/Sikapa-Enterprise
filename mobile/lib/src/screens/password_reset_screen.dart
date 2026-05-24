@@ -9,7 +9,8 @@ class PasswordResetScreen extends ConsumerStatefulWidget {
   const PasswordResetScreen({super.key});
 
   @override
-  ConsumerState<PasswordResetScreen> createState() => _PasswordResetScreenState();
+  ConsumerState<PasswordResetScreen> createState() =>
+      _PasswordResetScreenState();
 }
 
 class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
@@ -29,8 +30,13 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       _message = null;
     });
     try {
-      await ref.read(authServiceProvider).requestPasswordReset(_emailCtrl.text.trim());
-      setState(() => _message = 'If an account exists for that email, a reset link is on its way.');
+      await ref
+          .read(authServiceProvider)
+          .requestPasswordReset(_emailCtrl.text.trim());
+      setState(
+        () => _message =
+            'If an account exists for that email, a reset link is on its way.',
+      );
     } on ApiException catch (e) {
       setState(() => _message = e.message);
     } finally {
@@ -46,11 +52,16 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text("We'll email a reset link", style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              "We'll email a reset link",
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: 6),
             Text(
               'Open the link on this device to set a new password from the website. In-app reset is coming in v2.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SikapaColors.textMuted),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: SikapaColors.textMuted),
             ),
             const SizedBox(height: 20),
             TextField(
@@ -64,7 +75,13 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
               onPressed: _busy ? null : _request,
               child: _busy
                   ? const SizedBox(
-                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Text('Send reset link'),
             ),
             if (_message != null) ...[

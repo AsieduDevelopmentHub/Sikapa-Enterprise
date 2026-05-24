@@ -28,17 +28,57 @@ class SikapaTheme {
     final serif = GoogleFonts.cormorantGaramond;
     final sans = GoogleFonts.dmSans;
     return TextTheme(
-      displayLarge: serif(fontSize: 36, height: 1.12, color: heading, fontWeight: FontWeight.w600),
-      displayMedium: serif(fontSize: 32, height: 1.15, color: heading, fontWeight: FontWeight.w600),
-      headlineLarge: serif(fontSize: 22, height: 1.3, color: heading, fontWeight: FontWeight.w600),
-      headlineMedium: serif(fontSize: 20, height: 1.35, color: heading, fontWeight: FontWeight.w600),
-      titleLarge: sans(fontSize: 18, height: 1.4, color: heading, fontWeight: FontWeight.w600),
-      titleMedium: sans(fontSize: 16, height: 1.4, color: heading, fontWeight: FontWeight.w600),
+      displayLarge: serif(
+        fontSize: 36,
+        height: 1.12,
+        color: heading,
+        fontWeight: FontWeight.w600,
+      ),
+      displayMedium: serif(
+        fontSize: 32,
+        height: 1.15,
+        color: heading,
+        fontWeight: FontWeight.w600,
+      ),
+      headlineLarge: serif(
+        fontSize: 22,
+        height: 1.3,
+        color: heading,
+        fontWeight: FontWeight.w600,
+      ),
+      headlineMedium: serif(
+        fontSize: 20,
+        height: 1.35,
+        color: heading,
+        fontWeight: FontWeight.w600,
+      ),
+      titleLarge: sans(
+        fontSize: 18,
+        height: 1.4,
+        color: heading,
+        fontWeight: FontWeight.w600,
+      ),
+      titleMedium: sans(
+        fontSize: 16,
+        height: 1.4,
+        color: heading,
+        fontWeight: FontWeight.w600,
+      ),
       bodyLarge: sans(fontSize: 16, height: 1.5, color: body),
       bodyMedium: sans(fontSize: 14, height: 1.45, color: body),
       bodySmall: sans(fontSize: 12, height: 1.4, color: body),
-      labelLarge: sans(fontSize: 14, height: 1.2, color: body, fontWeight: FontWeight.w600),
-      labelMedium: sans(fontSize: 12, height: 1.2, color: body, fontWeight: FontWeight.w600),
+      labelLarge: sans(
+        fontSize: 14,
+        height: 1.2,
+        color: body,
+        fontWeight: FontWeight.w600,
+      ),
+      labelMedium: sans(
+        fontSize: 12,
+        height: 1.2,
+        color: body,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 
@@ -76,8 +116,13 @@ class SikapaTheme {
           backgroundColor: SikapaColors.gold,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: GoogleFonts.dmSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -85,8 +130,13 @@ class SikapaTheme {
           backgroundColor: SikapaColors.crimson,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: GoogleFonts.dmSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -94,14 +144,22 @@ class SikapaTheme {
           foregroundColor: SikapaColors.textPrimary,
           side: const BorderSide(color: SikapaColors.graySoft),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: GoogleFonts.dmSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: SikapaColors.graySoft),
@@ -114,7 +172,10 @@ class SikapaTheme {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: SikapaColors.gold, width: 1.5),
         ),
-        labelStyle: GoogleFonts.dmSans(color: SikapaColors.textSecondary, fontSize: 14),
+        labelStyle: GoogleFonts.dmSans(
+          color: SikapaColors.textSecondary,
+          fontSize: 14,
+        ),
       ),
       cardTheme: CardThemeData(
         color: Colors.white,
@@ -124,7 +185,11 @@ class SikapaTheme {
           side: const BorderSide(color: Color(0x14000000)),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: SikapaColors.graySoft, thickness: 1, space: 1),
+      dividerTheme: const DividerThemeData(
+        color: SikapaColors.graySoft,
+        thickness: 1,
+        space: 1,
+      ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
         selectedItemColor: SikapaColors.gold,

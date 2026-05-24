@@ -37,11 +37,16 @@ class CartScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.shopping_bag_outlined,
-                        size: 56, color: SikapaColors.textMuted),
+                    const Icon(
+                      Icons.shopping_bag_outlined,
+                      size: 56,
+                      color: SikapaColors.textMuted,
+                    ),
                     const SizedBox(height: 12),
-                    Text('Your cart is empty.',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      'Your cart is empty.',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 12),
                     FilledButton(
                       onPressed: () => context.go('/shop'),
@@ -68,7 +73,9 @@ class CartScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    border: Border(top: BorderSide(color: SikapaColors.graySoft)),
+                    border: Border(
+                      top: BorderSide(color: SikapaColors.graySoft),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -76,17 +83,22 @@ class CartScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Subtotal', style: Theme.of(context).textTheme.bodyLarge),
-                          Text(fmt.format(cart.subtotal),
-                              style: Theme.of(context).textTheme.titleMedium),
+                          Text(
+                            'Subtotal',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          Text(
+                            fmt.format(cart.subtotal),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Shipping is calculated at checkout.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SikapaColors.textMuted,
-                            ),
+                          color: SikapaColors.textMuted,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
@@ -128,7 +140,10 @@ class _CartLineRow extends ConsumerWidget {
               width: 64,
               height: 64,
               child: productImage != null
-                  ? CachedNetworkImage(imageUrl: productImage, fit: BoxFit.cover)
+                  ? CachedNetworkImage(
+                      imageUrl: productImage,
+                      fit: BoxFit.cover,
+                    )
                   : Container(color: SikapaColors.graySoft),
             ),
           ),
@@ -144,11 +159,13 @@ class _CartLineRow extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 2),
-                Text(fmt.format(line.unitPrice),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: SikapaColors.crimson,
-                          fontWeight: FontWeight.w600,
-                        )),
+                Text(
+                  fmt.format(line.unitPrice),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: SikapaColors.crimson,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -156,7 +173,9 @@ class _CartLineRow extends ConsumerWidget {
                       icon: Icons.remove,
                       onTap: line.quantity <= 1
                           ? () async {
-                              await ref.read(cartProvider.notifier).remove(line.id);
+                              await ref
+                                  .read(cartProvider.notifier)
+                                  .remove(line.id);
                             }
                           : () async {
                               await ref
@@ -166,8 +185,10 @@ class _CartLineRow extends ConsumerWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('${line.quantity}',
-                          style: Theme.of(context).textTheme.titleMedium),
+                      child: Text(
+                        '${line.quantity}',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                     ),
                     _QtyButton(
                       icon: Icons.add,
@@ -179,8 +200,10 @@ class _CartLineRow extends ConsumerWidget {
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: SikapaColors.textMuted),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: SikapaColors.textMuted,
+                      ),
                       onPressed: () async {
                         await ref.read(cartProvider.notifier).remove(line.id);
                       },
@@ -229,7 +252,11 @@ class _SignInPrompt extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline, size: 56, color: SikapaColors.textMuted),
+            const Icon(
+              Icons.lock_outline,
+              size: 56,
+              color: SikapaColors.textMuted,
+            ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),

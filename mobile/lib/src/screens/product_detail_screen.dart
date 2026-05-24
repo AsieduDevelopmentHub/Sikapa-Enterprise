@@ -27,7 +27,8 @@ class ProductDetailScreen extends ConsumerWidget {
           ),
         ),
         data: (p) {
-          final saved = ref.watch(wishlistProvider).value?.contains(p.id) ?? false;
+          final saved =
+              ref.watch(wishlistProvider).value?.contains(p.id) ?? false;
           final auth = ref.watch(authProvider);
           return CustomScrollView(
             slivers: [
@@ -39,12 +40,20 @@ class ProductDetailScreen extends ConsumerWidget {
                 actions: [
                   if (auth.isSignedIn)
                     IconButton(
-                      icon: Icon(saved ? Icons.favorite : Icons.favorite_border,
-                          color: saved ? SikapaColors.crimson : SikapaColors.textMuted),
+                      icon: Icon(
+                        saved ? Icons.favorite : Icons.favorite_border,
+                        color: saved
+                            ? SikapaColors.crimson
+                            : SikapaColors.textMuted,
+                      ),
                       onPressed: () async {
                         try {
-                          await ref.read(wishlistProvider.notifier).toggle(p.id);
-                        } catch (_) {/* silent */}
+                          await ref
+                              .read(wishlistProvider.notifier)
+                              .toggle(p.id);
+                        } catch (_) {
+                          /* silent */
+                        }
                       },
                     ),
                 ],
@@ -52,7 +61,8 @@ class ProductDetailScreen extends ConsumerWidget {
                   background: CachedNetworkImage(
                     imageUrl: p.displayImage,
                     fit: BoxFit.cover,
-                    errorWidget: (_, _, _) => Container(color: SikapaColors.graySoft),
+                    errorWidget: (_, _, _) =>
+                        Container(color: SikapaColors.graySoft),
                   ),
                 ),
               ),
@@ -62,32 +72,44 @@ class ProductDetailScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.name, style: Theme.of(context).textTheme.headlineLarge),
+                      Text(
+                        p.name,
+                        style: Theme.of(context).textTheme.headlineLarge,
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         fmt.format(p.price),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: SikapaColors.crimson,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          color: SikapaColors.crimson,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       if (p.avgRating > 0)
                         Row(
                           children: [
-                            const Icon(Icons.star, color: SikapaColors.gold, size: 16),
+                            const Icon(
+                              Icons.star,
+                              color: SikapaColors.gold,
+                              size: 16,
+                            ),
                             const SizedBox(width: 4),
                             Text(p.avgRating.toStringAsFixed(1)),
                             if (p.reviewCount > 0)
-                              Text('  •  ${p.reviewCount} reviews',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: SikapaColors.textMuted,
-                                      )),
+                              Text(
+                                '  •  ${p.reviewCount} reviews',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: SikapaColors.textMuted),
+                              ),
                           ],
                         ),
                       const SizedBox(height: 16),
-                      if (p.description != null && p.description!.trim().isNotEmpty)
-                        Text(p.description!, style: Theme.of(context).textTheme.bodyLarge),
+                      if (p.description != null &&
+                          p.description!.trim().isNotEmpty)
+                        Text(
+                          p.description!,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
                       const SizedBox(height: 24),
                       Row(
                         children: [
@@ -99,8 +121,12 @@ class ProductDetailScreen extends ConsumerWidget {
                                   ? () => context.push('/login')
                                   : () async {
                                       try {
-                                        await ref.read(wishlistProvider.notifier).toggle(p.id);
-                                      } catch (_) {/* silent */}
+                                        await ref
+                                            .read(wishlistProvider.notifier)
+                                            .toggle(p.id);
+                                      } catch (_) {
+                                        /* silent */
+                                      }
                                     },
                             ),
                           ),
@@ -115,10 +141,14 @@ class ProductDetailScreen extends ConsumerWidget {
                                   return;
                                 }
                                 try {
-                                  await ref.read(cartProvider.notifier).add(p.id);
+                                  await ref
+                                      .read(cartProvider.notifier)
+                                      .add(p.id);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Added to cart')),
+                                      const SnackBar(
+                                        content: Text('Added to cart'),
+                                      ),
                                     );
                                   }
                                 } on ApiException catch (e) {

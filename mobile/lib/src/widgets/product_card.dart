@@ -39,10 +39,14 @@ class ProductCard extends ConsumerWidget {
                   CachedNetworkImage(
                     imageUrl: product.displayImage,
                     fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(color: SikapaColors.graySoft),
+                    placeholder: (_, _) =>
+                        Container(color: SikapaColors.graySoft),
                     errorWidget: (_, _, _) => Container(
                       color: SikapaColors.graySoft,
-                      child: const Icon(Icons.image_not_supported, color: SikapaColors.textMuted),
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: SikapaColors.textMuted,
+                      ),
                     ),
                   ),
                   if (auth.isSignedIn)
@@ -52,8 +56,12 @@ class ProductCard extends ConsumerWidget {
                       child: InkWell(
                         onTap: () async {
                           try {
-                            await ref.read(wishlistProvider.notifier).toggle(product.id);
-                          } catch (_) {/* silent */}
+                            await ref
+                                .read(wishlistProvider.notifier)
+                                .toggle(product.id);
+                          } catch (_) {
+                            /* silent */
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.all(6),
@@ -64,7 +72,9 @@ class ProductCard extends ConsumerWidget {
                           child: Icon(
                             saved ? Icons.favorite : Icons.favorite_border,
                             size: 18,
-                            color: saved ? SikapaColors.crimson : SikapaColors.textMuted,
+                            color: saved
+                                ? SikapaColors.crimson
+                                : SikapaColors.textMuted,
                           ),
                         ),
                       ),
@@ -87,15 +97,19 @@ class ProductCard extends ConsumerWidget {
                   Text(
                     fmt.format(product.price),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: SikapaColors.crimson,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: SikapaColors.crimson,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   if (product.avgRating > 0) ...[
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(Icons.star, size: 14, color: SikapaColors.gold),
+                        const Icon(
+                          Icons.star,
+                          size: 14,
+                          color: SikapaColors.gold,
+                        ),
                         const SizedBox(width: 2),
                         Text(
                           product.avgRating.toStringAsFixed(1),
@@ -105,9 +119,8 @@ class ProductCard extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Text(
                             '(${product.reviewCount})',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: SikapaColors.textMuted,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: SikapaColors.textMuted),
                           ),
                         ],
                       ],

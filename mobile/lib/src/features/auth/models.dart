@@ -1,5 +1,10 @@
 class TokenResponse {
-  TokenResponse({required this.accessToken, this.refreshToken, this.tokenType = 'bearer', this.expiresIn = 0});
+  TokenResponse({
+    required this.accessToken,
+    this.refreshToken,
+    this.tokenType = 'bearer',
+    this.expiresIn = 0,
+  });
 
   final String accessToken;
   final String? refreshToken;

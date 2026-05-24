@@ -17,8 +17,10 @@ bool _looksLikePlausibleRelative(String t) {
   if (t.isEmpty) return false;
   if (_bogusTokens.contains(t.toLowerCase())) return false;
   if (t.contains('/')) return true;
-  return RegExp(r'\.(jpg|jpeg|png|webp|gif|svg|avif)(\?|#|$)', caseSensitive: false)
-      .hasMatch(t);
+  return RegExp(
+    r'\.(jpg|jpeg|png|webp|gif|svg|avif)(\?|#|$)',
+    caseSensitive: false,
+  ).hasMatch(t);
 }
 
 bool _absoluteUrlLooksInvalid(String trimmed) {

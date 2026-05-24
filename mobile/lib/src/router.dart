@@ -58,7 +58,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
-      GoRoute(path: '/password-reset', builder: (_, _) => const PasswordResetScreen()),
+      GoRoute(
+        path: '/password-reset',
+        builder: (_, _) => const PasswordResetScreen(),
+      ),
       GoRoute(
         path: '/account/shipping-address',
         builder: (_, _) => const ShippingAddressScreen(),

@@ -21,7 +21,11 @@ class OrdersScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.receipt_long, size: 56, color: SikapaColors.textMuted),
+                const Icon(
+                  Icons.receipt_long,
+                  size: 56,
+                  color: SikapaColors.textMuted,
+                ),
                 const SizedBox(height: 12),
                 const Text('Sign in to view your orders.'),
                 const SizedBox(height: 16),
@@ -50,7 +54,9 @@ class OrdersScreen extends ConsumerWidget {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('No orders yet. Place your first order from the cart.'),
+                child: Text(
+                  'No orders yet. Place your first order from the cart.',
+                ),
               ),
             );
           }
@@ -78,25 +84,32 @@ class OrdersScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Order #${o.id}',
-                                style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'Order #${o.id}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               '${dateFmt.format(o.createdAt)}  •  ${o.status}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: SikapaColors.textMuted,
-                                  ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: SikapaColors.textMuted),
                             ),
                             const SizedBox(height: 6),
-                            Text(fmt.format(o.total),
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                      color: SikapaColors.crimson,
-                                      fontWeight: FontWeight.w600,
-                                    )),
+                            Text(
+                              fmt.format(o.total),
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    color: SikapaColors.crimson,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: SikapaColors.textMuted),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: SikapaColors.textMuted,
+                      ),
                     ],
                   ),
                 );
