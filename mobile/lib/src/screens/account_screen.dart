@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import '../core/theme.dart';
 import '../core/theme_preference.dart';
 import '../providers.dart';
@@ -99,6 +98,12 @@ class AccountScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+            ),
+          if (user.isAdmin)
+            _Tile(
+              icon: Icons.admin_panel_settings_outlined,
+              title: 'Admin portal',
+              onTap: () => context.go('/admin'),
             ),
           const Divider(),
           Padding(

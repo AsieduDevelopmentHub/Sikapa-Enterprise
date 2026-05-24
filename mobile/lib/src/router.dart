@@ -2,8 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/admin_permissions.dart';
 import 'features/help/help_content.dart';
 import 'providers.dart';
+import 'screens/admin/admin_customers_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/admin_misc_screens.dart';
+import 'screens/admin/admin_order_detail_screen.dart';
+import 'screens/admin/admin_orders_screen.dart';
+import 'screens/admin/admin_products_screen.dart';
+import 'screens/admin/admin_returns_screen.dart';
+import 'screens/admin/admin_shell.dart';
 import 'screens/account_screen.dart';
 import 'screens/app_shell.dart';
 import 'screens/cart_screen.dart';
@@ -67,6 +76,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if ((path == '/login' || path == '/register') && auth.isSignedIn) {
         return '/';
+      }
+      if (path.startsWith('/admin')) {
+        if (!auth.isSignedIn) {
+          return '/login?from=${Uri.encodeComponent(state.uri.toString())}';
+        }
+        if (!(auth.user?.isAdmin ?? false)) {
+          return '/account';
+        }
+        if (!canAccessAdminPath(auth.user, path)) {
+          return canAccessAdminNav(auth.user, '/admin') ? '/admin' : '/account';
+        }
       }
       return null;
     },
@@ -165,6 +185,86 @@ final routerProvider = Provider<GoRouter>((ref) {
           final topic = helpTopicBySlug(slug);
           if (topic == null) return const HelpScreen();
           return HelpTopicScreen(topic: topic);
+        },
+      ),
+      ShellRoute(
+        builder: (_, _, child) => AdminShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/admin',
+            builder: (_, _) => const AdminDashboardScreen(),
+            routes: [
+              GoRoute(
+                path: 'orders',
+                builder: (_, _) => const AdminOrdersScreen(),
+              ),
+              GoRoute(
+                path: 'products',
+                builder: (_, _) => const AdminProductsScreen(),
+              ),
+              GoRoute(
+                path: 'returns',
+                builder: (_, _) => const AdminReturnsScreen(),
+              ),
+              GoRoute(
+                path: 'customers',
+                builder: (_, _) => const AdminCustomersScreen(),
+              ),
+              GoRoute(
+                path: 'inventory',
+                builder: (_, _) => const AdminInventoryScreen(),
+              ),
+              GoRoute(
+                path: 'reviews',
+                builder: (_, _) => const AdminReviewsScreen(),
+              ),
+              GoRoute(
+                path: 'coupons',
+                builder: (_, _) => const AdminCouponsScreen(),
+              ),
+              GoRoute(
+                path: 'payments',
+                builder: (_, _) => const AdminPaymentsScreen(),
+              ),
+              GoRoute(
+                path: 'analytics',
+                builder: (_, _) => const AdminAnalyticsScreen(),
+              ),
+              GoRoute(
+                path: 'audit',
+                builder: (_, _) => const AdminAuditScreen(),
+              ),
+              GoRoute(
+                path: 'staff',
+                builder: (_, _) => const AdminStaffScreen(),
+              ),
+              GoRoute(
+                path: 'settings',
+                builder: (_, _) => const AdminSettingsScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/admin/orders/:id',
+        builder: (_, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return AdminOrderDetailScreen(orderId: id);
+        },
+      ),
+      GoRoute(
+        path: '/admin/products/:id',
+        builder: (_, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return AdminProductDetailScreen(productId: id);
+        },
+      ),
+      GoRoute(
+        path: '/admin/returns/:id',
+        builder: (_, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return AdminReturnDetailScreen(returnId: id);
         },
       ),
     ],

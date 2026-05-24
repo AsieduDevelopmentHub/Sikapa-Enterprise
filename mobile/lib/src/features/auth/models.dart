@@ -61,6 +61,8 @@ class UserProfile {
     this.emailVerified = false,
     this.twoFaEnabled = false,
     this.isAdmin = false,
+    this.adminRole,
+    this.adminPermissions,
   });
 
   final int id;
@@ -78,6 +80,8 @@ class UserProfile {
   final bool emailVerified;
   final bool twoFaEnabled;
   final bool isAdmin;
+  final String? adminRole;
+  final String? adminPermissions;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -96,6 +100,8 @@ class UserProfile {
       emailVerified: json['email_verified'] as bool? ?? false,
       twoFaEnabled: json['two_fa_enabled'] as bool? ?? false,
       isAdmin: json['is_admin'] as bool? ?? false,
+      adminRole: json['admin_role'] as String?,
+      adminPermissions: json['admin_permissions'] as String?,
     );
   }
 }
