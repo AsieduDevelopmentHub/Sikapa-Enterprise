@@ -181,7 +181,7 @@ class AdminService {
       body: {
         'name': name,
         'slug': slug,
-        if (description != null) 'description': description,
+        'description': ?description,
         'is_active': isActive,
         'sort_order': sortOrder,
       },
