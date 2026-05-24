@@ -71,7 +71,10 @@ class OrdersScreen extends ConsumerWidget {
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (_, i) {
                 final o = orders[i];
-                return Container(
+                return InkWell(
+                  onTap: () => context.push('/orders/${o.id}'),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -112,6 +115,7 @@ class OrdersScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
+                ),
                 );
               },
             ),

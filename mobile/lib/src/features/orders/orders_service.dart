@@ -1,10 +1,16 @@
 import '../../core/api/api_client.dart';
 import '../../core/api/v1_paths.dart';
 import 'models.dart';
+import 'shipping_models.dart';
 
 class OrdersService {
   OrdersService(this._api);
   final ApiClient _api;
+
+  Future<ShippingOptions> shippingOptions() async {
+    final res = await _api.get<dynamic>(V1.ordersShippingOptions);
+    return ShippingOptions.fromJson((res as Map).cast<String, dynamic>());
+  }
 
   Future<List<Order>> list() async {
     final res = await _api.get<dynamic>(V1.ordersList, auth: true);

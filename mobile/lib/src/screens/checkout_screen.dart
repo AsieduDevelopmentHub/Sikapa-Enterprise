@@ -2,18 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/api/api_exception.dart';
+import '../core/shipping_address.dart';
 import '../core/theme.dart';
+import '../features/auth/models.dart';
+import '../features/orders/shipping_models.dart';
 import '../providers.dart';
-
-/// Sentinel return URL the WebView listens for. The Paystack-hosted page
-/// redirects here on completion. We don't actually serve this URL — the
-/// WebView intercepts the navigation, extracts the `?reference=`, then closes.
-const String _paystackReturnHost = 'sikapa-mobile.local';
-const String _paystackReturnUrl =
-    'https://$_paystackReturnHost/checkout-complete';
+import '../widgets/paystack_webview.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -25,6 +21,8 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _busy = false;
   String? _error;
+  String _shippingMethod = 'delivery';
+  String? _courier;
 
   Future<void> _placeOrderAndPay() async {
     final auth = ref.read(authProvider);
@@ -32,13 +30,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (auth.user == null || cart == null || cart.items.isEmpty) return;
 
     final user = auth.user!;
-    if ((user.shippingAddressLine1 ?? '').trim().isEmpty ||
-        (user.shippingRegion ?? '').trim().isEmpty ||
-        (user.shippingCity ?? '').trim().isEmpty) {
+    final isDelivery = _shippingMethod == 'delivery';
+    if (isDelivery && !userHasDeliveryAddress(user)) {
       setState(
-        () => _error = 'Add a shipping address before placing this order.',
+        () => _error = 'Add a delivery address before placing this order.',
       );
       if (mounted) context.push('/account/shipping-address');
+      return;
+    }
+    if (isDelivery && (_courier == null || _courier!.isEmpty)) {
+      setState(() => _error = 'Choose a courier for delivery.');
       return;
     }
 
@@ -47,27 +48,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _error = null;
     });
     try {
+      final body = <String, dynamic>{
+        'shipping_method': _shippingMethod,
+        if (isDelivery) ...{
+          'shipping_region': user.shippingRegion,
+          'shipping_city': user.shippingCity,
+          'shipping_provider': _courier,
+          'shipping_address': formatShippingAddress(user),
+          'shipping_contact_name': user.shippingContactName ?? user.name,
+          'shipping_contact_phone': user.shippingContactPhone ?? user.phone ?? '',
+        },
+      };
+
       final orders = ref.read(ordersServiceProvider);
-      final order = await orders.create({
-        'shipping_region': user.shippingRegion,
-        'shipping_city': user.shippingCity,
-        'shipping_address_line1': user.shippingAddressLine1,
-        if ((user.shippingAddressLine2 ?? '').isNotEmpty)
-          'shipping_address_line2': user.shippingAddressLine2,
-        if ((user.shippingLandmark ?? '').isNotEmpty)
-          'shipping_landmark': user.shippingLandmark,
-        'shipping_contact_name': user.shippingContactName ?? user.name,
-        'shipping_contact_phone': user.shippingContactPhone ?? user.phone ?? '',
-      });
+      final order = await orders.create(body);
       final authorizationUrl = await orders.initiatePaystack(
         orderId: order.id,
-        callbackUrl: _paystackReturnUrl,
+        callbackUrl: paystackReturnUrl,
       );
 
       if (!mounted) return;
       final reference = await Navigator.of(context).push<String?>(
         MaterialPageRoute(
-          builder: (_) => _PaystackWebView(authorizationUrl: authorizationUrl),
+          builder: (_) => PaystackWebView(authorizationUrl: authorizationUrl),
         ),
       );
 
@@ -75,12 +78,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         try {
           await orders.verifyPaystack(reference);
         } catch (_) {
-          /* server webhook will reconcile */
+          /* webhook reconciles */
         }
       }
       ref.invalidate(ordersProvider);
       ref.invalidate(cartProvider);
-      if (mounted) context.go('/orders');
+      if (mounted) context.go('/orders/${order.id}');
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
@@ -94,6 +97,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Widget build(BuildContext context) {
     final cartAsync = ref.watch(cartProvider);
     final auth = ref.watch(authProvider);
+    final shippingAsync = ref.watch(shippingOptionsProvider);
     final fmt = NumberFormat.simpleCurrency(name: 'GHS', decimalDigits: 2);
 
     return Scaffold(
@@ -107,79 +111,57 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           }
           final user = auth.user;
           final hasAddress =
-              user != null &&
-              (user.shippingAddressLine1 ?? '').trim().isNotEmpty &&
-              (user.shippingRegion ?? '').trim().isNotEmpty &&
-              (user.shippingCity ?? '').trim().isNotEmpty;
+              user != null && userHasDeliveryAddress(user);
+          final canPay = _shippingMethod == 'pickup' || hasAddress;
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Ship to',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  if (user != null)
-                    TextButton(
-                      onPressed: () =>
-                          context.push('/account/shipping-address'),
-                      child: Text(hasAddress ? 'Edit' : 'Add'),
-                    ),
-                ],
+              Text(
+                'Fulfillment',
+                style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: SikapaColors.graySoft),
-                ),
-                child: user == null
-                    ? const Text('Sign in to continue.')
-                    : !hasAddress
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'No shipping address saved yet.',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Add an address so we know where to deliver this order.',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: SikapaColors.textMuted),
-                          ),
-                          const SizedBox(height: 10),
-                          FilledButton(
-                            onPressed: () =>
-                                context.push('/account/shipping-address'),
-                            child: const Text('Add address'),
-                          ),
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user.shippingContactName ?? user.name,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if ((user.shippingAddressLine1 ?? '').isNotEmpty)
-                            Text(user.shippingAddressLine1!),
-                          if ((user.shippingAddressLine2 ?? '').isNotEmpty)
-                            Text(user.shippingAddressLine2!),
-                          Text(
-                            '${user.shippingCity ?? ''}, ${user.shippingRegion ?? ''}',
-                          ),
-                          if ((user.shippingContactPhone ?? '').isNotEmpty)
-                            Text(user.shippingContactPhone!),
-                        ],
-                      ),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'pickup', label: Text('Pickup')),
+                  ButtonSegment(value: 'delivery', label: Text('Delivery')),
+                ],
+                selected: {_shippingMethod},
+                onSelectionChanged: (s) {
+                  setState(() => _shippingMethod = s.first);
+                },
               ),
+              if (_shippingMethod == 'delivery') ...[
+                const SizedBox(height: 16),
+                shippingAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, _) => const Text('Could not load couriers.'),
+                  data: (opts) => _CourierPicker(
+                    couriers: opts.couriers,
+                    value: _courier,
+                    onChanged: (v) => setState(() => _courier = v),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Deliver to',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    if (user != null)
+                      TextButton(
+                        onPressed: () =>
+                            context.push('/account/shipping-address'),
+                        child: Text(hasAddress ? 'Edit' : 'Add'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _AddressCard(user: user, hasAddress: hasAddress),
+              ],
               const SizedBox(height: 24),
               Text(
                 'Order summary',
@@ -214,14 +196,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Shipping is added by the server based on your region.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: SikapaColors.textMuted),
+                _shippingMethod == 'pickup'
+                    ? 'Pickup orders have no delivery fee.'
+                    : 'Delivery fee is calculated on the server from your region.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: SikapaColors.textMuted,
+                ),
               ),
-              if (_error != null)
+              if (_error != null) ...[
+                const SizedBox(height: 12),
                 Container(
-                  margin: const EdgeInsets.only(top: 12),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEE2E2),
@@ -232,17 +216,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     style: const TextStyle(color: Color(0xFF991B1B)),
                   ),
                 ),
+              ],
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: _busy || !hasAddress ? null : _placeOrderAndPay,
+                onPressed: _busy || !canPay ? null : _placeOrderAndPay,
                 icon: const Icon(Icons.lock_outline),
                 label: _busy
                     ? const Text('Processing...')
-                    : Text(
-                        hasAddress
-                            ? 'Place order & pay'
-                            : 'Add address to continue',
-                      ),
+                    : const Text('Place order & pay'),
               ),
             ],
           );
@@ -252,51 +233,73 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 }
 
-class _PaystackWebView extends StatefulWidget {
-  const _PaystackWebView({required this.authorizationUrl});
-  final String authorizationUrl;
+class _CourierPicker extends StatelessWidget {
+  const _CourierPicker({
+    required this.couriers,
+    required this.value,
+    required this.onChanged,
+  });
 
-  @override
-  State<_PaystackWebView> createState() => _PaystackWebViewState();
-}
-
-class _PaystackWebViewState extends State<_PaystackWebView> {
-  late final WebViewController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (req) {
-            final uri = Uri.tryParse(req.url);
-            if (uri != null && uri.host == _paystackReturnHost) {
-              final ref =
-                  uri.queryParameters['reference'] ??
-                  uri.queryParameters['trxref'];
-              Navigator.of(context).pop(ref);
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.authorizationUrl));
-  }
+  final List<ShippingCourierOption> couriers;
+  final String? value;
+  final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pay with Paystack'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(null),
-        ),
+    if (couriers.isEmpty) {
+      return const Text('No couriers configured.');
+    }
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: const InputDecoration(labelText: 'Courier'),
+      items: couriers
+          .map(
+            (c) => DropdownMenuItem(
+              value: c.name,
+              child: Text('${c.name} (+GHS ${c.feeDelta.toStringAsFixed(2)})'),
+            ),
+          )
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _AddressCard extends StatelessWidget {
+  const _AddressCard({required this.user, required this.hasAddress});
+
+  final UserProfile? user;
+  final bool hasAddress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SikapaColors.graySoft),
       ),
-      body: WebViewWidget(controller: _controller),
+      child: user == null
+          ? const Text('Sign in to continue.')
+          : !hasAddress
+          ? const Text('Add a delivery address to continue.')
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.shippingContactName ?? user.name,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                if ((user.shippingAddressLine1 ?? '').isNotEmpty)
+                  Text(user.shippingAddressLine1!),
+                Text(
+                  '${user.shippingCity ?? ''}, ${user.shippingRegion ?? ''}',
+                ),
+                if ((user.shippingContactPhone ?? '').isNotEmpty)
+                  Text(user.shippingContactPhone!),
+              ],
+            ),
     );
   }
 }
