@@ -173,22 +173,22 @@ class _AdminProductFormScreenState
                           ],
                         ),
                       );
-                      if (ok != true || !mounted) return;
+                      if (ok != true || !context.mounted) return;
                       setState(() => _busy = true);
                       try {
                         await ref
                             .read(adminServiceProvider)
                             .deleteProduct(widget.productId!);
                         ref.invalidate(adminProductsProvider);
-                        if (mounted) context.go('/admin/products');
+                        if (!context.mounted) return;
+                        context.go('/admin/products');
                       } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text('$e')));
-                        }
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('$e')),
+                        );
                       } finally {
-                        if (mounted) setState(() => _busy = false);
+                        if (context.mounted) setState(() => _busy = false);
                       }
                     },
             ),
@@ -230,7 +230,8 @@ class _AdminProductFormScreenState
                 _category = names.first;
               }
               return DropdownButtonFormField<String>(
-                value: _category.isEmpty ? null : _category,
+                key: ValueKey(_category),
+                initialValue: _category.isEmpty ? null : _category,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: [
                   const DropdownMenuItem(value: '', child: Text('(none)')),
