@@ -33,4 +33,17 @@ class AppEnv {
     'SIKAPA_GOOGLE_OAUTH_ENABLED',
     defaultValue: false,
   );
+
+  /// Storefront origin for intercepting Google OAuth redirects (hash tokens).
+  /// Set to your deployed Next.js URL, e.g. https://your-app.vercel.app
+  static const String frontendUrl = String.fromEnvironment(
+    'SIKAPA_FRONTEND_URL',
+    defaultValue: '',
+  );
+
+  /// Custom URL scheme for deep links (password reset, email verify).
+  static const String appLinkScheme = String.fromEnvironment(
+    'SIKAPA_APP_SCHEME',
+    defaultValue: 'sikapa',
+  );
 }

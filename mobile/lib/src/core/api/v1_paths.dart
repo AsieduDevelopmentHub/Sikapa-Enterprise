@@ -18,6 +18,13 @@ class V1 {
   static const String authResendEmailVerification =
       '/auth/resend-email-verification';
   static const String authAccountDelete = '/auth/account/delete';
+  static const String authTwoFaSetup = '/auth/2fa/setup';
+  static const String authTwoFaEnable = '/auth/2fa/enable';
+  static const String authTwoFaDisable = '/auth/2fa/disable';
+  static const String authTwoFaBackupCodes = '/auth/2fa/backup-codes';
+  static const String authGoogleStart = '/auth/google/start';
+  static const String authGoogleCallback = '/auth/google/callback';
+  static const String authGoogleVerify2fa = '/auth/google/verify-2fa';
 
   // Products
   static const String productsList = '/products/';
