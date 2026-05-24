@@ -250,7 +250,8 @@ class _CourierPicker extends StatelessWidget {
       return const Text('No couriers configured.');
     }
     return DropdownButtonFormField<String>(
-      value: value,
+      key: ValueKey(value),
+      initialValue: value,
       decoration: const InputDecoration(labelText: 'Courier'),
       items: couriers
           .map(

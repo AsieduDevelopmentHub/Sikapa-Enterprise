@@ -5,6 +5,8 @@
 #   .\scripts\ci-local.ps1 -MobileOnly
 #   .\scripts\ci-local.ps1 -IncludeFrontend
 #   .\scripts\ci-local.ps1 -SkipAndroidBuild   # fast: format, analyze, test only
+#
+# Backend uses backend/venv (activate or let script auto-detect venv\Scripts\python.exe).
 
 param(
     [switch]$BackendOnly,
