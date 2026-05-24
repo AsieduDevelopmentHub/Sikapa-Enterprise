@@ -48,8 +48,9 @@ class CatalogService {
     int limit = 20,
   }) async {
     final q = query.trim();
-    if (q.isEmpty)
+    if (q.isEmpty) {
       return ProductPage(total: 0, skip: skip, limit: limit, items: const []);
+    }
     final res = await _api.get<dynamic>(
       V1.productsSearch,
       query: {'q': q, 'skip': skip, 'limit': limit},
