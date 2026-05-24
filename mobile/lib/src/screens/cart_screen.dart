@@ -17,13 +17,6 @@ class CartScreen extends ConsumerWidget {
     final cartAsync = ref.watch(cartProvider);
     final fmt = NumberFormat.simpleCurrency(name: 'GHS', decimalDigits: 2);
 
-    if (!auth.isSignedIn) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Cart')),
-        body: const _SignInPrompt(message: 'Sign in to start shopping.'),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(title: const Text('Your cart')),
       body: cartAsync.when(
@@ -59,12 +52,39 @@ class CartScreen extends ConsumerWidget {
           }
           return Column(
             children: [
+              if (!auth.isSignedIn)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF4E5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: SikapaColors.gold),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Sign in to sync your cart and check out.'),
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/login'),
+                        child: const Text('Sign in'),
+                      ),
+                    ],
+                  ),
+                ),
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  itemCount: cart.items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (_, i) => _CartLineRow(line: cart.items[i]),
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(cartProvider.notifier).refresh();
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    itemCount: cart.items.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (_, i) => _CartLineRow(line: cart.items[i]),
+                  ),
                 ),
               ),
               SafeArea(
@@ -102,8 +122,12 @@ class CartScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
-                        onPressed: () => context.push('/checkout'),
-                        child: const Text('Checkout'),
+                        onPressed: auth.isSignedIn
+                            ? () => context.push('/checkout')
+                            : () => context.push('/login?from=/checkout'),
+                        child: Text(
+                          auth.isSignedIn ? 'Checkout' : 'Sign in to checkout',
+                        ),
                       ),
                     ],
                   ),
@@ -235,37 +259,6 @@ class _QtyButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 16, color: SikapaColors.textPrimary),
-      ),
-    );
-  }
-}
-
-class _SignInPrompt extends StatelessWidget {
-  const _SignInPrompt({required this.message});
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.lock_outline,
-              size: 56,
-              color: SikapaColors.textMuted,
-            ),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => context.push('/login'),
-              child: const Text('Sign in'),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -10,7 +10,7 @@ Android-first, iOS-ready. Goal: **shopper parity** with the Next.js storefront (
 - Orders **list** only
 - Theme aligned with web (crimson / gold / cream)
 
-## Phase 1 — Android P0 (in progress)
+## Phase 1 — Android P0 ✅
 
 | Item | Status |
 |------|--------|
@@ -21,15 +21,17 @@ Android-first, iOS-ready. Goal: **shopper parity** with the Next.js storefront (
 | Router auth redirects for protected routes | Done |
 | Expand `Order` model (payment_status, fees, lines) | Done |
 
-## Phase 2 — Android P1
+## Phase 2 — Android P1 ✅
 
-- Product image gallery (multi-image carousel)
-- Reviews: list on PDP, create if `can-review`
-- Returns: request from order detail, my returns list
-- Search filters (price / rating) in shop UI
-- Guest cart merge on login (local lines → API)
-- Order list status filters + unpaid badge
-- Pull-to-refresh consistency on all lists
+| Item | Status |
+|------|--------|
+| Product image gallery (multi-image carousel) | Done |
+| Reviews: list on PDP, create if `can-review` | Done |
+| Returns: request from order detail, my returns list | Done |
+| Search filters (price / rating) in shop UI | Done |
+| Guest cart merge on login (local lines → API) | Done |
+| Order list status filters + unpaid badge | Done |
+| Pull-to-refresh on cart, orders, returns, wishlist, shop | Done |
 
 ## Phase 3 — Account & connectivity
 

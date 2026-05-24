@@ -57,29 +57,34 @@ class WishlistScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Wishlist')),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.62,
-        ),
-        itemCount: ids.length,
-        itemBuilder: (_, i) {
-          final productId = ids.elementAt(i);
-          final detail = ref.watch(productDetailProvider(productId));
-          return detail.when(
-            data: (p) => ProductCard(product: p),
-            loading: () => Container(
-              decoration: BoxDecoration(
-                color: SikapaColors.graySoft,
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            error: (_, _) => const SizedBox.shrink(),
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(wishlistProvider.notifier).refresh();
         },
+        child: GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.62,
+          ),
+          itemCount: ids.length,
+          itemBuilder: (_, i) {
+            final productId = ids.elementAt(i);
+            final detail = ref.watch(productDetailProvider(productId));
+            return detail.when(
+              data: (p) => ProductCard(product: p),
+              loading: () => Container(
+                decoration: BoxDecoration(
+                  color: SikapaColors.graySoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              error: (_, _) => const SizedBox.shrink(),
+            );
+          },
+        ),
       ),
     );
   }

@@ -12,6 +12,7 @@ import 'screens/login_2fa_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/orders_screen.dart';
+import 'screens/returns_screen.dart';
 import 'screens/password_reset_screen.dart';
 import 'screens/product_detail_screen.dart';
 import 'screens/register_screen.dart';
@@ -41,7 +42,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final path = state.matchedLocation;
       const protected = [
-        '/cart',
         '/checkout',
         '/wishlist',
         '/orders',
@@ -111,6 +111,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ShippingAddressScreen(),
       ),
       GoRoute(path: '/checkout', builder: (_, _) => const CheckoutScreen()),
+      GoRoute(path: '/returns', builder: (_, _) => const ReturnsScreen()),
     ],
   );
 });

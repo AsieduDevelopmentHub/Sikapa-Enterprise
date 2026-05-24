@@ -49,6 +49,22 @@ class V1 {
   static const String ordersShippingOptions = '/orders/shipping-options';
   static String ordersDetail(int id) => '/orders/$id';
 
+  // Reviews
+  static const String reviewsCreate = '/reviews';
+  static String reviewsProduct(int productId) => '/reviews/product/$productId';
+  static String reviewsCanReview(int productId) =>
+      '/reviews/product/$productId/can-review';
+  static const String reviewsMine = '/reviews/user/me';
+  static String reviewsDelete(int reviewId) => '/reviews/$reviewId';
+
+  // Returns
+  static String returnsCreateForOrder(int orderId) =>
+      '/orders/$orderId/returns';
+  static String returnsListForOrder(int orderId) => '/orders/$orderId/returns';
+  static const String returnsMyList = '/returns/';
+  static String returnsDetail(int returnId) => '/returns/$returnId';
+  static String returnsCancel(int returnId) => '/returns/$returnId';
+
   // Payments
   static const String paymentsPaystackInit = '/payments/paystack/initialize';
   static String paymentsPaystackVerify(String reference) =>
