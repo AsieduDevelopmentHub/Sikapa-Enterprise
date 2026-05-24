@@ -37,11 +37,17 @@ class OrdersService {
   /// Body shape mirrors `backend/app/api/v1/orders/schemas.py`. The mobile
   /// MVP submits the user's saved shipping address and lets the server compute
   /// totals and shipping fees server-side.
-  Future<Order> create(Map<String, dynamic> body) async {
+  Future<Order> create(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) async {
     final res = await _api.post<dynamic>(
       V1.ordersCreate,
       auth: true,
       body: body,
+      headers: idempotencyKey != null
+          ? {'Idempotency-Key': idempotencyKey}
+          : null,
     );
     return Order.fromJson((res as Map).cast<String, dynamic>());
   }
@@ -51,11 +57,15 @@ class OrdersService {
   Future<String> initiatePaystack({
     required int orderId,
     required String callbackUrl,
+    String? idempotencyKey,
   }) async {
     final res = await _api.post<dynamic>(
       V1.paymentsPaystackInit,
       auth: true,
       body: {'order_id': orderId, 'callback_url': callbackUrl},
+      headers: idempotencyKey != null
+          ? {'Idempotency-Key': idempotencyKey}
+          : null,
     );
     final map = (res as Map).cast<String, dynamic>();
     return map['authorization_url'] as String;

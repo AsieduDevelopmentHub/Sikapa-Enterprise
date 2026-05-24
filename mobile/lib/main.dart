@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'src/core/deep_links.dart';
 import 'src/core/theme.dart';
 import 'src/providers.dart';
 import 'src/router.dart';
@@ -11,17 +12,27 @@ void main() {
   runApp(const ProviderScope(child: SikapaApp()));
 }
 
-class SikapaApp extends ConsumerWidget {
+class SikapaApp extends ConsumerStatefulWidget {
   const SikapaApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SikapaApp> createState() => _SikapaAppState();
+}
+
+class _SikapaAppState extends ConsumerState<SikapaApp> {
+  var _deepLinksBound = false;
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final auth = ref.watch(authProvider);
     final maintenance = ref.watch(maintenanceMessageProvider);
 
-    // Eagerly wake the backend (Render free tier cold start). Fire-and-forget.
-    ref.listen<int>(Provider<int>((_) => 0), (_, _) {});
+    if (!_deepLinksBound && !auth.bootstrapping) {
+      _deepLinksBound = true;
+      bindDeepLinks(router);
+    }
+
     Future.microtask(() => ref.read(apiClientProvider).pingHealth());
 
     if (auth.bootstrapping) {

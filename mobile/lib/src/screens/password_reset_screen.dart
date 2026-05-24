@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/api/api_exception.dart';
 import '../core/theme.dart';
@@ -58,10 +59,15 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Open the link on this device to set a new password from the website. In-app reset is coming in v2.',
+              'Open the link on this device, or enter the token manually.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: SikapaColors.textMuted),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => context.push('/password-reset/confirm'),
+              child: const Text('I have a reset token'),
             ),
             const SizedBox(height: 20),
             TextField(

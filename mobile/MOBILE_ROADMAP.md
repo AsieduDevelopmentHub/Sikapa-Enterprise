@@ -33,14 +33,17 @@ Android-first, iOS-ready. Goal: **shopper parity** with the Next.js storefront (
 | Order list status filters + unpaid badge | Done |
 | Pull-to-refresh on cart, orders, returns, wishlist, shop | Done |
 
-## Phase 3 — Account & connectivity
+## Phase 3 — Account & connectivity ✅
 
-- In-app password change + reset confirm (deep link / manual token)
-- Email verification + resend
-- 2FA setup / disable (QR flow)
-- Google OAuth (`flutter_appauth` + custom scheme)
-- Profile edit (name, phone, email)
-- Idempotency-Key on order create + Paystack init
+| Item | Status |
+|------|--------|
+| In-app password change + reset confirm (deep link / manual token) | Done |
+| Email verification + resend | Done |
+| 2FA setup / disable (QR flow) | Done |
+| Google OAuth (WebView + SPA token intercept; `SIKAPA_GOOGLE_OAUTH_ENABLED`) | Done |
+| Profile edit (name, phone, email) | Done |
+| Idempotency-Key on order create + Paystack init | Done |
+| Deep links: `sikapa://reset-password`, `sikapa://verify-email` | Done |
 
 ## Phase 4 — iOS + polish
 
