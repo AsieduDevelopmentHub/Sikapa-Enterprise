@@ -55,7 +55,9 @@ class ShippingOptions {
   final List<ShippingRegionOption> regions;
   final List<ShippingCourierOption> couriers;
 
-  factory ShippingOptions.fromJson(Map<String, dynamic> json) => ShippingOptions(
+  factory ShippingOptions.fromJson(
+    Map<String, dynamic> json,
+  ) => ShippingOptions(
     regions: (json['regions'] as List? ?? const [])
         .whereType<Map>()
         .map((e) => ShippingRegionOption.fromJson(e.cast<String, dynamic>()))

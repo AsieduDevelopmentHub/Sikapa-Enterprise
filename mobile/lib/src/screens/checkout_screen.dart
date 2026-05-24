@@ -56,7 +56,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           'shipping_provider': _courier,
           'shipping_address': formatShippingAddress(user),
           'shipping_contact_name': user.shippingContactName ?? user.name,
-          'shipping_contact_phone': user.shippingContactPhone ?? user.phone ?? '',
+          'shipping_contact_phone':
+              user.shippingContactPhone ?? user.phone ?? '',
         },
       };
 
@@ -110,8 +111,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             return const Center(child: Text('Your cart is empty.'));
           }
           final user = auth.user;
-          final hasAddress =
-              user != null && userHasDeliveryAddress(user);
+          final hasAddress = user != null && userHasDeliveryAddress(user);
           final canPay = _shippingMethod == 'pickup' || hasAddress;
 
           return ListView(
@@ -199,9 +199,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 _shippingMethod == 'pickup'
                     ? 'Pickup orders have no delivery fee.'
                     : 'Delivery fee is calculated on the server from your region.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SikapaColors.textMuted,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: SikapaColors.textMuted),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
@@ -296,9 +296,7 @@ class _AddressCard extends StatelessWidget {
                     ),
                     if ((u.shippingAddressLine1 ?? '').isNotEmpty)
                       Text(u.shippingAddressLine1!),
-                    Text(
-                      '${u.shippingCity ?? ''}, ${u.shippingRegion ?? ''}',
-                    ),
+                    Text('${u.shippingCity ?? ''}, ${u.shippingRegion ?? ''}'),
                     if ((u.shippingContactPhone ?? '').isNotEmpty)
                       Text(u.shippingContactPhone!),
                   ],
