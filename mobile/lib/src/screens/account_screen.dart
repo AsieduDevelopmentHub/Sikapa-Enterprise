@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme.dart';
+import '../core/theme_preference.dart';
 import '../providers.dart';
 
 class AccountScreen extends ConsumerWidget {
@@ -100,6 +101,44 @@ class AccountScreen extends ConsumerWidget {
               ),
             ),
           const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(
+              'Appearance',
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: SikapaColors.textMuted),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.dark_mode_outlined),
+            title: const Text('Theme'),
+            subtitle: Text(_themeLabel(ref.watch(themePreferenceProvider))),
+            trailing: DropdownButton<ThemePreference>(
+              value: ref.watch(themePreferenceProvider),
+              underline: const SizedBox.shrink(),
+              items: const [
+                DropdownMenuItem(
+                  value: ThemePreference.system,
+                  child: Text('System'),
+                ),
+                DropdownMenuItem(
+                  value: ThemePreference.light,
+                  child: Text('Light'),
+                ),
+                DropdownMenuItem(
+                  value: ThemePreference.dark,
+                  child: Text('Dark'),
+                ),
+              ],
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(themePreferenceProvider.notifier).set(v);
+                }
+              },
+            ),
+          ),
+          const Divider(),
           _Tile(
             icon: Icons.edit_outlined,
             title: 'Edit profile',
@@ -146,13 +185,7 @@ class AccountScreen extends ConsumerWidget {
           _Tile(
             icon: Icons.help_outline,
             title: 'Help & support',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Help center available on the web for now.'),
-                ),
-              );
-            },
+            onTap: () => context.push('/help'),
           ),
           const Divider(),
           ListTile(
@@ -171,6 +204,17 @@ class AccountScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+String _themeLabel(ThemePreference p) {
+  switch (p) {
+    case ThemePreference.light:
+      return 'Light';
+    case ThemePreference.dark:
+      return 'Dark';
+    case ThemePreference.system:
+      return 'Match device';
   }
 }
 

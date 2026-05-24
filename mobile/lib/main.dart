@@ -1,14 +1,18 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'src/core/deep_links.dart';
+import 'src/core/order_notifications.dart';
 import 'src/core/theme.dart';
+import 'src/core/theme_preference.dart';
 import 'src/providers.dart';
 import 'src/router.dart';
 import 'src/screens/maintenance_screen.dart';
 import 'src/screens/splash_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const ProviderScope(child: SikapaApp()));
 }
 
@@ -21,12 +25,26 @@ class SikapaApp extends ConsumerStatefulWidget {
 
 class _SikapaAppState extends ConsumerState<SikapaApp> {
   var _deepLinksBound = false;
+  var _notificationsInit = false;
 
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final auth = ref.watch(authProvider);
     final maintenance = ref.watch(maintenanceMessageProvider);
+    final themeMode = ref.watch(themeModeProvider);
+
+    if (!_notificationsInit) {
+      _notificationsInit = true;
+      final isTest = WidgetsBinding.instance.runtimeType.toString().contains(
+        'Test',
+      );
+      if (!kIsWeb && !isTest) {
+        Future.microtask(
+          () => ref.read(orderNotificationServiceProvider).initialize(),
+        );
+      }
+    }
 
     if (!_deepLinksBound && !auth.bootstrapping) {
       _deepLinksBound = true;
@@ -39,6 +57,8 @@ class _SikapaAppState extends ConsumerState<SikapaApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: SikapaTheme.light(),
+        darkTheme: SikapaTheme.dark(),
+        themeMode: themeMode,
         home: const SplashScreen(),
       );
     }
@@ -47,6 +67,8 @@ class _SikapaAppState extends ConsumerState<SikapaApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: SikapaTheme.light(),
+        darkTheme: SikapaTheme.dark(),
+        themeMode: themeMode,
         home: const MaintenanceScreen(),
       );
     }
@@ -55,6 +77,8 @@ class _SikapaAppState extends ConsumerState<SikapaApp> {
       title: 'Sikapa',
       debugShowCheckedModeBanner: false,
       theme: SikapaTheme.light(),
+      darkTheme: SikapaTheme.dark(),
+      themeMode: themeMode,
       routerConfig: router,
     );
   }

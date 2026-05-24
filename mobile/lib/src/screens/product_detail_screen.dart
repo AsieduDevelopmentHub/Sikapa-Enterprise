@@ -10,6 +10,7 @@ import '../features/catalog/variant_models.dart';
 import '../features/reviews/models.dart';
 import '../providers.dart';
 import '../widgets/product_image_carousel.dart';
+import '../widgets/recently_viewed_row.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.productId});
@@ -22,6 +23,15 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   int? _selectedVariantId;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(recentlyViewedStoreProvider).track(widget.productId);
+      ref.invalidate(recentlyViewedProductsProvider(widget.productId));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -253,6 +263,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     ],
                   ),
                 ),
+              ),
+              SliverToBoxAdapter(
+                child: RecentlyViewedRow(excludeProductId: widget.productId),
               ),
             ],
           );
