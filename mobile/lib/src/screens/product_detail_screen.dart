@@ -6,15 +6,27 @@ import 'package:intl/intl.dart';
 
 import '../core/api/api_exception.dart';
 import '../core/theme.dart';
+import '../features/catalog/variant_models.dart';
 import '../providers.dart';
 
-class ProductDetailScreen extends ConsumerWidget {
+class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.productId});
   final int productId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final productAsync = ref.watch(productDetailProvider(productId));
+  ConsumerState<ProductDetailScreen> createState() =>
+      _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
+  int? _selectedVariantId;
+
+  @override
+  Widget build(BuildContext context) {
+    final productAsync = ref.watch(productDetailProvider(widget.productId));
+    final variantsAsync = ref.watch(
+      productVariantsProvider(widget.productId),
+    );
     final fmt = NumberFormat.simpleCurrency(name: 'GHS', decimalDigits: 2);
 
     return Scaffold(
@@ -27,9 +39,35 @@ class ProductDetailScreen extends ConsumerWidget {
           ),
         ),
         data: (p) {
+          final variants = variantsAsync.value ?? const <ProductVariant>[];
+          ProductVariant? selected;
+          for (final v in variants) {
+            if (v.id == _selectedVariantId) {
+              selected = v;
+              break;
+            }
+          }
+          if (variants.isNotEmpty &&
+              selected == null &&
+              _selectedVariantId == null) {
+            final firstInStock = variants.where((v) => v.isInStock).toList();
+            final pick = firstInStock.isNotEmpty ? firstInStock.first : variants.first;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _selectedVariantId = pick.id);
+            });
+          }
+
+          final unitPrice = p.price + (selected?.priceDelta ?? 0);
+          final imageUrl = (selected?.imageUrl?.isNotEmpty == true)
+              ? selected!.displayImage
+              : p.displayImage;
+          final canAdd = p.isInStock &&
+              (variants.isEmpty || (selected?.isInStock ?? false));
+
           final saved =
               ref.watch(wishlistProvider).value?.contains(p.id) ?? false;
           final auth = ref.watch(authProvider);
+
           return CustomScrollView(
             slivers: [
               SliverAppBar(
@@ -51,15 +89,13 @@ class ProductDetailScreen extends ConsumerWidget {
                           await ref
                               .read(wishlistProvider.notifier)
                               .toggle(p.id);
-                        } catch (_) {
-                          /* silent */
-                        }
+                        } catch (_) {}
                       },
                     ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: CachedNetworkImage(
-                    imageUrl: p.displayImage,
+                    imageUrl: imageUrl,
                     fit: BoxFit.cover,
                     errorWidget: (_, _, _) =>
                         Container(color: SikapaColors.graySoft),
@@ -78,12 +114,20 @@ class ProductDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        fmt.format(p.price),
+                        fmt.format(unitPrice),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: SikapaColors.crimson,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+                      if (!p.isInStock)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            'Out of stock',
+                            style: TextStyle(color: SikapaColors.crimson),
+                          ),
+                        ),
                       const SizedBox(height: 4),
                       if (p.avgRating > 0)
                         Row(
@@ -103,6 +147,30 @@ class ProductDetailScreen extends ConsumerWidget {
                               ),
                           ],
                         ),
+                      if (variants.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Options',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: variants.map((v) {
+                            final isSel = v.id == _selectedVariantId;
+                            return ChoiceChip(
+                              label: Text(v.name),
+                              selected: isSel,
+                              onSelected: v.isInStock
+                                  ? (_) => setState(
+                                      () => _selectedVariantId = v.id,
+                                    )
+                                  : null,
+                            );
+                          }).toList(),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       if (p.description != null &&
                           p.description!.trim().isNotEmpty)
@@ -124,9 +192,7 @@ class ProductDetailScreen extends ConsumerWidget {
                                         await ref
                                             .read(wishlistProvider.notifier)
                                             .toggle(p.id);
-                                      } catch (_) {
-                                        /* silent */
-                                      }
+                                      } catch (_) {}
                                     },
                             ),
                           ),
@@ -135,30 +201,39 @@ class ProductDetailScreen extends ConsumerWidget {
                             child: FilledButton.icon(
                               icon: const Icon(Icons.shopping_bag_outlined),
                               label: const Text('Add to cart'),
-                              onPressed: () async {
-                                if (!auth.isSignedIn) {
-                                  context.push('/login');
-                                  return;
-                                }
-                                try {
-                                  await ref
-                                      .read(cartProvider.notifier)
-                                      .add(p.id);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Added to cart'),
-                                      ),
-                                    );
-                                  }
-                                } on ApiException catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(e.message)),
-                                    );
-                                  }
-                                }
-                              },
+                              onPressed: !canAdd
+                                  ? null
+                                  : () async {
+                                      if (!auth.isSignedIn) {
+                                        context.push('/login');
+                                        return;
+                                      }
+                                      try {
+                                        await ref
+                                            .read(cartProvider.notifier)
+                                            .add(
+                                              p.id,
+                                              variantId: _selectedVariantId,
+                                            );
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Added to cart'),
+                                            ),
+                                          );
+                                        }
+                                      } on ApiException catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(content: Text(e.message)),
+                                          );
+                                        }
+                                      }
+                                    },
                             ),
                           ),
                         ],

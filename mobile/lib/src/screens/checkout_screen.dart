@@ -284,21 +284,26 @@ class _AddressCard extends StatelessWidget {
           ? const Text('Sign in to continue.')
           : !hasAddress
           ? const Text('Add a delivery address to continue.')
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.shippingContactName ?? user.name,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                if ((user.shippingAddressLine1 ?? '').isNotEmpty)
-                  Text(user.shippingAddressLine1!),
-                Text(
-                  '${user.shippingCity ?? ''}, ${user.shippingRegion ?? ''}',
-                ),
-                if ((user.shippingContactPhone ?? '').isNotEmpty)
-                  Text(user.shippingContactPhone!),
-              ],
+          : Builder(
+              builder: (context) {
+                final u = user!;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      u.shippingContactName ?? u.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if ((u.shippingAddressLine1 ?? '').isNotEmpty)
+                      Text(u.shippingAddressLine1!),
+                    Text(
+                      '${u.shippingCity ?? ''}, ${u.shippingRegion ?? ''}',
+                    ),
+                    if ((u.shippingContactPhone ?? '').isNotEmpty)
+                      Text(u.shippingContactPhone!),
+                  ],
+                );
+              },
             ),
     );
   }

@@ -164,6 +164,10 @@ The mobile client uses the **same** `/api/v1/*` endpoints the Next.js web app do
 - **Cold-start ping.** On launch, the app fires a `/health` request (Render free tier wake-up).
   Failures are silent.
 
+## Full development plan
+
+See **[MOBILE_ROADMAP.md](./MOBILE_ROADMAP.md)** for phased Android-first parity with the web storefront (UI/UX, API coverage, iOS).
+
 ## What's in v1 vs v2
 
 Implemented:
