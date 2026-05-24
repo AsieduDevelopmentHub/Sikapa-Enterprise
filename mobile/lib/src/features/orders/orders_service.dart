@@ -32,13 +32,20 @@ class OrdersService {
   /// MVP submits the user's saved shipping address and lets the server compute
   /// totals and shipping fees server-side.
   Future<Order> create(Map<String, dynamic> body) async {
-    final res = await _api.post<dynamic>(V1.ordersCreate, auth: true, body: body);
+    final res = await _api.post<dynamic>(
+      V1.ordersCreate,
+      auth: true,
+      body: body,
+    );
     return Order.fromJson((res as Map).cast<String, dynamic>());
   }
 
   /// Initiate Paystack checkout for an order. Returns the hosted
   /// `authorization_url` to load in a WebView.
-  Future<String> initiatePaystack({required int orderId, required String callbackUrl}) async {
+  Future<String> initiatePaystack({
+    required int orderId,
+    required String callbackUrl,
+  }) async {
     final res = await _api.post<dynamic>(
       V1.paymentsPaystackInit,
       auth: true,
@@ -49,7 +56,10 @@ class OrdersService {
   }
 
   Future<Map<String, dynamic>> verifyPaystack(String reference) async {
-    final res = await _api.get<dynamic>(V1.paymentsPaystackVerify(reference), auth: true);
+    final res = await _api.get<dynamic>(
+      V1.paymentsPaystackVerify(reference),
+      auth: true,
+    );
     return (res as Map).cast<String, dynamic>();
   }
 }

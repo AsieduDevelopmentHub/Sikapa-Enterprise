@@ -20,14 +20,21 @@ class AccountScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.account_circle_outlined,
-                    size: 56, color: SikapaColors.textMuted),
+                const Icon(
+                  Icons.account_circle_outlined,
+                  size: 56,
+                  color: SikapaColors.textMuted,
+                ),
                 const SizedBox(height: 12),
-                Text('Welcome to Sikapa',
-                    style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Welcome to Sikapa',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 6),
-                const Text('Sign in to track orders, save items, and check out faster.',
-                    textAlign: TextAlign.center),
+                const Text(
+                  'Sign in to track orders, save items, and check out faster.',
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -62,9 +69,14 @@ class AccountScreen extends ConsumerWidget {
               foregroundColor: Colors.white,
               child: Icon(Icons.person),
             ),
-            title: Text(user.name, style: Theme.of(context).textTheme.titleMedium),
-            subtitle: Text(user.email ?? user.username,
-                style: Theme.of(context).textTheme.bodySmall),
+            title: Text(
+              user.name,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            subtitle: Text(
+              user.email ?? user.username,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
           const Divider(),
           _Tile(
@@ -88,8 +100,10 @@ class AccountScreen extends ConsumerWidget {
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                    content: Text(
-                        'Use “Forgot password?” on the sign-in screen to receive a reset email.')),
+                  content: Text(
+                    'Use “Forgot password?” on the sign-in screen to receive a reset email.',
+                  ),
+                ),
               );
             },
           ),
@@ -99,16 +113,21 @@ class AccountScreen extends ConsumerWidget {
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                    content:
-                        Text('Help center available on the web for now.')),
+                  content: Text('Help center available on the web for now.'),
+                ),
               );
             },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: SikapaColors.crimson),
-            title: const Text('Sign out',
-                style: TextStyle(color: SikapaColors.crimson, fontWeight: FontWeight.w600)),
+            title: const Text(
+              'Sign out',
+              style: TextStyle(
+                color: SikapaColors.crimson,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             onTap: () async {
               await ref.read(authProvider.notifier).logout();
             },

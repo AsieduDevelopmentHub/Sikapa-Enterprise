@@ -46,7 +46,8 @@ class Cart {
         .whereType<Map>()
         .map((e) => CartLine.fromJson(e.cast<String, dynamic>()))
         .toList();
-    final subtotal = (json['subtotal'] as num?)?.toDouble() ??
+    final subtotal =
+        (json['subtotal'] as num?)?.toDouble() ??
         items.fold<double>(0, (s, l) => s + l.lineTotal);
     return Cart(items: items, subtotal: subtotal);
   }

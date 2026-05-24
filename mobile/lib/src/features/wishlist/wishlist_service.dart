@@ -8,9 +8,9 @@ class WishlistItem {
   final int productId;
 
   factory WishlistItem.fromJson(Map<String, dynamic> json) => WishlistItem(
-        id: (json['id'] as num).toInt(),
-        productId: (json['product_id'] as num).toInt(),
-      );
+    id: (json['id'] as num).toInt(),
+    productId: (json['product_id'] as num).toInt(),
+  );
 }
 
 class WishlistService {
@@ -29,9 +29,11 @@ class WishlistService {
   }
 
   Future<void> add(int productId) async {
-    await _api.post<dynamic>(V1.wishlistAdd, auth: true, body: {
-      'product_id': productId,
-    });
+    await _api.post<dynamic>(
+      V1.wishlistAdd,
+      auth: true,
+      body: {'product_id': productId},
+    );
   }
 
   Future<void> removeByProduct(int productId) async {

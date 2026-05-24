@@ -13,7 +13,9 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final productsAsync = ref.watch(productsProvider(const ProductsQuery(limit: 12)));
+    final productsAsync = ref.watch(
+      productsProvider(const ProductsQuery(limit: 12)),
+    );
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
@@ -32,8 +34,10 @@ class HomeScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                child: Text('Shop by category',
-                    style: Theme.of(context).textTheme.headlineMedium),
+                child: Text(
+                  'Shop by category',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
               ),
             ),
             SliverToBoxAdapter(
@@ -58,8 +62,10 @@ class HomeScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('New arrivals',
-                        style: Theme.of(context).textTheme.headlineMedium),
+                    Text(
+                      'New arrivals',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
                     TextButton(
                       onPressed: () => context.go('/shop'),
                       child: const Text('See all'),
@@ -137,9 +143,9 @@ class _Hero extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Heritage you can wear.',
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                  color: Colors.white,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.displayMedium?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -164,7 +170,8 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/shop?cat=${Uri.encodeComponent(category.slug)}'),
+      onTap: () =>
+          context.go('/shop?cat=${Uri.encodeComponent(category.slug)}'),
       child: SizedBox(
         width: 84,
         child: Column(
@@ -212,7 +219,10 @@ class _CategorySkeleton extends StatelessWidget {
           Container(
             width: 64,
             height: 64,
-            decoration: const BoxDecoration(shape: BoxShape.circle, color: SikapaColors.graySoft),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: SikapaColors.graySoft,
+            ),
           ),
           const SizedBox(height: 8),
           Container(width: 60, height: 8, color: SikapaColors.graySoft),

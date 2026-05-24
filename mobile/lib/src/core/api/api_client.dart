@@ -20,8 +20,8 @@ typedef LogoutListener = void Function();
 ///   show the dedicated maintenance screen and then surface the message.
 class ApiClient {
   ApiClient({TokenStore? tokenStore, Dio? dio})
-      : _tokenStore = tokenStore ?? TokenStore(),
-        _dio = dio ?? Dio() {
+    : _tokenStore = tokenStore ?? TokenStore(),
+      _dio = dio ?? Dio() {
     _dio.options
       ..baseUrl = AppEnv.apiBase
       ..connectTimeout = const Duration(seconds: 20)
@@ -41,7 +41,11 @@ class ApiClient {
 
   // ─────────────────────── Public API ──────────────────────────────────────
 
-  Future<T> get<T>(String path, {Map<String, dynamic>? query, bool auth = false}) {
+  Future<T> get<T>(
+    String path, {
+    Map<String, dynamic>? query,
+    bool auth = false,
+  }) {
     return _request<T>('GET', path, queryParameters: query, auth: auth);
   }
 
@@ -69,7 +73,9 @@ class ApiClient {
         Uri.parse('${AppEnv.backendOrigin}/health'),
         options: Options(receiveTimeout: const Duration(seconds: 5)),
       );
-    } catch (_) {/* ignore */}
+    } catch (_) {
+      /* ignore */
+    }
   }
 
   // ─────────────────────── Internals ───────────────────────────────────────
@@ -87,7 +93,11 @@ class ApiClient {
         final stored = await _tokenStore.read();
         final token = stored.access;
         if (token == null || token.isEmpty) {
-          throw ApiException(statusCode: 401, message: 'Not signed in', unauthorized: true);
+          throw ApiException(
+            statusCode: 401,
+            message: 'Not signed in',
+            unauthorized: true,
+          );
         }
         headers['Authorization'] = 'Bearer $token';
       }
@@ -130,13 +140,21 @@ class ApiClient {
     final maintenance = _detectMaintenance(res);
     if (maintenance != null) {
       onMaintenance?.call(maintenance);
-      throw ApiException(statusCode: code, message: maintenance, maintenance: true);
+      throw ApiException(
+        statusCode: code,
+        message: maintenance,
+        maintenance: true,
+      );
     }
 
     final message = _friendlyMessage(code, res.data);
     if (code == 401 && auth) {
       onForcedLogout?.call();
-      throw ApiException(statusCode: code, message: message, unauthorized: true);
+      throw ApiException(
+        statusCode: code,
+        message: message,
+        unauthorized: true,
+      );
     }
     throw ApiException(statusCode: code, message: message);
   }
@@ -193,7 +211,9 @@ class ApiClient {
       try {
         final decoded = jsonDecode(body);
         if (decoded is Map) json = decoded.cast<String, dynamic>();
-      } catch (_) {/* ignore */}
+      } catch (_) {
+        /* ignore */
+      }
     }
     if (json == null || json['maintenance'] != true) return null;
     final msg = json['message'];
@@ -211,7 +231,9 @@ class ApiClient {
       try {
         final decoded = jsonDecode(body);
         if (decoded is Map) json = decoded.cast<String, dynamic>();
-      } catch (_) {/* ignore */}
+      } catch (_) {
+        /* ignore */
+      }
     }
     if (json != null) {
       final m = json['message'];
@@ -243,7 +265,8 @@ class ApiClient {
       case 429:
         return 'Too many attempts. Wait a moment and try again.';
       default:
-        if (status >= 500) return 'Something went wrong on our side. Try again shortly.';
+        if (status >= 500)
+          return 'Something went wrong on our side. Try again shortly.';
         return 'Something went wrong. Try again.';
     }
   }

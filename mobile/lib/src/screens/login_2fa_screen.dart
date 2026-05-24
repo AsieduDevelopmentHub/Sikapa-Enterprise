@@ -39,7 +39,9 @@ class _Login2faScreenState extends ConsumerState<Login2faScreen> {
   Future<void> _submit() async {
     final code = _codeCtrl.text.trim();
     if (code.length < 6) {
-      setState(() => _error = 'Enter the 6-digit code from your authenticator app.');
+      setState(
+        () => _error = 'Enter the 6-digit code from your authenticator app.',
+      );
       return;
     }
     setState(() {
@@ -68,14 +70,16 @@ class _Login2faScreenState extends ConsumerState<Login2faScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text('Enter your code',
-                style: Theme.of(context).textTheme.headlineLarge),
+            Text(
+              'Enter your code',
+              style: Theme.of(context).textTheme.headlineLarge,
+            ),
             const SizedBox(height: 6),
             Text(
               'Open your authenticator app and enter the 6-digit code for ${widget.args.identifier}.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: SikapaColors.textMuted,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: SikapaColors.textMuted),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -100,8 +104,10 @@ class _Login2faScreenState extends ConsumerState<Login2faScreen> {
                   color: const Color(0xFFFEE2E2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(_error!,
-                    style: const TextStyle(color: Color(0xFF991B1B))),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: Color(0xFF991B1B)),
+                ),
               ),
             const SizedBox(height: 16),
             FilledButton(
@@ -111,7 +117,9 @@ class _Login2faScreenState extends ConsumerState<Login2faScreen> {
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Verify & sign in'),
             ),

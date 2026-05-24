@@ -108,8 +108,14 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'newest', child: Text('Newest first')),
-              PopupMenuItem(value: 'price_asc', child: Text('Price: low to high')),
-              PopupMenuItem(value: 'price_desc', child: Text('Price: high to low')),
+              PopupMenuItem(
+                value: 'price_asc',
+                child: Text('Price: low to high'),
+              ),
+              PopupMenuItem(
+                value: 'price_desc',
+                child: Text('Price: high to low'),
+              ),
               PopupMenuItem(value: 'name', child: Text('Name (A–Z)')),
             ],
           ),
@@ -165,7 +171,10 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
           Expanded(
             child: productsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => _ErrorState(message: '$e', onRetry: () => ref.invalidate(productsProvider)),
+              error: (e, _) => _ErrorState(
+                message: '$e',
+                onRetry: () => ref.invalidate(productsProvider),
+              ),
               data: (page) {
                 if (page.items.isEmpty) {
                   return const Center(
@@ -182,12 +191,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   },
                   child: GridView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.62,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.62,
+                        ),
                     itemCount: page.items.length,
                     itemBuilder: (_, i) => ProductCard(product: page.items[i]),
                   ),
@@ -214,7 +224,11 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off, size: 48, color: SikapaColors.textMuted),
+            const Icon(
+              Icons.cloud_off,
+              size: 48,
+              color: SikapaColors.textMuted,
+            ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),

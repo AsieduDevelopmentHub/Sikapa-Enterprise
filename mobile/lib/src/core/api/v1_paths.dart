@@ -15,7 +15,8 @@ class V1 {
   static const String authPasswordResetConfirm = '/auth/password-reset/confirm';
   static const String authPasswordChange = '/auth/password/change';
   static const String authVerifyEmail = '/auth/verify-email';
-  static const String authResendEmailVerification = '/auth/resend-email-verification';
+  static const String authResendEmailVerification =
+      '/auth/resend-email-verification';
   static const String authAccountDelete = '/auth/account/delete';
 
   // Products
@@ -36,7 +37,8 @@ class V1 {
   static const String wishlistList = '/wishlist/';
   static const String wishlistAdd = '/wishlist/items';
   static String wishlistRemove(int id) => '/wishlist/items/$id';
-  static String wishlistByProduct(int productId) => '/wishlist/by-product/$productId';
+  static String wishlistByProduct(int productId) =>
+      '/wishlist/by-product/$productId';
 
   // Orders
   static const String ordersList = '/orders/';
