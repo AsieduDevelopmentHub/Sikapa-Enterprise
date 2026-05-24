@@ -227,7 +227,8 @@ class BackupCodesResponse(BaseModel):
 
 # ============ Logout ============
 class LogoutRequest(BaseModel):
-    pass
+    """Optional refresh token so logout fully ends the session (not just access JWT)."""
+    refresh_token: str | None = None
 
 
 # ============ Session Management ============

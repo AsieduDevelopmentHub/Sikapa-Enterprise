@@ -106,9 +106,18 @@ export async function authFetchProfile(accessToken: string): Promise<UserProfile
   return apiFetchJsonAuth<UserProfile>(accessToken, V1.auth.profile);
 }
 
-export async function authLogout(accessToken: string): Promise<void> {
+export async function authLogout(
+  accessToken: string,
+  refreshToken?: string | null
+): Promise<void> {
+  const body =
+    refreshToken && refreshToken.trim().length > 0
+      ? { refresh_token: refreshToken }
+      : {};
   await apiFetchJsonAuth<{ message: string }>(accessToken, V1.auth.logout, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 }
 

@@ -86,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const applySession = useCallback(async (tokens: TokenResponse, remember = true) => {
+    clearAllAuthTokens();
     const bucket: AuthBucket = remember ? "local" : "session";
     persistTokens(tokens.access_token, tokens.refresh_token ?? undefined, bucket);
     const profile = await authFetchProfile(tokens.access_token);
@@ -225,10 +226,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    const token = readTokens().access;
-    if (token) {
+    const { access, refresh } = readTokens();
+    if (access) {
       try {
-        await authLogout(token);
+        await authLogout(access, refresh);
       } catch {
         /* still clear locally */
       }
