@@ -265,8 +265,9 @@ class ApiClient {
       case 429:
         return 'Too many attempts. Wait a moment and try again.';
       default:
-        if (status >= 500)
+        if (status >= 500) {
           return 'Something went wrong on our side. Try again shortly.';
+        }
         return 'Something went wrong. Try again.';
     }
   }
