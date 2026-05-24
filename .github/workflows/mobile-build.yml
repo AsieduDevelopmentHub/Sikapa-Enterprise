@@ -393,3 +393,52 @@ jobs:
           path: artifacts/ios/**
           if-no-files-found: error
           retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # GitHub Release (tag pushes only — same workflow run as artifact upload)
+  # ---------------------------------------------------------------------------
+
+  publish_release:
+    name: Publish GitHub Release
+    needs: [android]
+    if: startsWith(github.ref, 'refs/tags/mobile-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-${{ github.run_number }}
+          path: dist/android
+
+      - name: Download iOS artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-${{ github.run_number }}
+          path: dist/ios
+
+      - name: Verify release files
+        run: |
+          echo "Android:"
+          ls -la dist/android
+          echo "iOS (optional):"
+          ls -la dist/ios || true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Sikapa Mobile ${{ github.ref_name }}
+          generate_release_notes: false
+          fail_on_unmatched_files: false
+          body: |
+            Sikapa Mobile release (Android APK/AAB; unsigned iOS IPA when the macOS job ran).
+
+            See [mobile/MOBILE_ROADMAP.md](https://github.com/AsieduDevelopmentHub/Sikapa-Enterprise/blob/main/mobile/MOBILE_ROADMAP.md) for feature scope.
+          files: |
+            dist/android/**
+            dist/ios/**
