@@ -35,6 +35,11 @@ const _allNavItems = [
     icon: Icons.inventory_2_outlined,
   ),
   AdminNavItem(
+    path: '/admin/categories',
+    label: 'Categories',
+    icon: Icons.category_outlined,
+  ),
+  AdminNavItem(
     path: '/admin/returns',
     label: 'Returns',
     icon: Icons.assignment_return_outlined,

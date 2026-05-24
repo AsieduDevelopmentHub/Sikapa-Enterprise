@@ -9,6 +9,7 @@ const _rolesWithFullBypass = {'super_admin', 'admin'};
 const adminNavPermissions = <String, Object?>{
   '/admin': null,
   '/admin/products': 'manage_products',
+  '/admin/categories': 'manage_products',
   '/admin/orders': 'manage_orders',
   '/admin/returns': 'manage_orders',
   '/admin/customers': 'view_users',
