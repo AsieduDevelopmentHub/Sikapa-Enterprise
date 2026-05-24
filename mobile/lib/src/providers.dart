@@ -20,6 +20,8 @@ import 'features/reviews/reviews_service.dart';
 import 'features/reviews/models.dart';
 import 'features/returns/returns_service.dart';
 import 'features/returns/models.dart';
+import 'features/admin/admin_service.dart';
+import 'features/admin/models.dart';
 import 'features/wishlist/wishlist_service.dart';
 
 // ─────────────────────── Singletons ────────────────────────────────────────
@@ -53,6 +55,9 @@ final reviewsServiceProvider = Provider(
 );
 final returnsServiceProvider = Provider(
   (ref) => ReturnsService(ref.read(apiClientProvider)),
+);
+final adminServiceProvider = Provider(
+  (ref) => AdminService(ref.read(apiClientProvider)),
 );
 final guestCartStoreProvider = Provider((ref) => GuestCartStore());
 final recentlyViewedStoreProvider = Provider((ref) => RecentlyViewedStore());
@@ -690,3 +695,10 @@ final orderReturnsProvider = FutureProvider.family<List<OrderReturn>, int>((
   if (!ref.watch(authProvider).isSignedIn) return const [];
   return ref.read(returnsServiceProvider).forOrder(orderId);
 });
+
+// ─────────────────────── Admin ─────────────────────────────────────────────
+
+final adminDashboardProvider =
+    FutureProvider.autoDispose<AdminDashboardMetrics>(
+      (ref) => ref.read(adminServiceProvider).dashboard(),
+    );

@@ -56,10 +56,21 @@ Android-first, iOS-ready. Goal: **shopper parity** with the Next.js storefront (
 | Recently viewed products (local SharedPreferences) | Done |
 | Shipped-order local notifications (status diff; FCM deferred) | Done |
 
-## Explicitly out of scope (web/admin)
+## Phase 5 — Mobile admin ✅ (MVP)
 
-- Admin dashboard (`/system`)
-- Staff permissions UI
+In-app admin at `/admin` for `is_admin` users (permission-aware nav mirrors web `admin-permissions.ts`).
+
+| Area | Mobile | Notes |
+|------|--------|-------|
+| Dashboard / analytics | ✅ | Metrics, order stats, top products |
+| Orders | ✅ | List, filters, detail, status + shipped/cancel |
+| Products | ✅ | List + read-only detail (edit on web) |
+| Returns | ✅ | Queue + status updates |
+| Customers | ✅ | List, activate/deactivate |
+| Inventory, reviews, payments, coupons, audit, staff, settings | ✅ | List views |
+| Categories, coupons CRUD, product create/edit, bulk import, staff role editor | Web | Use `frontend` `/system` for heavy forms |
+
+Account → **Admin portal** when signed in as admin.
 
 ## Sync checklist
 
