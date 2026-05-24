@@ -53,7 +53,11 @@ jobs:
         with:
           tag_name: ${{ github.event.workflow_run.head_branch }}
           name: Sikapa Mobile ${{ github.event.workflow_run.head_branch }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body: |
+            Sikapa Mobile release (Android APK/AAB; unsigned iOS IPA when the macOS job runs).
+
+            See [mobile/MOBILE_ROADMAP.md](https://github.com/AsieduDevelopmentHub/Sikapa-Enterprise/blob/main/mobile/MOBILE_ROADMAP.md) for feature scope.
           fail_on_unmatched_files: false
           files: |
             dist/android/**
