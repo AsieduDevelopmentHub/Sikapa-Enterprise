@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'core/admin_permissions.dart';
 import 'features/help/help_content.dart';
 import 'providers.dart';
+import 'screens/admin/admin_categories_screen.dart';
 import 'screens/admin/admin_customers_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_misc_screens.dart';
+import 'screens/admin/admin_product_form_screen.dart';
 import 'screens/admin/admin_order_detail_screen.dart';
 import 'screens/admin/admin_orders_screen.dart';
 import 'screens/admin/admin_products_screen.dart';
@@ -203,6 +205,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (_, _) => const AdminProductsScreen(),
               ),
               GoRoute(
+                path: 'categories',
+                builder: (_, _) => const AdminCategoriesScreen(),
+              ),
+              GoRoute(
                 path: 'returns',
                 builder: (_, _) => const AdminReturnsScreen(),
               ),
@@ -245,6 +251,28 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/admin/products/new',
+        builder: (_, _) => const AdminProductFormScreen(),
+      ),
+      GoRoute(
+        path: '/admin/products/:id/edit',
+        builder: (_, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return AdminProductFormScreen(productId: id);
+        },
+      ),
+      GoRoute(
+        path: '/admin/categories/new',
+        builder: (_, _) => const AdminCategoryFormScreen(),
+      ),
+      GoRoute(
+        path: '/admin/categories/:id/edit',
+        builder: (_, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return AdminCategoryFormScreen(categoryId: id);
+        },
       ),
       GoRoute(
         path: '/admin/orders/:id',

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/admin_order_alerts.dart';
 import '../../features/admin/models.dart';
 import '../../providers.dart';
 import '../../widgets/order_status_chip.dart';
@@ -33,6 +34,7 @@ final adminOrdersProvider = FutureProvider.autoDispose<_AdminOrdersView>((
   final service = ref.read(adminServiceProvider);
   final status = filter == 'all' ? null : filter;
   final orders = await service.orders(limit: 50, status: status);
+  await ref.read(adminOrderAlertServiceProvider).onOrdersPolled(orders);
   final users = await service.usersForLabels(limit: 100);
   final names = {for (final u in users) u.id: u.name};
   return _AdminOrdersView(orders: orders, userNames: names);

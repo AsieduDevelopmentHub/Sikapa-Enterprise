@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/api/v1_admin_paths.dart';
@@ -92,6 +94,125 @@ class AdminService {
   Future<AdminProduct> productDetail(int id) async {
     final res = await _api.get<dynamic>(V1Admin.product(id), auth: true);
     return AdminProduct.fromJson((res as Map).cast<String, dynamic>());
+  }
+
+  Future<AdminProduct> createProduct({
+    required String name,
+    required String slug,
+    required double price,
+    String? description,
+    String? category,
+    int inStock = 0,
+    String? imagePath,
+  }) async {
+    final form = FormData.fromMap({
+      'name': name,
+      'slug': slug,
+      'price': price,
+      if (description != null && description.isNotEmpty)
+        'description': description,
+      if (category != null && category.isNotEmpty) 'category': category,
+      'in_stock': inStock,
+    });
+    if (imagePath != null) {
+      form.files.add(
+        MapEntry('image', await MultipartFile.fromFile(imagePath)),
+      );
+    }
+    final res = await _api.postForm<dynamic>(V1Admin.products, form);
+    return AdminProduct.fromJson((res as Map).cast<String, dynamic>());
+  }
+
+  Future<AdminProduct> updateProduct(
+    int id, {
+    String? name,
+    String? slug,
+    double? price,
+    String? description,
+    String? category,
+    int? inStock,
+    bool? isActive,
+    String? imagePath,
+  }) async {
+    final form = FormData();
+    void field(String key, Object? value) {
+      if (value != null) form.fields.add(MapEntry(key, '$value'));
+    }
+
+    field('name', name);
+    field('slug', slug);
+    field('description', description);
+    field('price', price);
+    field('category', category);
+    field('in_stock', inStock);
+    field('is_active', isActive);
+    if (imagePath != null) {
+      form.files.add(
+        MapEntry('image', await MultipartFile.fromFile(imagePath)),
+      );
+    }
+    final res = await _api.putForm<dynamic>(V1Admin.product(id), form);
+    return AdminProduct.fromJson((res as Map).cast<String, dynamic>());
+  }
+
+  Future<void> deleteProduct(int id) async {
+    await _api.delete<dynamic>(V1Admin.product(id), auth: true);
+  }
+
+  Future<List<AdminCategory>> categories({int limit = 100}) async {
+    final res = await _api.get<dynamic>(
+      V1Admin.categories,
+      auth: true,
+      query: {'limit': limit},
+    );
+    return _listFromJson(res, AdminCategory.fromJson);
+  }
+
+  Future<AdminCategory> createCategory({
+    required String name,
+    required String slug,
+    String? description,
+    bool isActive = true,
+    int sortOrder = 0,
+  }) async {
+    final res = await _api.post<dynamic>(
+      V1Admin.categories,
+      auth: true,
+      body: {
+        'name': name,
+        'slug': slug,
+        if (description != null) 'description': description,
+        'is_active': isActive,
+        'sort_order': sortOrder,
+      },
+    );
+    return AdminCategory.fromJson((res as Map).cast<String, dynamic>());
+  }
+
+  Future<AdminCategory> updateCategory(
+    int id, {
+    String? name,
+    String? slug,
+    String? description,
+    bool? isActive,
+    int? sortOrder,
+  }) async {
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (slug != null) body['slug'] = slug;
+    if (description != null) body['description'] = description;
+    if (isActive != null) body['is_active'] = isActive;
+    if (sortOrder != null) body['sort_order'] = sortOrder;
+    final res = await _api.put<dynamic>(
+      V1Admin.category(id),
+      auth: true,
+      body: body,
+    );
+    return AdminCategory.fromJson((res as Map).cast<String, dynamic>());
+  }
+
+  Future<void> deleteCategory(int id) async {
+    await _api.delete<dynamic>(V1Admin.category(id), auth: true);
   }
 
   Future<List<AdminUser>> users({

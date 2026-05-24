@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'src/core/admin_order_alerts.dart';
 import 'src/core/deep_links.dart';
 import 'src/core/order_notifications.dart';
 import 'src/core/theme.dart';
@@ -40,9 +41,12 @@ class _SikapaAppState extends ConsumerState<SikapaApp> {
         'Test',
       );
       if (!kIsWeb && !isTest) {
-        Future.microtask(
-          () => ref.read(orderNotificationServiceProvider).initialize(),
-        );
+        Future.microtask(() async {
+          await ref.read(orderNotificationServiceProvider).initialize();
+          if (auth.user?.isAdmin ?? false) {
+            await ref.read(adminOrderAlertServiceProvider).initialize();
+          }
+        });
       }
     }
 

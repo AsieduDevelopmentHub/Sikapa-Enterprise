@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme.dart';
+import '../../core/admin_order_alerts.dart';
 import '../../providers.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
@@ -26,6 +27,8 @@ class AdminDashboardScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(adminDashboardProvider);
           await ref.read(adminDashboardProvider.future);
+          final orders = await ref.read(adminServiceProvider).orders(limit: 30);
+          await ref.read(adminOrderAlertServiceProvider).onOrdersPolled(orders);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
