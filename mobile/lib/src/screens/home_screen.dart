@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/responsive.dart';
 import '../core/theme.dart';
 import '../features/catalog/models.dart';
 import '../providers.dart';
 import '../widgets/product_card.dart';
+import '../widgets/recently_viewed_row.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -56,6 +58,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const SliverToBoxAdapter(child: RecentlyViewedRow()),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -90,11 +93,13 @@ class HomeScreen extends ConsumerWidget {
               data: (page) => SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 sliver: SliverGrid.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: SikapaLayout.productGridColumns(context),
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 0.62,
+                    childAspectRatio: SikapaLayout.productGridAspectRatio(
+                      context,
+                    ),
                   ),
                   itemCount: page.items.length,
                   itemBuilder: (_, i) => ProductCard(product: page.items[i]),

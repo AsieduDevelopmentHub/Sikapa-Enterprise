@@ -112,11 +112,7 @@ class AuthService {
   }
 
   Future<UserProfile> updateProfile(Map<String, dynamic> body) async {
-    final res = await _api.put<dynamic>(
-      V1.authProfile,
-      body: body,
-      auth: true,
-    );
+    final res = await _api.put<dynamic>(V1.authProfile, body: body, auth: true);
     return UserProfile.fromJson((res as Map).cast<String, dynamic>());
   }
 

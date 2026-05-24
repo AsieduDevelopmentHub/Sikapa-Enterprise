@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/responsive.dart';
 import '../core/theme.dart';
 import '../providers.dart';
 import '../widgets/product_card.dart';
@@ -63,11 +64,11 @@ class WishlistScreen extends ConsumerWidget {
         },
         child: GridView.builder(
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: SikapaLayout.productGridColumns(context),
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.62,
+            childAspectRatio: SikapaLayout.productGridAspectRatio(context),
           ),
           itemCount: ids.length,
           itemBuilder: (_, i) {

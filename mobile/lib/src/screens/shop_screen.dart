@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/responsive.dart';
 import '../core/theme.dart';
 import '../features/catalog/models.dart';
 import '../providers.dart';
@@ -308,13 +309,14 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   },
                   child: GridView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 0.62,
-                        ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: SikapaLayout.productGridColumns(context),
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: SikapaLayout.productGridAspectRatio(
+                        context,
+                      ),
+                    ),
                     itemCount: page.items.length,
                     itemBuilder: (_, i) => ProductCard(product: page.items[i]),
                   ),

@@ -8,8 +8,10 @@ import 'features/auth/auth_service.dart';
 import 'features/cart/cart_service.dart';
 import 'features/cart/guest_cart_store.dart';
 import 'features/cart/models.dart';
+import 'core/order_notifications.dart';
 import 'features/catalog/catalog_service.dart';
 import 'features/catalog/models.dart';
+import 'features/catalog/recently_viewed_store.dart';
 import 'features/catalog/variant_models.dart';
 import 'features/orders/shipping_models.dart';
 import 'features/orders/models.dart';
@@ -53,6 +55,7 @@ final returnsServiceProvider = Provider(
   (ref) => ReturnsService(ref.read(apiClientProvider)),
 );
 final guestCartStoreProvider = Provider((ref) => GuestCartStore());
+final recentlyViewedStoreProvider = Provider((ref) => RecentlyViewedStore());
 
 // ─────────────────────── Maintenance state ─────────────────────────────────
 
@@ -616,8 +619,28 @@ final wishlistProvider =
 
 final ordersProvider = FutureProvider<List<Order>>((ref) async {
   if (!ref.watch(authProvider).isSignedIn) return const [];
-  return ref.read(ordersServiceProvider).list();
+  final orders = await ref.read(ordersServiceProvider).list();
+  await ref.read(orderNotificationServiceProvider).onOrdersUpdated(orders);
+  return orders;
 });
+
+final recentlyViewedProductsProvider =
+    FutureProvider.family<List<Product>, int?>((ref, excludeId) async {
+      final ids = await ref
+          .read(recentlyViewedStoreProvider)
+          .readIds(excludeId: excludeId);
+      if (ids.isEmpty) return const [];
+      final catalog = ref.read(catalogServiceProvider);
+      final products = <Product>[];
+      for (final id in ids.take(12)) {
+        try {
+          products.add(await catalog.detail(id));
+        } catch (_) {
+          /* skip missing */
+        }
+      }
+      return products;
+    });
 
 final orderDetailProvider = FutureProvider.family<Order, int>((ref, id) async {
   return ref.read(ordersServiceProvider).detail(id);

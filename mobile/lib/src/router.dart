@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/help/help_content.dart';
 import 'providers.dart';
 import 'screens/account_screen.dart';
 import 'screens/app_shell.dart';
@@ -9,6 +10,8 @@ import 'screens/cart_screen.dart';
 import 'screens/change_password_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/google_oauth_2fa_screen.dart';
+import 'screens/help_screen.dart';
+import 'screens/help_topic_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_2fa_screen.dart';
 import 'screens/login_screen.dart';
@@ -154,6 +157,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/account/two-fa', builder: (_, _) => const TwoFaScreen()),
       GoRoute(path: '/checkout', builder: (_, _) => const CheckoutScreen()),
       GoRoute(path: '/returns', builder: (_, _) => const ReturnsScreen()),
+      GoRoute(path: '/help', builder: (_, _) => const HelpScreen()),
+      GoRoute(
+        path: '/help/:slug',
+        builder: (_, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          final topic = helpTopicBySlug(slug);
+          if (topic == null) return const HelpScreen();
+          return HelpTopicScreen(topic: topic);
+        },
+      ),
     ],
   );
 });
