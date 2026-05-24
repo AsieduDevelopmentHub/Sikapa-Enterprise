@@ -39,6 +39,11 @@ class ApiClient {
   Dio get raw => _dio;
   TokenStore get tokens => _tokenStore;
 
+  /// Cancel in-flight refresh work after sign-out or before a new sign-in.
+  void resetSession() {
+    _refreshInflight = null;
+  }
+
   // ─────────────────────── Public API ──────────────────────────────────────
 
   Future<T> get<T>(

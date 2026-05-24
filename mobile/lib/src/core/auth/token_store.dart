@@ -28,13 +28,21 @@ class TokenStore {
 
   Future<void> write({required String access, String? refresh}) async {
     await _storage.write(key: _accessKey, value: access);
-    if (refresh != null) {
+    if (refresh != null && refresh.isNotEmpty) {
       await _storage.write(key: _refreshKey, value: refresh);
+    } else {
+      await _storage.delete(key: _refreshKey);
     }
   }
 
+  /// Wipe all stored credentials (logout / before a new sign-in).
   Future<void> clear() async {
     await _storage.delete(key: _accessKey);
     await _storage.delete(key: _refreshKey);
+    try {
+      await _storage.deleteAll();
+    } catch (_) {
+      /* deleteAll not supported on every platform */
+    }
   }
 }
