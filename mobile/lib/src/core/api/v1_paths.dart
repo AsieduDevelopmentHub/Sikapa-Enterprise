@@ -25,6 +25,8 @@ class V1 {
   static const String productsSearch = '/products/search';
   static String productsDetail(int id) => '/products/$id';
   static String productsBySlug(String slug) => '/products/slug/$slug';
+  static String productsVariants(int productId) => '/products/$productId/variants';
+  static String productsImages(int productId) => '/products/$productId/images';
 
   // Cart
   static const String cartList = '/cart/';

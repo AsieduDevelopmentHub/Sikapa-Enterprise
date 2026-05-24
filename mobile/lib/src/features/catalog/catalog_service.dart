@@ -1,6 +1,7 @@
 import '../../core/api/api_client.dart';
 import '../../core/api/v1_paths.dart';
 import 'models.dart';
+import 'variant_models.dart';
 
 class CatalogService {
   CatalogService(this._api);
@@ -62,5 +63,27 @@ class CatalogService {
   Future<Product> detail(int id) async {
     final res = await _api.get<dynamic>(V1.productsDetail(id));
     return Product.fromJson((res as Map).cast<String, dynamic>());
+  }
+
+  Future<List<ProductVariant>> variants(int productId) async {
+    final res = await _api.get<dynamic>(V1.productsVariants(productId));
+    if (res is List) {
+      return res
+          .whereType<Map>()
+          .map((e) => ProductVariant.fromJson(e.cast<String, dynamic>()))
+          .toList();
+    }
+    return const [];
+  }
+
+  Future<List<ProductGalleryImage>> images(int productId) async {
+    final res = await _api.get<dynamic>(V1.productsImages(productId));
+    if (res is List) {
+      return res
+          .whereType<Map>()
+          .map((e) => ProductGalleryImage.fromJson(e.cast<String, dynamic>()))
+          .toList();
+    }
+    return const [];
   }
 }
