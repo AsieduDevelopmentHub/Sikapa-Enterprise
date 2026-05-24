@@ -22,10 +22,7 @@ class AuthService {
       final tokens = TokenResponse.fromJson(
         (res as Map).cast<String, dynamic>(),
       );
-      await _api.tokens.write(
-        access: tokens.accessToken,
-        refresh: tokens.refreshToken,
-      );
+      await _persistSessionTokens(tokens);
       return tokens;
     } on ApiException catch (e) {
       if (e.statusCode == 403 &&
@@ -46,10 +43,7 @@ class AuthService {
       body: {'identifier': identifier, 'password': password, 'code': code},
     );
     final tokens = TokenResponse.fromJson((res as Map).cast<String, dynamic>());
-    await _api.tokens.write(
-      access: tokens.accessToken,
-      refresh: tokens.refreshToken,
-    );
+    await _persistSessionTokens(tokens);
     return tokens;
   }
 
@@ -81,12 +75,31 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    final stored = await _api.tokens.read();
     try {
-      await _api.post<dynamic>(V1.authLogout, auth: true);
+      await _api.post<dynamic>(
+        V1.authLogout,
+        body: {
+          if (stored.refresh != null && stored.refresh!.isNotEmpty)
+            'refresh_token': stored.refresh,
+        },
+        auth: true,
+      );
     } catch (_) {
       /* clear locally regardless */
+    } finally {
+      _api.resetSession();
+      await _api.tokens.clear();
     }
+  }
+
+  Future<void> _persistSessionTokens(TokenResponse tokens) async {
+    _api.resetSession();
     await _api.tokens.clear();
+    await _api.tokens.write(
+      access: tokens.accessToken,
+      refresh: tokens.refreshToken,
+    );
   }
 
   Future<void> requestPasswordReset(String email) async {

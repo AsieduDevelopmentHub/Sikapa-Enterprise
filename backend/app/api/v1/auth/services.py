@@ -235,23 +235,36 @@ def refresh_access_token(session: Session, refresh_token: str) -> dict:
 
 
 # ============ Logout & Token Blacklist ============
-def logout_user(session: Session, user_id: int, token: str) -> None:
-    """Add token to blacklist for logout, expiring at the token's own exp time."""
-    # Use the token's own exp claim so blacklist entries are pruned correctly
-    # even when ACCESS_TOKEN_EXPIRE_MINUTES is changed via env.
-    payload = decode_access_token(token) or {}
+def logout_user(
+    session: Session,
+    user_id: int,
+    access_token: str,
+    refresh_token: str | None = None,
+) -> None:
+    """Blacklist access (and optional refresh) tokens so the session cannot resume."""
+    payload = decode_access_token(access_token) or {}
     exp = payload.get("exp")
     if exp:
         expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
     else:
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    blacklist_entry = TokenBlacklist(
-        user_id=user_id,
-        token=token,
-        expires_at=expires_at
+    session.add(
+        TokenBlacklist(
+            user_id=user_id,
+            token=access_token,
+            expires_at=expires_at,
+        )
     )
-    session.add(blacklist_entry)
+
+    if refresh_token:
+        try:
+            refresh_payload = decode_refresh_token(refresh_token)
+            if refresh_payload:
+                _blacklist_token(session, user_id, refresh_token, refresh_payload)
+        except Exception:
+            pass
+
     session.commit()
 
 

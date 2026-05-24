@@ -1,56 +1,101 @@
-# vscode
+# Editor / IDE
 /.vscode/
 /.cursor/
+.idea/
+*.iml
 
-# Node
-node_modules
+# Node (frontend)
+node_modules/
 npm-debug.log*
-.next
-out
+.yarn/
+.pnp.*
+.next/
+out/
 
 # Python
-__pycache__
+__pycache__/
 *.py[cod]
-/backend/venv
-/backend/.venv
+*.pyo
+.venv/
+venv/
+/backend/venv/
+/backend/.venv/
+
+# Environment secrets (keep checked-in examples)
+.env
+.env.*
+!.env.example
+!**/.env.example
 /backend/.env
 /backend/.env.production
 /frontend/.env.local
-.env
-*.sqlite
-backend/coverage.xml
 
-# Pytest
-/backend/tests/__pycache__
+# Logs & pasted CI output (e.g. workflows.logs)
+*.log
+*.logs
+.github/workflows/*.logs
+/backend/*.logs
+
+# Test / coverage artifacts
+/backend/tests/__pycache__/
 /backend/tests/*.log
 /backend/*.coverage
-/backend/htmlcov
+/backend/htmlcov/
+backend/coverage.xml
+.coverage
+htmlcov/
 
 # Database
+*.sqlite
 *.db
 /backend/db/sikapa.db
 /backend/db/sikapa.db-journal
 /backend/sikapa.db
 
-# TLS certificates
+# TLS certificates (local dev only)
 /backend/certs/*.key
 /backend/certs/*.pem
 /backend/certs/*.crt
 
-# logs
-*.log
-*.logs
-/backend/*.logs
-
-
-# mcp
+# MCP (when .vscode is not fully ignored)
 /.vscode/mcp.json
 
 # macOS
 .DS_Store
 
-# Android
-*.iml
-.gradle
-/local.properties
-/.idea
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Flutter / Dart (mobile)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+**/doc/api/
+
+# Android (Flutter + native)
+**/.gradle/
+**/local.properties
+**/key.properties
+**/*.keystore
+**/*.jks
+mobile/android/.cxx/
+mobile/android/captures/
+
+# iOS build outputs (see also mobile/ios/.gitignore)
+**/Pods/
+**/DerivedData/
+
+# Mobile release binaries & CI download folders
+*.apk
+*.aab
+*.ipa
+artifacts/
+dist/
+
+# Symbolication / obfuscation
+app.*.symbols
+app.*.map.json

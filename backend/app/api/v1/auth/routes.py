@@ -32,6 +32,7 @@ from app.api.v1.auth.schemas import (
     DeleteAccountRequest,
     RefreshTokenRequest,
     GoogleOAuth2FAVerifyRequest,
+    LogoutRequest,
 )
 from sqlmodel import SQLModel
 from pydantic import Field as PydanticField
@@ -256,19 +257,25 @@ def google_oauth_verify_2fa(
 
 @router.post("/logout")
 def logout_endpoint(
+    payload: LogoutRequest,
     current_user: User = Depends(get_current_active_user),
     authorization: str = Header(None),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
-    """Logout user by blacklisting current token."""
+    """Logout by blacklisting the access JWT and, when provided, the refresh token."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header"
+            detail="Missing or invalid authorization header",
         )
 
-    token = authorization.replace("Bearer ", "")
-    logout_user(session, current_user.id, token)
+    access_token = authorization.replace("Bearer ", "", 1)
+    logout_user(
+        session,
+        current_user.id,
+        access_token,
+        refresh_token=payload.refresh_token,
+    )
 
     return {"message": "Logout successful"}
 

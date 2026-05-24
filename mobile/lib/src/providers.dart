@@ -88,7 +88,11 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> _bootstrap() async {
     final api = _ref.read(apiClientProvider);
     final stored = await api.tokens.read();
-    if (stored.access == null) {
+    final access = stored.access?.trim();
+    if (access == null || access.isEmpty) {
+      if (stored.refresh != null && stored.refresh!.isNotEmpty) {
+        await api.tokens.clear();
+      }
       state = AuthState(bootstrapping: false);
       return;
     }
@@ -167,9 +171,8 @@ class AuthController extends StateNotifier<AuthState> {
       await _ref.read(authServiceProvider).logout();
       _ref.invalidate(cartProvider);
       _ref.invalidate(wishlistProvider);
-      state = AuthState(bootstrapping: false);
     } finally {
-      if (mounted) state = state.copyWith(loading: false);
+      if (mounted) state = AuthState(bootstrapping: false);
     }
   }
 
