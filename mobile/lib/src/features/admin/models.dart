@@ -471,6 +471,38 @@ class AdminSetting {
   }
 }
 
+class AdminCategory {
+  AdminCategory({
+    required this.id,
+    required this.name,
+    required this.slug,
+    required this.isActive,
+    required this.sortOrder,
+    this.description,
+    this.imageUrl,
+  });
+
+  final int id;
+  final String name;
+  final String slug;
+  final String? description;
+  final String? imageUrl;
+  final bool isActive;
+  final int sortOrder;
+
+  factory AdminCategory.fromJson(Map<String, dynamic> json) {
+    return AdminCategory(
+      id: (json['id'] as num).toInt(),
+      name: json['name'] as String? ?? '',
+      slug: json['slug'] as String? ?? '',
+      description: json['description'] as String?,
+      imageUrl: json['image_url'] as String?,
+      isActive: json['is_active'] as bool? ?? true,
+      sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class AdminAuditLog {
   AdminAuditLog({
     required this.id,

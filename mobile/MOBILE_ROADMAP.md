@@ -68,7 +68,9 @@ In-app admin at `/admin` for `is_admin` users (permission-aware nav mirrors web 
 | Returns | ✅ | Queue + status updates |
 | Customers | ✅ | List, activate/deactivate |
 | Inventory, reviews, payments, coupons, audit, staff, settings | ✅ | List views |
-| Categories, coupons CRUD, product create/edit, bulk import, staff role editor | Web | Use `frontend` `/system` for heavy forms |
+| Product create/edit (multipart + image), categories CRUD | Done (mobile) |
+| Coupons CRUD, bulk import, staff role editor, category image upload | Web | Use `frontend` `/system` |
+| New-order alerts (admin) | Done | Local notification on poll; FCM deferred |
 
 Account → **Admin portal** when signed in as admin.
 

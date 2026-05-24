@@ -121,6 +121,15 @@ class ApiClient {
     );
   }
 
+  /// Multipart form (admin product create/update with optional image).
+  Future<T> postForm<T>(String path, FormData form, {bool auth = true}) {
+    return _request<T>('POST', path, data: form, auth: auth);
+  }
+
+  Future<T> putForm<T>(String path, FormData form, {bool auth = true}) {
+    return _request<T>('PUT', path, data: form, auth: auth);
+  }
+
   /// Wake a cold backend (Render free tier) by hitting `/health`. Failures are
   /// silent — same UX contract as the web `pingBackendHealth()`.
   Future<void> pingHealth() async {

@@ -9,6 +9,9 @@ class V1Admin {
   static const usersStaffAccounts = '/admin/users/staff-accounts';
   static const products = '/admin/products';
   static String product(int id) => '/admin/products/$id';
+  static const categories = '/admin/categories/';
+  static String category(int id) => '/admin/categories/$id';
+  static String categoryImage(int id) => '/admin/categories/$id/image';
   static const orders = '/admin/orders';
   static String order(int id) => '/admin/orders/$id';
   static String orderStatus(int id) => '/admin/orders/$id/status';
