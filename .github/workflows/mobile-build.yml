@@ -93,8 +93,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Must match mobile/README.md (Flutter 3.41+ / Dart ^3.11.5 in pubspec.yaml).
-  FLUTTER_VERSION: "3.41.0"
+  # Must match mobile/README.md (Flutter 3.44+ ships Dart ^3.11.5 per pubspec.yaml).
+  FLUTTER_VERSION: "3.44.0"
   FLUTTER_CHANNEL: stable
   WORKING_DIR: mobile
 
