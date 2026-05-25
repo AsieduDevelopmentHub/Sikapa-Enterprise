@@ -10,6 +10,51 @@ A scalable, production-oriented eCommerce ecosystem powering beauty, cosmetics, 
 
 ---
 
+## Latest update — May 2026
+
+**Release:** [`mobile-v1.2.1`](https://github.com/AsieduDevelopmentHub/Sikapa-Enterprise/releases/tag/mobile-v1.2.1) — Android APK/AAB built and published via GitHub Actions on tag push. CI now runs format, analyze, test, and release builds on the same workflow.
+
+### Mobile (`mobile/`)
+
+| Area | What shipped |
+|------|----------------|
+| **Shopper app** | Phases 1–4 complete: checkout/shipping, variants, reviews, returns, OAuth, 2FA, dark theme, tablet layouts, help, recently viewed, shipped-order local notifications |
+| **Admin portal** | In-app `/admin` for `is_admin` users — dashboard, orders (status/ship/cancel), products, customers, returns, inventory, reviews, payments, coupons, staff, settings, audit |
+| **Admin extras** | Product create/edit (multipart + image), categories CRUD, new-order local alerts (poll; FCM later) |
+| **Android build** | Core library desugaring enabled for `flutter_local_notifications` |
+| **Docs** | [`mobile/README.md`](mobile/README.md), [`mobile/MOBILE_ROADMAP.md`](mobile/MOBILE_ROADMAP.md) |
+
+```bash
+# Install latest release build locally (production API)
+cd mobile && flutter pub get
+flutter run --dart-define=SIKAPA_API_BASE=https://sikapa-backend.onrender.com/api/v1
+```
+
+Pre-tag checks (matches CI):
+
+```powershell
+.\scripts\ci-local.ps1 -MobileOnly -SkipAndroidBuild   # fast
+.\scripts\ci-local.ps1 -MobileOnly                     # includes release APK
+```
+
+### Repo & CI
+
+- **Tag workflow:** `mobile-v*` triggers build + GitHub Release upload (see [`.github/workflows/README.md`](.github/workflows/README.md))
+- **Git hooks:** [`.githooks/`](.githooks/) strip `Co-authored-by` and attribution trailers — enable with `git config core.hooksPath .githooks` (requires Python on `PATH`)
+
+### Still on web `/system` (optional later on mobile)
+
+Coupon CRUD, bulk import, staff role editor, category image upload — use the Next.js admin until ported.
+
+### Next (when you resume)
+
+- Device-test admin + shopper flows on a physical phone with the `mobile-v1.2.1` APK
+- Align `pubspec.yaml` version with release tags (`1.2.1+3`)
+- iOS TestFlight when Apple signing secrets are configured
+- FCM for admin new-order push (replacing poll-based alerts)
+
+---
+
 # Overview
 
 Sikapa Enterprise is a full-stack commerce platform designed to support modern online retail operations with a strong focus on:
@@ -62,12 +107,11 @@ The platform currently powers:
 
 ## Mobile Infrastructure
 
-- Flutter-based mobile application
-- Android release builds
-- iOS validation builds
-- Runtime environment injection via `--dart-define`
-- GitHub Actions CI/CD automation
-- Automated artifact generation and release workflows
+- Flutter storefront + **in-app admin portal** (`/admin`)
+- Android release builds (APK + AAB on tagged releases)
+- iOS validation / TestFlight workflow (optional secrets)
+- Runtime configuration via `--dart-define`
+- GitHub Actions: format, analyze, test, build, and release publish
 
 ---
 
@@ -445,15 +489,17 @@ The platform now includes:
 
 # Project Status
 
-### Current Phase
-Production-oriented infrastructure stabilization and mobile ecosystem expansion.
+### Current phase
+Mobile **v1.2.x** — shopper parity plus admin MVP; release automation stable on `mobile-v*` tags.
 
-### Platform Status
-- Backend API: Active
-- Frontend Storefront: Active
-- Mobile CI/CD: Active
-- Database Infrastructure: Active
-- Release Automation: Active
+### Platform status
+| Component | Status |
+|-----------|--------|
+| Backend API | Active |
+| Next.js storefront | Active |
+| Flutter mobile (shop + admin) | Active — see **Latest update** above |
+| Mobile CI/CD & releases | Active — `mobile-v1.2.1` |
+| Database / migrations | Active |
 
 ---
 
