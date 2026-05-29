@@ -16,7 +16,8 @@ Start here. Everything below lives in this repo; use it for onboarding, deployme
 | **Frontend → Vercel** | [../frontend/docs/hosting/vercel.md](../frontend/docs/hosting/vercel.md) |
 | **TLS / local HTTPS** | [../backend/docs/tls/https.md](../backend/docs/tls/https.md) |
 | **Database migrations** | [../backend/docs/migration/migration.md](../backend/docs/migration/migration.md) |
-| **Android WebView wrapper** | [../android/README.md](../android/README.md) |
+| **System audit & gap checklist** | [audit/README.md](./audit/README.md) |
+| **Mobile app** | [../mobile/README.md](../mobile/README.md) |
 
 ## Repository layout
 
@@ -24,8 +25,9 @@ Start here. Everything below lives in this repo; use it for onboarding, deployme
 Sikapa/
 ├── frontend/     Next.js storefront
 ├── backend/      FastAPI API (`/api/v1/...`)
-├── android/      WebView shell (optional)
+├── mobile/       Flutter storefront + admin
 ├── docs/         This documentation hub
+│   └── audit/    System audit & remediation checklists
 └── README.md     Project overview & quick start
 ```
 
