@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, frontend, backend]
+    branches: [main, dev/develop]
   pull_request:
-    branches: [main, frontend, backend]
+    branches: [main, dev/develop]
   workflow_dispatch:
 
 # Keep workflow-level permissions minimal (matches actions-smoke.yml). Jobs that
