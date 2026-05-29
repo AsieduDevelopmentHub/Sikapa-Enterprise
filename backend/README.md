@@ -48,18 +48,30 @@ HTTPS_ENABLED=false
 # HTTPS_ENABLED=true
 ```
 
-### 3. Start the Server
-```bash
-# Option 1: Simple startup script
-python start_local.py
+### 3. Database migrations (recommended)
 
-# Option 2: Run uvicorn via Python (recommended on Windows)
+```bash
+cd backend
+alembic upgrade head
+```
+
+Optional dev-only shortcut (not for shared/production DBs):
+
+```bash
+# backend/.env
+DEV_AUTO_CREATE_TABLES=true
+```
+
+### 4. Start the Server
+
+```bash
+# Recommended on Windows (avoids blocked uvicorn.exe under some IT policies)
 venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-**Windows:** If `uvicorn` fails with *“An Application Control policy has blocked this file”*, do not run `uvicorn.exe` from `Scripts\` directly. Use `python -m uvicorn` as above (or `py -m uvicorn` with the same args). IT policies sometimes block downloaded executables while allowing the Python interpreter.
+**Linux / macOS:** `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 
-### 4. Verify It's Working
+### 5. Verify It's Working
 ```bash
 # Health check
 curl http://127.0.0.1:8000/health
@@ -167,13 +179,10 @@ This backend can be deployed to Render using the Dockerfile.
 
 ```bash
 # Run all tests
-pytest
+pytest tests/ -v
 
-# Run auth tests specifically
-pytest tests/test_auth.py
-
-# Test authentication system
-python test_auth_system.py
+# DSA + auth + Paystack focused suites
+pytest tests/test_dsa.py tests/test_auth_e2e.py -v
 ```
 
 ## Documentation

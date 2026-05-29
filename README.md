@@ -139,7 +139,7 @@ The platform currently powers:
 ├── frontend/                  # Next.js storefront application
 ├── backend/                   # FastAPI backend services
 ├── mobile/                    # Flutter mobile application
-├── android/                   # Legacy Android WebView wrapper
+├── mobile/                    # Flutter mobile application
 ├── docs/                      # Centralized project documentation
 ├── .github/workflows/         # CI/CD workflows
 │

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { lowerBound, priceRangeIndices, LRUCache, Trie } from "@/lib/dsa";
+import { lowerBound, priceRangeIndices, LRUCache } from "@/lib/dsa";
 import { buildProductTrie, sortProducts } from "@/lib/dsa/sort";
 import type { MockProduct } from "@/lib/mock-data";
 

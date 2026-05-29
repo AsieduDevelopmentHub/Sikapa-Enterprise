@@ -165,8 +165,13 @@ def on_startup() -> None:
     validate_production_config_or_raise()
     warn_dev_secret()
     warn_database_config()
-    if not is_production_environment():
+    if not is_production_environment() and os.getenv(
+        "DEV_AUTO_CREATE_TABLES", "false"
+    ).strip().lower() in {"1", "true", "yes"}:
         create_db_and_tables()
+        logging.getLogger("sikapa").warning(
+            "DEV_AUTO_CREATE_TABLES=true — used create_all(); prefer `alembic upgrade head`."
+        )
     
     # Warm up cache for Admin Dashboard (Lite)
     try:

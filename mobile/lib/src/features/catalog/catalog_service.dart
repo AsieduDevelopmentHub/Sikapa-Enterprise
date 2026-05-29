@@ -60,6 +60,22 @@ class CatalogService {
     return ProductPage(total: 0, skip: skip, limit: limit, items: const []);
   }
 
+  Future<List<Product>> suggest(String query, {int limit = 6}) async {
+    final q = query.trim();
+    if (q.isEmpty) return const [];
+    final res = await _api.get<dynamic>(
+      V1.productsSuggest,
+      query: {'q': q, 'limit': limit},
+    );
+    if (res is! Map) return const [];
+    final items = res['items'];
+    if (items is! List) return const [];
+    return items
+        .whereType<Map>()
+        .map((e) => Product.fromJson(e.cast<String, dynamic>()))
+        .toList();
+  }
+
   Future<Product> detail(int id) async {
     final res = await _api.get<dynamic>(V1.productsDetail(id));
     return Product.fromJson((res as Map).cast<String, dynamic>());

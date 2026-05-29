@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 /// LRU cache for small in-memory collections (recent searches, etc.).
 class LruCache<K, V> {
   LruCache(this.maxSize) {

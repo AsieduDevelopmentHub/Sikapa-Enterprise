@@ -28,8 +28,9 @@ This guide covers everything needed to deploy Sikapa to production securely and 
 ### Database
 - [ ] PostgreSQL/Supabase production instance provisioned
 - [ ] Database backups configured (automated daily backups)
-- [ ] Alembic migrations tested against production schema
-- [ ] Connection pooling configured
+- [ ] Run `alembic upgrade head` on every deploy (do **not** rely on `DEV_AUTO_CREATE_TABLES` in production)
+- [ ] Postgres RLS applied via `backend/tools/rls/rls_setup.py` when using row-level security
+- [ ] Connection pooling configured (`DB_POOL_SIZE`, `DB_MAX_OVERFLOW` on Render)
 - [ ] Database user has minimal required permissions (not superuser)
 
 ### API & Services
@@ -41,7 +42,7 @@ This guide covers everything needed to deploy Sikapa to production securely and 
 - [ ] Audit logging enabled
 
 ### Frontend
-- [ ] `NEXT_PUBLIC_API_BASE_URL` points to production backend (with `/api` prefix)
+- [ ] `NEXT_PUBLIC_API_URL` points to production backend (e.g. `https://api.example.com/api/v1`)
 - [ ] Build optimized (`npm run build`)
 - [ ] ESLint passing with zero warnings
 - [ ] No sensitive data in NEXT_PUBLIC_* variables

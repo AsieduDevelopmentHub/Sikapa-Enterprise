@@ -85,6 +85,14 @@ class OrderManagementRead(BaseModel):
         from_attributes = True
 
 
+class AdminOrderListPage(BaseModel):
+    """Keyset-paginated admin order list."""
+
+    items: List[OrderManagementRead]
+    next_cursor: Optional[str] = None
+    has_more: bool = False
+
+
 class PaystackTransactionRead(BaseModel):
     id: int
     order_id: int

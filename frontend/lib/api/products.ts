@@ -33,6 +33,19 @@ export type ApiProductListResponse = {
   items: ApiProductRow[];
 };
 
+export type ApiProductSuggestItem = {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  image_url?: string | null;
+};
+
+export type ApiProductSuggestResponse = {
+  query: string;
+  items: ApiProductSuggestItem[];
+};
+
 export type CatalogCategory = {
   key: string;
   label: string;
@@ -172,6 +185,35 @@ export async function fetchProductById(id: number): Promise<ApiProductRow> {
     throw new Error("Invalid product response");
   }
   return row;
+}
+
+export async function fetchProductSuggest(
+  query: string,
+  limit = 6,
+): Promise<ApiProductSuggestItem[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  const res = await apiFetchJson<ApiProductSuggestResponse>(
+    `${V1.products.suggest}?${params.toString()}`,
+  );
+  return Array.isArray(res?.items) ? res.items : [];
+}
+
+export function mapSuggestToMock(
+  row: ApiProductSuggestItem,
+  categories: ApiCategoryRow[],
+): MockProduct {
+  return mapApiProductToMock(
+    {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      price: row.price,
+      image_url: row.image_url,
+    },
+    categories,
+  );
 }
 
 /**

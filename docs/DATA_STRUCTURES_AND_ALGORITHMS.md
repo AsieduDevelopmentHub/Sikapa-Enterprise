@@ -15,6 +15,8 @@ Reference for reusable DSA modules across backend, frontend, and mobile. Each st
 | **Binary search** | — | `lib/dsa/binary-search.ts` | — | Price-range filter on sorted lists |
 | **Stable sort** | SQL `ORDER BY` | `lib/dsa/sort.ts` | — | Shop/search result ordering |
 | **Pagination helpers** | `app/core/dsa/pagination.py` | — | — | List metadata + cursor encoding |
+| **Cart line hash map** | `app/core/dsa/cart_index.py` | — | — | O(1) cart merge by `(product_id, variant_id)` |
+| **Admin order keyset pagination** | `GET /api/v1/admin/orders/page` | — | — | Cursor-based order lists |
 
 ---
 

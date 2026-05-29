@@ -11,7 +11,7 @@ This document describes how to deploy the backend to Render using the existing `
 
 ## Files used for Render
 
-- `render.yaml` (repo root)
+- `backend/render.yaml` (Render blueprint — set **Root Directory** to `backend`)
 - `backend/Dockerfile`
 - `backend/.dockerignore`
 

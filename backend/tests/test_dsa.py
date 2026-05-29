@@ -129,6 +129,59 @@ class TestProductSearchTrie:
         assert len(ids) >= 1
 
 
+class TestCartIndex:
+    def test_index_and_find_by_line_key(self):
+        from app.core.dsa.cart_index import find_cart_line, index_cart_lines
+        from app.models import CartItem
+
+        line_a = CartItem(user_id=1, product_id=10, variant_id=None, quantity=1)
+        line_b = CartItem(user_id=1, product_id=10, variant_id=5, quantity=2)
+        idx = index_cart_lines([line_a, line_b])
+        assert find_cart_line(idx, 10, None) is line_a
+        assert find_cart_line(idx, 10, 5) is line_b
+        assert find_cart_line(idx, 99, None) is None
+
+
+class TestAdminOrderCursorPage:
+    @pytest.mark.asyncio
+    async def test_keyset_page_returns_cursor(self, test_session):
+        from datetime import datetime, timezone
+
+        from app.api.v1.admin.services import get_orders_admin_page
+        from app.models import Order, User
+
+        user = User(
+            username="buyer1",
+            name="Buyer",
+            email="buyer1@example.com",
+            hashed_password="x",
+        )
+        test_session.add(user)
+        test_session.commit()
+        test_session.refresh(user)
+
+        for i in range(3):
+            test_session.add(
+                Order(
+                    user_id=user.id,
+                    total_price=10.0 + i,
+                    status="pending",
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+        test_session.commit()
+
+        page1 = await get_orders_admin_page(test_session, limit=2)
+        assert len(page1["items"]) == 2
+        assert page1["has_more"] is True
+        assert page1["next_cursor"]
+
+        page2 = await get_orders_admin_page(
+            test_session, limit=2, cursor=page1["next_cursor"]
+        )
+        assert len(page2["items"]) >= 1
+
+
 class TestSuggestEndpoint:
     @pytest.mark.asyncio
     async def test_suggest_returns_matches(self, client: AsyncClient, test_session):

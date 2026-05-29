@@ -50,7 +50,7 @@ export default function AdminProductsPage() {
         });
       }
     },
-    [accessToken, alertDialog, load]
+    [accessToken, alertDialog, load, queryClient]
   );
 
   const handleConfirm = useCallback(

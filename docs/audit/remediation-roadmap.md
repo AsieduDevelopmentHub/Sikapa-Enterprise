@@ -2,40 +2,43 @@
 
 Phased plan to close audit gaps. Check items off here and in the area-specific docs.
 
+**Current focus:** Phase 2 (Phase 1 and Phase 5 complete — May 2026)
+
 **Legend:** S = small (hours), M = medium (days), L = large (week+)
 
 ---
 
-## Phase 1 — Safety & trust (1–2 weeks)
+## Phase 1 — Safety & trust ✅ Complete
 
 Goal: Config honesty, schema discipline, dependency alerts, doc accuracy.
 
-| ID | Task | Effort | Doc |
-|----|------|--------|-----|
-| B-001 | Wire or remove dead rate-limit / pool env vars | S | [backend.md](./backend.md#b-001) — **rate limit wired**; DB pool still pending |
-| B-002 | Alembic-only schema; document deploy migrate + RLS | M | [backend.md](./backend.md#b-002) |
-| D-001 | Add Dependabot + npm audit + pip-audit | S | [devops-ci.md](./devops-ci.md#d-001) |
-| DOC-001–004 | Fix doc drift (paths, env names, README) | S | [documentation-drift.md](./documentation-drift.md) |
-| DOC-010 | Fix license in `pyproject.toml` | S | [documentation-drift.md](./documentation-drift.md#doc-010) |
-| M-001 | Align `pubspec.yaml` with release tags | S | [mobile.md](./mobile.md#m-001) |
-| B-011 | Fix backend README commands | S | [backend.md](./backend.md#b-011) |
+| ID | Task | Status |
+|----|------|--------|
+| B-001 | Rate limit + DB pool env vars wired | Done |
+| B-002 | Alembic-only dev path; prod migrate + RLS documented | Done |
+| D-001 | Dependabot + pip-audit + npm audit in CI | Done |
+| DOC-001–004 | Doc drift (paths, env names, README) | Done |
+| DOC-010 | License aligned in `pyproject.toml` | Done |
+| M-001 | `pubspec.yaml` → `1.2.1+3` | Done |
+| B-011 | Backend README commands fixed | Done |
+| DOC-015 | Audit linked from `docs/README.md` | Done |
 
 ### Phase 1 master checklist
 
-- [ ] B-001 — Rate limit / DB pool env vars resolved (API rate limit **done**; DB pool pending)
-- [ ] B-002 — Schema: Alembic-only dev path + prod migrate documented
-- [ ] D-001 — Dependabot + audit steps in CI
-- [ ] DOC-001 — Remove stale `android/` references
-- [ ] DOC-002 — Fix `render.yaml` path in docs
-- [ ] DOC-003 — Fix backend README
-- [ ] DOC-004 — Fix `NEXT_PUBLIC_API_URL` in prod docs
-- [ ] DOC-010 — License aligned
-- [ ] M-001 — Mobile version synced
-- [ ] DOC-015 — Audit linked from `docs/README.md`
+- [x] B-001 — Rate limit / DB pool env vars resolved
+- [x] B-002 — Schema: Alembic-only dev path + prod migrate documented
+- [x] D-001 — Dependabot + audit steps in CI
+- [x] DOC-001 — Remove stale `android/` references
+- [x] DOC-002 — Fix `render.yaml` path in docs
+- [x] DOC-003 — Fix backend README
+- [x] DOC-004 — Fix `NEXT_PUBLIC_API_URL` in prod docs
+- [x] DOC-010 — License aligned
+- [x] M-001 — Mobile version synced
+- [x] DOC-015 — Audit linked from `docs/README.md`
 
 ---
 
-## Phase 2 — Test foundation (2–3 weeks)
+## Phase 2 — Test foundation (active)
 
 Goal: Confidence on money paths and auth.
 
@@ -85,7 +88,7 @@ Goal: Production security and operability.
 - [ ] D-010 — Docker hardened
 - [ ] D-004 — Ruff in CI
 - [ ] D-003 — Mobile CI required on main
-- [ ] S-004 — RLS documented in prod deploy
+- [x] S-004 — RLS documented in prod deploy
 - [ ] M-003 — FCM (when prioritized)
 
 ---
@@ -121,22 +124,9 @@ Goal: Maintainability and team scale.
 
 ---
 
-## Phase 5 — Data structures & algorithms
-
-Goal: Performance, search quality, and algorithmic correctness across stacks.
+## Phase 5 — Data structures & algorithms ✅ Complete
 
 **Reference:** [data-structures-algorithms.md](./data-structures-algorithms.md) · [DATA_STRUCTURES_AND_ALGORITHMS.md](../DATA_STRUCTURES_AND_ALGORITHMS.md)
-
-| ID | Task | Effort | Status |
-|----|------|--------|--------|
-| DSA-001–011 | Core DSA modules + suggest API + tests + docs | L | **Done** |
-| DSA-012 | Invalidate search trie on admin product CRUD | S | Todo |
-| DSA-013 | Mobile shop autocomplete (API or local trie) | M | Todo |
-| DSA-014 | Frontend API suggest fallback when catalog offline | S | Todo |
-| DSA-015 | Keyset pagination for admin orders | M | Todo |
-| DSA-016 | Cart line hash map for O(1) merge | M | Todo |
-| DSA-017 | Top-K batch reports for search analytics | S | Todo |
-| DSA-018–020 | Inverted index, Bloom filter, job priority queue | L | Optional |
 
 ### Phase 5 master checklist
 
@@ -151,12 +141,14 @@ Goal: Performance, search quality, and algorithmic correctness across stacks.
 - [x] DSA-009 — DSA unit tests (backend, frontend, mobile)
 - [x] DSA-010 — Path constants for suggest endpoint
 - [x] DSA-011 — `docs/DATA_STRUCTURES_AND_ALGORITHMS.md`
-- [ ] DSA-012 — Trie invalidation on product mutations
-- [ ] DSA-013 — Mobile autocomplete integration
-- [ ] DSA-014 — Frontend API suggest fallback
-- [ ] DSA-015 — Cursor pagination for orders
-- [ ] DSA-016 — Cart hash-map merge
-- [ ] DSA-017 — Top-K analytics report script
+- [x] DSA-012 — Trie invalidation via `invalidate_storefront_catalog_cache()`
+- [x] DSA-013 — Mobile shop autocomplete (`/products/suggest`)
+- [x] DSA-014 — Frontend API suggest fallback in `SearchAutocomplete`
+- [x] DSA-015 — Keyset pagination `GET /admin/orders/page`
+- [x] DSA-016 — Cart hash-map merge (`cart_index.py` + `add_to_cart`)
+- [x] DSA-017 — `backend/tools/reports/search_top_k.py`
+
+Optional (deferred): DSA-018–020 — inverted index, Bloom filter, job priority queue.
 
 ---
 
@@ -166,48 +158,21 @@ Goal: Performance, search quality, and algorithmic correctness across stacks.
 
 | ID | Summary | File |
 |----|---------|------|
-| B-001 | Dead env vars | [backend.md](./backend.md) |
-| B-002 | Schema Alembic vs create_all | [backend.md](./backend.md) |
-| B-010 | Backend test gaps | [backend.md](./backend.md) |
-| D-001 | No Dependabot/audit | [devops-ci.md](./devops-ci.md) |
-| F-005 | Frontend smoke test only | [frontend.md](./frontend.md) |
-| M-002 | Mobile test gaps | [mobile.md](./mobile.md) |
-| S-001 | Global rate limits | [security.md](./security.md) — **sliding window wired**; Redis multi-instance pending |
-| S-007 | No CVE scanning | [security.md](./security.md) |
+| B-002 | Schema Alembic vs create_all | [backend.md](./backend.md) — **Phase 1 done** |
+| B-010 | Backend test gaps | [backend.md](./backend.md) — **Phase 2** |
+| D-001 | Dependabot/audit | [devops-ci.md](./devops-ci.md) — **Phase 1 done** |
+| F-005 | Frontend smoke test only | [frontend.md](./frontend.md) — **Phase 2** |
+| M-002 | Mobile test gaps | [mobile.md](./mobile.md) — **Phase 2** |
+| S-007 | CVE scanning | [security.md](./security.md) — **Phase 1 done (CI audit)** |
 
 ### P1 — High priority
 
-| ID | Summary | File |
-|----|---------|------|
-| B-005 | Redis rate limits | [backend.md](./backend.md) |
-| B-007 | Dev JWT/TOTP fallbacks | [backend.md](./backend.md) |
-| B-011 | Backend README | [backend.md](./backend.md) |
-| D-003 | Mobile not in main CI | [devops-ci.md](./devops-ci.md) |
-| D-004 | No backend lint | [devops-ci.md](./devops-ci.md) |
-| D-010 | Docker hardening | [devops-ci.md](./devops-ci.md) |
-| D-011 | render.yaml doc path | [devops-ci.md](./devops-ci.md) |
-| D-013 | No Sentry | [devops-ci.md](./devops-ci.md) |
-| DOC-001–004 | Doc drift | [documentation-drift.md](./documentation-drift.md) |
-| DOC-009–010 | Version/license | [documentation-drift.md](./documentation-drift.md) |
-| F-003 | Client-only route protection | [frontend.md](./frontend.md) |
-| M-001 | pubspec version drift | [mobile.md](./mobile.md) |
-| M-005 | API path sync | [mobile.md](./mobile.md) |
-| S-002–006 | Redis, RLS, routes, pool | [security.md](./security.md) |
-| S-008–009 | Docker root/dev deps | [security.md](./security.md) |
-
-### P2 — Medium
-
-See area files for B-003, B-004, B-008, B-012, B-014, F-004, F-007, F-008, F-009, F-010, F-012, M-003, M-004, M-006, M-007, D-002, D-006, D-009, D-012, D-015, DOC-005–006, DOC-011–012, DOC-014, DOC-016, S-010–011, S-013.
-
-### P3 — Low
-
-See area files for B-006, B-009, B-013, F-006, F-011, F-013, D-007–008, D-014, D-016, DOC-008, DOC-013, DOC-015, S-012.
+See Phase 2–3 checklists and area docs.
 
 ---
 
 ## Re-audit cadence
 
-- **After Phase 1:** Quick pass on config and docs (1 hour).
 - **After Phase 2:** Review test coverage reports (Codecov, pytest, Vitest).
 - **Quarterly:** Full re-audit; update `executive-summary.md` "Last reviewed" date.
 
