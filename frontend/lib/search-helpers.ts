@@ -1,43 +1,20 @@
-import type { MockProduct } from "@/lib/mock-data";
+import { LRUCache } from "@/lib/dsa/lru-cache";
 
-export type SortKey = "relevance" | "price-asc" | "price-desc" | "name" | "rating";
-
-export function matchesQuery(p: MockProduct, q: string): boolean {
-  if (!q) return true;
-  const t = q.toLowerCase();
-  return (
-    p.name.toLowerCase().includes(t) ||
-    p.description.toLowerCase().includes(t) ||
-    p.categoryLabel.toLowerCase().includes(t)
-  );
-}
-
-export function sortProducts(list: MockProduct[], key: SortKey): MockProduct[] {
-  const next = [...list];
-  if (key === "price-asc") next.sort((a, b) => a.price - b.price);
-  else if (key === "price-desc") next.sort((a, b) => b.price - a.price);
-  else if (key === "name") next.sort((a, b) => a.name.localeCompare(b.name));
-  else if (key === "rating") next.sort((a, b) => b.rating - a.rating);
-  return next;
-}
-
-export function filterByPriceAndRating(
-  list: MockProduct[],
-  opts: { min?: number; max?: number; minRating?: number; inStockOnly?: boolean },
-): MockProduct[] {
-  return list.filter((p) => {
-    if (opts.min != null && p.price < opts.min) return false;
-    if (opts.max != null && p.price > opts.max) return false;
-    if (opts.minRating != null && p.rating < opts.minRating) return false;
-    if (opts.inStockOnly && typeof p.in_stock === "number" && p.in_stock <= 0) return false;
-    return true;
-  });
-}
+export type { SortKey } from "@/lib/dsa/sort";
+export {
+  sortProducts,
+  filterByPriceAndRating,
+  filterByPriceSorted,
+  matchesQuery,
+  buildProductTrie,
+} from "@/lib/dsa/sort";
 
 const STORAGE_KEY = "sikapa-recent-searches";
 const MAX = 8;
 
-export function readRecentSearches(): string[] {
+const recentCache = new LRUCache<string, string[]>(MAX + 1);
+
+function loadRecentFromStorage(): string[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -50,20 +27,35 @@ export function readRecentSearches(): string[] {
   }
 }
 
-export function addRecentSearch(term: string): void {
-  const t = term.trim();
-  if (!t || typeof window === "undefined") return;
-  const prev = readRecentSearches().filter((x) => x.toLowerCase() !== t.toLowerCase());
-  const next = [t, ...prev].slice(0, MAX);
+function persistRecent(list: string[]): void {
+  if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   } catch {
     /* silent */
   }
 }
 
+export function readRecentSearches(): string[] {
+  const cached = recentCache.get(STORAGE_KEY);
+  if (cached) return cached;
+  const loaded = loadRecentFromStorage();
+  recentCache.set(STORAGE_KEY, loaded);
+  return loaded;
+}
+
+export function addRecentSearch(term: string): void {
+  const t = term.trim();
+  if (!t || typeof window === "undefined") return;
+  const prev = readRecentSearches().filter((x) => x.toLowerCase() !== t.toLowerCase());
+  const next = [t, ...prev].slice(0, MAX);
+  recentCache.set(STORAGE_KEY, next);
+  persistRecent(next);
+}
+
 export function clearRecentSearches(): void {
   if (typeof window === "undefined") return;
+  recentCache.delete(STORAGE_KEY);
   try {
     window.localStorage.removeItem(STORAGE_KEY);
   } catch {
@@ -71,7 +63,7 @@ export function clearRecentSearches(): void {
   }
 }
 
-/** Popular searches shown before the user types. Single-brand store stays in beauty lane. */
+/** Popular searches shown before the user types. */
 export const TRENDING_SEARCHES: string[] = [
   "wigs",
   "vitamin c serum",

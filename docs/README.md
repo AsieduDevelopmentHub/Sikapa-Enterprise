@@ -7,6 +7,8 @@ Start here. Everything below lives in this repo; use it for onboarding, deployme
 | Topic | Document |
 |--------|-----------|
 | **Environment variables (backend + frontend)** | [ENVIRONMENT.md](./ENVIRONMENT.md) |
+| **Data structures & algorithms** | [DATA_STRUCTURES_AND_ALGORITHMS.md](./DATA_STRUCTURES_AND_ALGORITHMS.md) |
+| **System audit & gap checklist** | [audit/README.md](./audit/README.md) |
 | **Running services, deploys, JWT, CORS, health** | [OPERATIONS.md](./OPERATIONS.md) |
 | **Auth endpoints, tokens, 2FA** | [../backend/docs/AUTHENTICATION.md](../backend/docs/AUTHENTICATION.md) |
 | **Browser “Remember me”, JWT refresh, admin RBAC** | [AUTH_SESSION_AND_ADMIN.md](./AUTH_SESSION_AND_ADMIN.md) |

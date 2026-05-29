@@ -12,7 +12,7 @@ Goal: Config honesty, schema discipline, dependency alerts, doc accuracy.
 
 | ID | Task | Effort | Doc |
 |----|------|--------|-----|
-| B-001 | Wire or remove dead rate-limit / pool env vars | S | [backend.md](./backend.md#b-001) |
+| B-001 | Wire or remove dead rate-limit / pool env vars | S | [backend.md](./backend.md#b-001) — **rate limit wired**; DB pool still pending |
 | B-002 | Alembic-only schema; document deploy migrate + RLS | M | [backend.md](./backend.md#b-002) |
 | D-001 | Add Dependabot + npm audit + pip-audit | S | [devops-ci.md](./devops-ci.md#d-001) |
 | DOC-001–004 | Fix doc drift (paths, env names, README) | S | [documentation-drift.md](./documentation-drift.md) |
@@ -22,7 +22,7 @@ Goal: Config honesty, schema discipline, dependency alerts, doc accuracy.
 
 ### Phase 1 master checklist
 
-- [ ] B-001 — Rate limit / DB pool env vars resolved
+- [ ] B-001 — Rate limit / DB pool env vars resolved (API rate limit **done**; DB pool pending)
 - [ ] B-002 — Schema: Alembic-only dev path + prod migrate documented
 - [ ] D-001 — Dependabot + audit steps in CI
 - [ ] DOC-001 — Remove stale `android/` references
@@ -79,7 +79,7 @@ Goal: Production security and operability.
 ### Phase 3 master checklist
 
 - [ ] B-005 — Redis configured on Render
-- [ ] B-005 — Global API rate limits wired
+- [x] B-005 — Global API rate limits wired (sliding window; Redis for multi-instance still pending)
 - [ ] F-003 — Server-side admin gate
 - [ ] D-013 — Sentry integrated
 - [ ] D-010 — Docker hardened
@@ -121,6 +121,45 @@ Goal: Maintainability and team scale.
 
 ---
 
+## Phase 5 — Data structures & algorithms
+
+Goal: Performance, search quality, and algorithmic correctness across stacks.
+
+**Reference:** [data-structures-algorithms.md](./data-structures-algorithms.md) · [DATA_STRUCTURES_AND_ALGORITHMS.md](../DATA_STRUCTURES_AND_ALGORITHMS.md)
+
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| DSA-001–011 | Core DSA modules + suggest API + tests + docs | L | **Done** |
+| DSA-012 | Invalidate search trie on admin product CRUD | S | Todo |
+| DSA-013 | Mobile shop autocomplete (API or local trie) | M | Todo |
+| DSA-014 | Frontend API suggest fallback when catalog offline | S | Todo |
+| DSA-015 | Keyset pagination for admin orders | M | Todo |
+| DSA-016 | Cart line hash map for O(1) merge | M | Todo |
+| DSA-017 | Top-K batch reports for search analytics | S | Todo |
+| DSA-018–020 | Inverted index, Bloom filter, job priority queue | L | Optional |
+
+### Phase 5 master checklist
+
+- [x] DSA-001 — Backend `app/core/dsa/` module
+- [x] DSA-002 — LRU `InMemoryCache`
+- [x] DSA-003 — `/api/v1/products/suggest` (trie-backed)
+- [x] DSA-004 — Sliding-window `API_RATE_LIMIT_*` middleware
+- [x] DSA-005 — Frontend `lib/dsa/`
+- [x] DSA-006 — Search autocomplete trie
+- [x] DSA-007 — Recent searches LRU
+- [x] DSA-008 — Mobile DSA utilities
+- [x] DSA-009 — DSA unit tests (backend, frontend, mobile)
+- [x] DSA-010 — Path constants for suggest endpoint
+- [x] DSA-011 — `docs/DATA_STRUCTURES_AND_ALGORITHMS.md`
+- [ ] DSA-012 — Trie invalidation on product mutations
+- [ ] DSA-013 — Mobile autocomplete integration
+- [ ] DSA-014 — Frontend API suggest fallback
+- [ ] DSA-015 — Cursor pagination for orders
+- [ ] DSA-016 — Cart hash-map merge
+- [ ] DSA-017 — Top-K analytics report script
+
+---
+
 ## Full gap index (by severity)
 
 ### P0 — Before scaling
@@ -133,7 +172,7 @@ Goal: Maintainability and team scale.
 | D-001 | No Dependabot/audit | [devops-ci.md](./devops-ci.md) |
 | F-005 | Frontend smoke test only | [frontend.md](./frontend.md) |
 | M-002 | Mobile test gaps | [mobile.md](./mobile.md) |
-| S-001 | Global rate limits | [security.md](./security.md) |
+| S-001 | Global rate limits | [security.md](./security.md) — **sliding window wired**; Redis multi-instance pending |
 | S-007 | No CVE scanning | [security.md](./security.md) |
 
 ### P1 — High priority

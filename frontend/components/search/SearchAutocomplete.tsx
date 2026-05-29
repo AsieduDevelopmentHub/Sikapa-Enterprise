@@ -17,9 +17,9 @@ import {
   TRENDING_SEARCHES,
   addRecentSearch,
   clearRecentSearches,
-  matchesQuery,
   readRecentSearches,
 } from "@/lib/search-helpers";
+import { buildProductTrie } from "@/lib/dsa";
 import { cleanImageUrl } from "@/lib/clean-image-url";
 
 type Props = {
@@ -64,11 +64,13 @@ export function SearchAutocomplete({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
+  const productTrie = useMemo(() => buildProductTrie(products), [products]);
+
   const suggestions = useMemo(() => {
-    const q = term.trim();
+    const q = term.trim().toLowerCase();
     if (!q) return [];
-    return products.filter((p) => matchesQuery(p, q)).slice(0, MAX_SUGGESTIONS);
-  }, [products, term]);
+    return productTrie.searchPrefix(q, MAX_SUGGESTIONS);
+  }, [productTrie, term]);
 
   const matchedCategories = useMemo(() => {
     const q = term.trim().toLowerCase();

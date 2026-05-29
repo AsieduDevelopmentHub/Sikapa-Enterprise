@@ -5,11 +5,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
 import type { MockProduct } from "@/lib/mock-data";
 import { productsForHomeCategory } from "@/lib/mock-data";
+import { invalidateCatalogQueries, CATALOG_CHANGED_EVENT } from "@/lib/catalog-cache";
 import {
   fetchCategories,
   fetchProductById,
@@ -81,7 +83,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         const p = mapApiProductToMock(row, cats);
         
         // Update the query cache
-        await queryClient.invalidateQueries({ queryKey: ["products"] });
+        await invalidateCatalogQueries(queryClient);
         
         return p;
       } catch {
@@ -90,6 +92,14 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     },
     [queryClient]
   );
+
+  useEffect(() => {
+    const onCatalogChanged = () => {
+      void invalidateCatalogQueries(queryClient);
+    };
+    window.addEventListener(CATALOG_CHANGED_EVENT, onCatalogChanged);
+    return () => window.removeEventListener(CATALOG_CHANGED_EVENT, onCatalogChanged);
+  }, [queryClient]);
 
   const homeRailCategoryKeys = useMemo(
     () => homeRailKeys(categories, source),

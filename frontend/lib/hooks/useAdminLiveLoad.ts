@@ -6,6 +6,8 @@ type AdminLiveLoadOptions = {
   enabled?: boolean;
 };
 
+const DEFAULT_ADMIN_POLL_MS = 10_000;
+
 /**
  * Runs `load` on mount/deps change, when the tab regains focus, and on an interval.
  * Pass `{ silent: true }` from the loader to avoid full-page skeleton flicker on polls.
@@ -15,7 +17,7 @@ export function useAdminLiveLoad(
   deps: readonly unknown[],
   options: AdminLiveLoadOptions = {}
 ): { reload: (opts?: { silent?: boolean }) => void; refreshing: () => void } {
-  const { intervalMs = 20_000, enabled = true } = options;
+  const { intervalMs = DEFAULT_ADMIN_POLL_MS, enabled = true } = options;
   const loadRef = useRef(load);
   loadRef.current = load;
 

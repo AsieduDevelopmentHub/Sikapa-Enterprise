@@ -30,6 +30,7 @@ class V1 {
   static const String productsList = '/products/';
   static const String productsCategories = '/products/categories';
   static const String productsSearch = '/products/search';
+  static const String productsSuggest = '/products/suggest';
   static String productsDetail(int id) => '/products/$id';
   static String productsBySlug(String slug) => '/products/slug/$slug';
   static String productsVariants(int productId) =>

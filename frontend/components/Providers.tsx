@@ -27,18 +27,13 @@ export function Providers({
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Catalog content rarely changes minute-to-minute; the previous 1-minute
-            // staleTime combined with the default `refetchOnWindowFocus: true` caused
-            // products to silently refetch every time the tab regained focus, which in
-            // turn re-rendered the entire shop grid and made images appear to "reload"
-            // on a continuous cycle. Treat data as fresh for 5 minutes and stop
-            // chatty background refetches that the user did not ask for.
-            staleTime: 5 * 60 * 1000,
+            // Default query cache for non-catalog data. Catalog hooks override staleTime.
+            staleTime: 60_000,
             gcTime: 30 * 60 * 1000,
             retry: 1,
-            refetchOnWindowFocus: false,
-            refetchOnReconnect: false,
-            refetchOnMount: false,
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
+            refetchOnMount: true,
           },
         },
       })

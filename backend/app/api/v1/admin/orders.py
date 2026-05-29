@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from pydantic import BaseModel
 
 from app.core.audit import AuditLogger
-from app.core.cache import cache
+from app.core.cache import invalidate_admin_operational_cache
 from app.db import get_session
 from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Order, Product
@@ -136,7 +136,7 @@ async def admin_paystack_refund(
         },
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_admin_operational_cache()
     return PaystackRefundResponse(**data)
 
 
@@ -161,7 +161,7 @@ async def update_order_status_endpoint(
         changes={"status": {"old": prev_status, "new": order.status}},
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_admin_operational_cache()
     return order
 
 
@@ -216,7 +216,7 @@ async def update_order_tracking(
         },
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_admin_operational_cache()
     return order
 
 
@@ -265,7 +265,7 @@ async def update_order_shipping(
         changes=changes,
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_admin_operational_cache()
     return order
 
 

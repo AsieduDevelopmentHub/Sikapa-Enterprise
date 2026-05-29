@@ -318,7 +318,11 @@ async def get_all_products_admin(
 
 async def create_category_admin(session: Session, category_data: dict) -> Category:
     """Create a category."""
-    return await create_entity_with_slug(session, Category, category_data)
+    from app.core.cache import invalidate_storefront_catalog_cache
+
+    created = await create_entity_with_slug(session, Category, category_data)
+    invalidate_storefront_catalog_cache()
+    return created
 
 
 async def update_category_admin(
@@ -327,14 +331,21 @@ async def update_category_admin(
     category_data: dict,
 ) -> Category:
     """Update a category."""
-    return await update_entity_generic(
+    from app.core.cache import invalidate_storefront_catalog_cache
+
+    updated = await update_entity_generic(
         session, Category, category_id, category_data, has_slug=True
     )
+    invalidate_storefront_catalog_cache()
+    return updated
 
 
 async def delete_category_admin(session: Session, category_id: int) -> None:
     """Delete a category."""
+    from app.core.cache import invalidate_storefront_catalog_cache
+
     await delete_entity_safe(session, Category, category_id)
+    invalidate_storefront_catalog_cache()
 
 
 async def get_all_categories_admin(
@@ -477,8 +488,7 @@ async def update_order_status(
     session.refresh(order)
 
     try:
-        from app.core.cache import cache
-        cache.delete_pattern("admin:dashboard:*")
+        invalidate_admin_operational_cache()
     except Exception:
         pass
 
@@ -550,6 +560,9 @@ async def create_inventory_adjustment(
     session.add(log)
     session.commit()
     session.refresh(log)
+    from app.core.cache import invalidate_storefront_catalog_cache
+
+    invalidate_storefront_catalog_cache()
     return log
 
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import {
@@ -11,8 +12,10 @@ import {
   adminUpdateCategory,
   type AdminCategory,
 } from "@/lib/api/admin";
+import { invalidateCatalogQueries } from "@/lib/catalog-cache";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminCategoryListSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 function slugify(name: string): string {
   return name
@@ -25,6 +28,7 @@ function slugify(name: string): string {
 
 export default function AdminCategoriesPage() {
   const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
   const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const [rows, setRows] = useState<AdminCategory[]>([]);
   const [name, setName] = useState("");
@@ -42,21 +46,19 @@ export default function AdminCategoriesPage() {
     return rows.filter((c) => `${c.name} ${c.slug}`.toLowerCase().includes(q));
   }, [rows, query]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     try {
       setRows(await adminFetchCategories(accessToken));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken]);
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,9 +78,7 @@ export default function AdminCategoriesPage() {
       setName("");
       setNewImageFile(null);
       await load();
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("sikapa-catalog-refresh"));
-      }
+      await invalidateCatalogQueries(queryClient);
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Create failed");
     } finally {
@@ -177,9 +177,7 @@ export default function AdminCategoriesPage() {
                           try {
                             await adminUploadCategoryImage(accessToken, c.id, file);
                             await load();
-                            if (typeof window !== "undefined") {
-                              window.dispatchEvent(new CustomEvent("sikapa-catalog-refresh"));
-                            }
+                            await invalidateCatalogQueries(queryClient);
                           } catch (ex) {
                             await alertDialog(ex instanceof Error ? ex.message : "Image upload failed", {
                               variant: "error",
@@ -203,9 +201,7 @@ export default function AdminCategoriesPage() {
                       try {
                         await adminUpdateCategory(accessToken, c.id, { is_active: !c.is_active });
                         await load();
-                        if (typeof window !== "undefined") {
-                          window.dispatchEvent(new CustomEvent("sikapa-catalog-refresh"));
-                        }
+                        await invalidateCatalogQueries(queryClient);
                       } catch (e) {
                         void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
                       }
@@ -230,9 +226,7 @@ export default function AdminCategoriesPage() {
                       try {
                         await adminDeleteCategory(accessToken, c.id);
                         await load();
-                        if (typeof window !== "undefined") {
-                          window.dispatchEvent(new CustomEvent("sikapa-catalog-refresh"));
-                        }
+                        await invalidateCatalogQueries(queryClient);
                       } catch (e) {
                         await alertDialog(e instanceof Error ? e.message : "Delete failed", {
                           variant: "error",

@@ -18,7 +18,8 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.routes import router as api_v1_router
 from app.core.http_errors import integrity_error_handler, request_validation_exception_handler
 from app.core.maintenance import MaintenanceMiddleware, is_maintenance_enabled
-from app.core.rate_limit import limiter
+from app.core.rate_limit import check_api_path_rate_limit, limiter
+from slowapi.util import get_remote_address
 from app.core.startup_checks import (
     is_production_environment,
     validate_production_config_or_raise,
@@ -102,6 +103,18 @@ _request_log = logging.getLogger("sikapa.request")
 
 
 @app.middleware("http")
+async def api_prefix_rate_limit(request: Request, call_next):
+    """Sliding-window limit for admin/orders/payments prefixes (API_RATE_LIMIT_*)."""
+    client_key = get_remote_address(request) or "unknown"
+    if not check_api_path_rate_limit(client_key, request.url.path):
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Try again shortly."},
+        )
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -171,7 +184,7 @@ def on_startup() -> None:
     if cache.ping():
         logging.getLogger("sikapa").info("Redis cache: connected and healthy")
     else:
-        logging.getLogger("sikapa").info("Running with InMemoryCache (LRU-lite)")
+        logging.getLogger("sikapa").info("Running with InMemoryCache (LRU)")
 
     if is_maintenance_enabled():
         logging.getLogger("sikapa").warning(

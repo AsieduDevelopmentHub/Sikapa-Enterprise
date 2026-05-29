@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -14,6 +14,7 @@ import {
 import { sanitizeMultiline } from "@/lib/validation/input";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminReturnsPageSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 const STATUS_FILTERS = [
   "all",
@@ -70,9 +71,9 @@ export default function AdminReturnsPage() {
   // Map order_item_id -> product_name (resolved from order details).
   const [itemNameById, setItemNameById] = useState<Record<number, string>>({});
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const [data, users] = await Promise.all([
@@ -114,13 +115,11 @@ export default function AdminReturnsPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load returns");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accessToken, filter]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken, filter]);
 
   const handleStatusChange = async (ret: AdminReturn, next: AdminReturn["status"]) => {
     if (!accessToken) return;

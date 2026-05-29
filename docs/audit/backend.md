@@ -9,7 +9,8 @@
 
 ### B-001 — Dead env vars (rate limit & DB pool)
 
-- [ ] **P0** — Wire or remove undocumented settings
+- [x] **P0** — Wire API rate limit env vars (**done** — sliding window + middleware)
+- [ ] **P0** — Wire `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` in `app/db.py` or remove from `.env.example`
 
 **Problem:** `backend/.env.example` documents settings that application code never reads.
 

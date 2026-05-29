@@ -37,7 +37,8 @@ This folder is the actionable follow-up to the full system audit. Use it as a ch
 | [devops-ci.md](./devops-ci.md) | Pipelines, dependencies, Docker, ops |
 | [documentation-drift.md](./documentation-drift.md) | Wrong paths, env names, missing files |
 | [cross-platform-parity.md](./cross-platform-parity.md) | Web vs mobile feature matrix |
-| [remediation-roadmap.md](./remediation-roadmap.md) | Phased plan + master checklist |
+| [data-structures-algorithms.md](./data-structures-algorithms.md) | DSA implementation checklist |
+| [remediation-roadmap.md](./remediation-roadmap.md) | Phased plan + master checklist (includes Phase 5 DSA) |
 
 ---
 
@@ -47,6 +48,7 @@ This folder is the actionable follow-up to the full system audit. Use it as a ch
 - [OPERATIONS.md](../OPERATIONS.md) — deploys, health, CORS
 - [PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md) — production checklist
 - [IMPROVEMENTS_SUMMARY.md](../IMPROVEMENTS_SUMMARY.md) — prior improvement notes
+- [DATA_STRUCTURES_AND_ALGORITHMS.md](../DATA_STRUCTURES_AND_ALGORITHMS.md) — DSA modules and usage
 
 ---
 

@@ -21,6 +21,7 @@ os.environ["TESTING"] = "true"
 # Match CI: in-memory rate limits (avoid Redis from backend/.env during tests).
 os.environ["REDIS_URL"] = ""
 os.environ["PAYSTACK_SECRET_KEY"] = ""
+os.environ["API_RATE_LIMIT_ENABLED"] = "false"
 
 import pytest
 from httpx import AsyncClient
@@ -90,17 +91,19 @@ def test_session(test_engine) -> Generator[Session, None, None]:
 @pytest.fixture(autouse=True)
 def _reset_rate_limits():
     """Clear SlowAPI counters between tests so limits do not leak across tests."""
-    from app.core.rate_limit import limiter
+    from app.core.rate_limit import limiter, reset_api_path_rate_limiters
 
     try:
         limiter.reset()
     except Exception:
         pass
+    reset_api_path_rate_limiters()
     yield
     try:
         limiter.reset()
     except Exception:
         pass
+    reset_api_path_rate_limiters()
 
 
 @pytest.fixture(scope="function")

@@ -73,13 +73,15 @@ export function useProducts(filters: ProductFilters = {}) {
       const endpoint = search ? V1.products.search : V1.products.list;
       const url = `${baseUrl}${endpoint}?${params.toString()}`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) {
         throw new Error("Failed to fetch products");
       }
       return res.json();
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }
 
@@ -89,12 +91,14 @@ export function useCategories() {
     queryFn: async () => {
       const baseUrl = getApiV1Base();
       const url = `${baseUrl}${V1.products.categories}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) {
         throw new Error("Failed to fetch categories");
       }
       return res.json();
     },
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }

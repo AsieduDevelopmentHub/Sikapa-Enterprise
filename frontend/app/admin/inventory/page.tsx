@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminCreateInventoryAdjustment,
@@ -10,8 +11,10 @@ import {
   type InventoryAdjustmentRow,
   type InventoryStockLevelRow,
 } from "@/lib/api/admin";
+import { invalidateCatalogQueries } from "@/lib/catalog-cache";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminInventoryPageSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 function stockOptionValue(row: InventoryStockLevelRow): string {
   if (row.kind === "variant" && row.variant_id != null) {
@@ -30,6 +33,7 @@ function parseStockSelection(val: string): { product_id: number; variant_id?: nu
 
 export default function AdminInventoryPage() {
   const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
   const [rows, setRows] = useState<InventoryStockLevelRow[]>([]);
   const [logs, setLogs] = useState<InventoryAdjustmentRow[]>([]);
   const [stockKey, setStockKey] = useState("");
@@ -41,7 +45,7 @@ export default function AdminInventoryPage() {
   const [logQuery, setLogQuery] = useState("");
   const [ready, setReady] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
     try {
       const [levels, changes] = await Promise.all([
@@ -53,13 +57,11 @@ export default function AdminInventoryPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setReady(true);
+      if (!opts?.silent) setReady(true);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken]);
 
   const logLineLabel = useCallback(
     (l: InventoryAdjustmentRow) => {
@@ -114,6 +116,7 @@ export default function AdminInventoryPage() {
       setDelta("");
       setReason("");
       await load();
+      await invalidateCatalogQueries(queryClient);
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Adjustment failed");
     } finally {

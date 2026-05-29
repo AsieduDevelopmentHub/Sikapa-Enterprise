@@ -15,8 +15,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session, select
 
-from app.api.v1.auth.dependencies import require_admin_permission
 from app.api.v1.admin.services import upload_product_image
+from app.api.v1.auth.dependencies import require_admin_permission
+from app.core.cache import invalidate_storefront_catalog_cache
 from app.core.sanitization import sanitize_multiline_text, sanitize_plain_text
 from app.db import get_session
 from app.models import Product, ProductVariant, User
@@ -201,6 +202,7 @@ async def create_variant(
     session.add(v)
     session.commit()
     session.refresh(v)
+    invalidate_storefront_catalog_cache()
     return _to_read(v)
 
 
@@ -248,6 +250,7 @@ async def update_variant(
     session.add(v)
     session.commit()
     session.refresh(v)
+    invalidate_storefront_catalog_cache()
     return _to_read(v)
 
 
@@ -270,6 +273,7 @@ async def upload_variant_image(
     session.add(v)
     session.commit()
     session.refresh(v)
+    invalidate_storefront_catalog_cache()
     return _to_read(v)
 
 
@@ -286,3 +290,4 @@ async def delete_variant(
         )
     session.delete(v)
     session.commit()
+    invalidate_storefront_catalog_cache()
