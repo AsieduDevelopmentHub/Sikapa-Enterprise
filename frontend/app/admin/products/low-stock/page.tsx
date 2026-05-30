@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { adminFetchLowStockAlerts, type StockAlertItem } from "@/lib/api/admin";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminTableSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 export default function AdminLowStockPage() {
   const { accessToken } = useAuth();
@@ -16,9 +17,9 @@ export default function AdminLowStockPage() {
   const [err, setErr] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const data = await adminFetchLowStockAlerts(accessToken, { threshold, limit: 100 });
@@ -26,13 +27,11 @@ export default function AdminLowStockPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accessToken, threshold]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken, threshold]);
 
   const visibleRows = useMemo(() => {
     const q = query.trim().toLowerCase();

@@ -3,7 +3,7 @@ import os
 import time
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -16,9 +16,15 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.routes import router as api_v1_router
-from app.core.http_errors import integrity_error_handler, request_validation_exception_handler
+from app.core.http_errors import (
+    integrity_error_handler,
+    request_validation_exception_handler,
+    structured_http_exception_handler,
+)
 from app.core.maintenance import MaintenanceMiddleware, is_maintenance_enabled
-from app.core.rate_limit import limiter
+from app.core.rate_limit import check_api_path_rate_limit, limiter
+from app.core.settings import get_settings
+from slowapi.util import get_remote_address
 from app.core.startup_checks import (
     is_production_environment,
     validate_production_config_or_raise,
@@ -26,22 +32,24 @@ from app.core.startup_checks import (
     warn_dev_secret,
 )
 from app.core.cache import cache
+from app.core.observability import init_sentry
 from app.db import create_db_and_tables
 
 # Do not override env vars already set (CI, pytest conftest, Render dashboard).
 load_dotenv(override=False)
+
+init_sentry()
+
+_settings = get_settings()
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
 )
 
-_https_enabled = os.getenv("HTTPS_ENABLED", "false").lower() == "true"
-# Render terminates TLS at the edge; redirecting HTTP→HTTPS in-app breaks health checks.
-_on_render = os.getenv("RENDER", "").strip().lower() in {"true", "1", "yes"}
-_disable_openapi = os.getenv("DISABLE_OPENAPI", "").strip().lower() in {"1", "true", "yes"} or (
-    is_production_environment()
-)
+_https_enabled = _settings.https_enabled
+_on_render = _settings.render or os.getenv("RENDER", "").strip().lower() in {"true", "1", "yes"}
+_disable_openapi = _settings.disable_openapi or _settings.is_production
 
 _docs_url = None if _disable_openapi else "/docs"
 _redoc_url = None if _disable_openapi else "/redoc"
@@ -58,18 +66,18 @@ app = FastAPI(
 
 app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
 app.add_exception_handler(IntegrityError, integrity_error_handler)
+app.add_exception_handler(HTTPException, structured_http_exception_handler)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-if _https_enabled and not _on_render and os.getenv("DEBUG", "false").lower() != "true":
+if _https_enabled and not _on_render and not _settings.debug:
     app.add_middleware(HTTPSRedirectMiddleware)
 
-_cors_raw = os.getenv("CORS_ORIGINS", "")
-cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
-cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
-_cors_regex = os.getenv("CORS_ORIGIN_REGEX", "").strip()
+cors_origins = _settings.cors_origin_list
+cors_allow_credentials = _settings.cors_allow_credentials
+_cors_regex = _settings.cors_origin_regex.strip()
 
 _cors_kwargs = dict(
     allow_origins=cors_origins,
@@ -84,13 +92,12 @@ if _cors_regex:
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.add_middleware(GZipMiddleware, minimum_size=1200)
 
-_allowed_hosts = os.getenv("ALLOWED_HOSTS", "").strip()
-if _allowed_hosts:
+if _settings.allowed_host_list:
     from starlette.middleware.trustedhost import TrustedHostMiddleware
 
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=[h.strip() for h in _allowed_hosts.split(",") if h.strip()],
+        allowed_hosts=_settings.allowed_host_list,
     )
 
 # Outermost gate: when MAINTENANCE_MODE=true, return 503 for non-allowlisted
@@ -99,6 +106,18 @@ if _allowed_hosts:
 app.add_middleware(MaintenanceMiddleware)
 
 _request_log = logging.getLogger("sikapa.request")
+
+
+@app.middleware("http")
+async def api_prefix_rate_limit(request: Request, call_next):
+    """Sliding-window limit for admin/orders/payments prefixes (API_RATE_LIMIT_*)."""
+    client_key = get_remote_address(request) or "unknown"
+    if not check_api_path_rate_limit(client_key, request.url.path):
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Try again shortly."},
+        )
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -152,8 +171,13 @@ def on_startup() -> None:
     validate_production_config_or_raise()
     warn_dev_secret()
     warn_database_config()
-    if not is_production_environment():
+    if not is_production_environment() and os.getenv(
+        "DEV_AUTO_CREATE_TABLES", "false"
+    ).strip().lower() in {"1", "true", "yes"}:
         create_db_and_tables()
+        logging.getLogger("sikapa").warning(
+            "DEV_AUTO_CREATE_TABLES=true — used create_all(); prefer `alembic upgrade head`."
+        )
     
     # Warm up cache for Admin Dashboard (Lite)
     try:
@@ -171,7 +195,7 @@ def on_startup() -> None:
     if cache.ping():
         logging.getLogger("sikapa").info("Redis cache: connected and healthy")
     else:
-        logging.getLogger("sikapa").info("Running with InMemoryCache (LRU-lite)")
+        logging.getLogger("sikapa").info("Running with InMemoryCache (LRU)")
 
     if is_maintenance_enabled():
         logging.getLogger("sikapa").warning(

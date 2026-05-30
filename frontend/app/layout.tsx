@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import { Providers } from "@/components/Providers";
+import { SkipToContent } from "@/components/SkipToContent";
 import { cookieBannerNeeded } from "@/lib/cookie-consent-server";
 import { buildRootMetadata } from "@/lib/seo";
 import PWARegister from "@/components/PWARegister";
@@ -32,6 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${cormorant.variable} ${dmSans.variable}`}>
       <body>
+        <SkipToContent />
         <PWARegister />
         <PWAInstallPrompt />
         <Providers showCookieConsent={showCookieConsent}>{children}</Providers>

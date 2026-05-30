@@ -139,15 +139,23 @@ The platform currently powers:
 ├── frontend/                  # Next.js storefront application
 ├── backend/                   # FastAPI backend services
 ├── mobile/                    # Flutter mobile application
-├── android/                   # Legacy Android WebView wrapper
-├── docs/                      # Centralized project documentation
+├── docs/                      # Documentation hub (lowercase subfolders)
+│   ├── audit/                 # System audit & remediation
+│   ├── architecture/          # DSA reference
+│   ├── deployment/            # Production rollout
+│   ├── contributing/          # PR workflow
+│   ├── environment/           # Env vars
+│   ├── guides/                # Developer quickref
+│   ├── security/              # Security policy
+│   └── operations/            # Runbooks & auth sessions
 ├── .github/workflows/         # CI/CD workflows
 │
 ├── backend/dbschemas/         # Database schema definitions
 ├── backend/migration/         # Custom migration tooling
-├── backend/docs/              # Backend-focused documentation
+├── backend/docs/              # Backend API, hosting, migration, tls
+│   └── api/                   # authentication.md, api-reference.md
 │
-└── frontend/docs/             # Frontend deployment and hosting docs
+└── frontend/docs/             # Frontend hosting (vercel.md)
 ```
 
 ---
@@ -415,11 +423,18 @@ Current automation includes:
 
 | Area | Location |
 |------|----------|
-| Environment Configuration | `docs/ENVIRONMENT.md` |
-| Operations & Infrastructure | `docs/OPERATIONS.md` |
-| Production Deployment | `docs/PRODUCTION_DEPLOYMENT.md` |
-| Authentication System | `backend/docs/AUTHENTICATION.md` |
-| API Reference | `backend/docs/API_REFERENCE.md` |
+| Documentation hub | `docs/README.md` |
+| Contributing | `docs/contributing/contributing.md` |
+| Security policy | `docs/security/security-policy.md` |
+| Developer quick reference | `docs/guides/developer-quickref.md` |
+| System audit | `docs/audit/README.md` |
+| Environment Configuration | `docs/environment/environment.md` |
+| Operations & Infrastructure | `docs/operations/operations.md` |
+| Auth sessions & admin (web) | `docs/operations/auth-session-and-admin.md` |
+| Production Deployment | `docs/deployment/production-deployment.md` |
+| Data structures & algorithms | `docs/architecture/data-structures-and-algorithms.md` |
+| Authentication System | `backend/docs/api/authentication.md` |
+| API Reference | `backend/docs/api/api-reference.md` |
 | Backend Setup | `backend/README.md` |
 | Render Deployment | `backend/docs/hosting/render.md` |
 | Vercel Deployment | `frontend/docs/hosting/vercel.md` |

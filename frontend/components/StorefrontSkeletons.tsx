@@ -21,13 +21,16 @@ export function ProductCardSkeleton() {
 
 export function ProductGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <ul className={`mt-5 ${PRODUCT_GRID_CLASS}`} aria-hidden>
+    <>
+      <span className="sr-only">Loading products</span>
+      <ul className={`mt-5 ${PRODUCT_GRID_CLASS}`} aria-hidden>
       {Array.from({ length: count }).map((_, i) => (
         <li key={i}>
           <ProductCardSkeleton />
         </li>
       ))}
     </ul>
+    </>
   );
 }
 
@@ -76,11 +79,14 @@ export function OrderCardSkeleton() {
 
 export function OrderListSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="mx-auto max-w-mobile space-y-3 px-4 pb-6" aria-hidden>
+    <>
+      <span className="sr-only">Loading orders</span>
+      <div className="mx-auto max-w-mobile space-y-3 px-4 pb-6" aria-hidden>
       {Array.from({ length: count }).map((_, i) => (
         <OrderCardSkeleton key={i} />
       ))}
-    </div>
+      </div>
+    </>
   );
 }
 

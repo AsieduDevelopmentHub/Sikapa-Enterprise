@@ -38,10 +38,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         className="pointer-events-none fixed inset-x-0 top-0 z-[100] flex flex-col items-center gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
         aria-live="polite"
+        aria-relevant="additions"
       >
         {toasts.map((t) => (
           <div
             key={t.id}
+            role={t.tone === "err" ? "alert" : "status"}
+            aria-live={t.tone === "err" ? "assertive" : "polite"}
             className={`pointer-events-auto max-w-mobile rounded-[12px] px-4 py-3 text-center text-small font-medium shadow-lg ring-1 md:max-w-xl ${
               t.tone === "err"
                 ? "bg-red-900 text-white ring-red-800"

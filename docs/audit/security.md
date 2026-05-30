@@ -21,7 +21,7 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 ### S-001 — Global API rate limiting not implemented
 
-- [ ] **P0**
+- [x] **P0** — Prefix middleware wired (`API_RATE_LIMIT_*` in `rate_limit.py` + `main.py`)
 
 **Problem:** Only auth endpoints use SlowAPI. Documented global limits for `/admin`, `/orders`, `/payments` are not wired.
 
@@ -41,7 +41,7 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 ### S-003 — DB pool env vars ignored
 
-- [ ] **P1**
+- [x] **P1** — Read via `settings.py` in `app/db.py`
 
 **Problem:** Connection pool not tunable via env — can affect DoS resilience under load.
 
@@ -51,7 +51,7 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 ### S-004 — Postgres RLS requires manual setup
 
-- [ ] **P1**
+- [x] **P1** — Documented in prod deploy checklist; `backend/tools/rls/rls_setup.py` remains manual step
 
 **Problem:** `app.current_user_id` GUC is set per request, but RLS policies applied via `backend/tools/rls/rls_setup.py` — not automatic on deploy.
 
@@ -65,13 +65,13 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 **Problem:** Unset `SECRET_KEY` → predictable dev key in `app/core/security.py`.
 
-**Fix:** Fail in CI; document in `docs/ENVIRONMENT.md`. Production checks already block weak keys.
+**Fix:** Fail in CI; document in `docs/environment/environment.md`. Production checks already block weak keys.
 
 ---
 
 ### S-006 — Client-only route protection (frontend)
 
-- [ ] **P1**
+- [x] **P1** — Server-side admin gate via `sikapa_session` cookie + proxy
 
 **Problem:** Admin and checkout URLs reachable without server-side auth check.
 
@@ -81,7 +81,7 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 ### S-007 — No automated dependency/CVE scanning
 
-- [ ] **P0**
+- [x] **P0** — Dependabot + npm audit + pip-audit in CI (soft-fail; see D-001)
 
 **Problem:** No Dependabot, CodeQL, npm audit, or pip-audit in repo.
 
@@ -141,11 +141,11 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 ---
 
-### S-013 — No SECURITY.md vulnerability reporting
+### S-013 — Security policy & vulnerability reporting
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-**Fix:** Add `SECURITY.md` at repo root with contact and disclosure process.
+**Location:** [docs/security/security-policy.md](../security/security-policy.md). GitHub: [.github/SECURITY.md](../../.github/SECURITY.md) redirects to canonical doc.
 
 ---
 

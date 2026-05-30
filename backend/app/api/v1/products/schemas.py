@@ -72,6 +72,19 @@ class ProductSearchResponse(BaseModel):
         from_attributes = True
 
 
+class ProductSuggestItem(BaseModel):
+    id: int
+    name: str
+    slug: str
+    price: float
+    image_url: Optional[str] = None
+
+
+class ProductSuggestResponse(BaseModel):
+    query: str
+    items: List[ProductSuggestItem]
+
+
 class ProductCreateAdmin(ProductCreate):
     """Admin product creation with all fields"""
     pass

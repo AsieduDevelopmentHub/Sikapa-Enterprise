@@ -22,10 +22,11 @@ Add these environment variables in Vercel:
 
 - `NEXT_PUBLIC_API_URL` = `https://your-backend-url.com/api/v1` (must match the FastAPI mount; see `frontend/.env.example`)
 
-If you use Supabase or other external services, also add:
+Optional (only if you add client-side integrations — not required for the default storefront):
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_WHATSAPP_*` — contact / support links (see `frontend/.env.example`)
+
+The web app does **not** use a Supabase JavaScript client; product images may still be served from Supabase Storage URLs returned by the API.
 
 > Do not commit production API keys or secrets to Git.
 

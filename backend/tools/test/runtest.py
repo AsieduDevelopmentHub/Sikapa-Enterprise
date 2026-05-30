@@ -17,8 +17,6 @@ def run_tests():
     env.update({
         'DATABASE_URL': 'sqlite+aiosqlite:///:memory:',
         'SECRET_KEY': 'test-secret-key-for-testing-only',
-        'JWT_SECRET_KEY': 'test-jwt-secret-key',
-        'JWT_REFRESH_SECRET_KEY': 'test-jwt-refresh-secret-key',
         'RESEND_API_KEY': 'test-resend-api-key',
         'EMAIL_FROM': 'test@example.com',
         'FRONTEND_URL': 'http://localhost:3000',

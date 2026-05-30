@@ -10,18 +10,9 @@
 
 ### M-001 — pubspec version out of sync with release tags
 
-- [ ] **P1** — Align version with GitHub releases
+- [x] **P1** — Resolved (`version: 1.2.1+3` matches `mobile-v1.2.1`)
 
-**Problem:** `mobile/pubspec.yaml` shows `1.1.0+2`; README and releases reference `mobile-v1.2.1`.
-
-**Fix:**
-
-```yaml
-# mobile/pubspec.yaml
-version: 1.2.1+3  # match tag + build number convention
-```
-
-Add a pre-tag checklist step in `mobile/README.md` and `.github/workflows/README.md`.
+**Ongoing:** Bump `mobile/pubspec.yaml` before each `mobile-v*` tag (see `mobile/README.md` release checklist).
 
 ---
 
@@ -29,16 +20,17 @@ Add a pre-tag checklist step in `mobile/README.md` and `.github/workflows/README
 
 ### M-002 — Minimal test coverage
 
-- [ ] **P0** — Expand beyond splash widget test
+- [x] **P0** — Core tests added (`router_auth_test.dart`, `checkout_test.dart`, DSA)
+- [ ] **P2** — Optional: Paystack WebView mock, broader integration
 
-**Current:** `mobile/test/widget_test.dart` — boots app, finds "Sikapa" text.
+**Current:** `router_auth_test.dart`, `checkout_test.dart`, `widget_test.dart`, `dsa_test.dart`.
 
 **Priority tests:**
 
-- [ ] Auth redirect for protected routes (`router.dart`)
-- [ ] Checkout shipping options and order create body
-- [ ] Admin gate for non-admin users
-- [ ] API path constants match web (`v1_paths.dart` vs `frontend/lib/api/v1-paths.ts`)
+- [x] Auth redirect for protected routes (`router.dart`)
+- [x] Checkout shipping options and order create body
+- [x] Admin gate for non-admin users
+- [x] API path constants match web (CI script `check_api_path_sync.py`)
 - [ ] Paystack WebView flow (mock Dio)
 
 **Files:** `mobile/test/`, `mobile/lib/src/router.dart`
@@ -65,16 +57,18 @@ Add a pre-tag checklist step in `mobile/README.md` and `.github/workflows/README
 
 ### M-004 — Web-only admin features
 
-- [ ] **P2** — Port or document permanently web-only
+- [x] **P2** — Documented as **intentionally web-only** (product decision May 2026)
 
-**Still on Next.js `/system` only:**
+**Permanently on Next.js `/system` only** (mobile read-only or list where noted):
 
-- Coupon CRUD (mobile has list view)
-- Bulk product import
-- Staff role editor
-- Category image upload
+| Feature | Mobile | Rationale |
+|---------|--------|-----------|
+| Coupon CRUD | List only | Complex validation; low mobile ops frequency |
+| Bulk product import | — | CSV upload + error report UX |
+| Staff role editor | List only | RBAC matrix editing on small screens |
+| Category image upload | — | File picker + crop workflow |
 
-**Fix:** Either port to mobile or keep documented as intentional; update `cross-platform-parity.md` when decided.
+See [cross-platform-parity.md](./cross-platform-parity.md) for the full matrix.
 
 ---
 
@@ -82,7 +76,7 @@ Add a pre-tag checklist step in `mobile/README.md` and `.github/workflows/README
 
 ### M-005 — Dual path files must stay in sync
 
-- [ ] **P1** — Add CI check or shared codegen
+- [x] **P1** — CI check via `scripts/check_api_path_sync.py` + pre-commit hook
 
 **Problem:** Backend route changes require manual updates to both:
 
@@ -125,7 +119,7 @@ Add a pre-tag checklist step in `mobile/README.md` and `.github/workflows/README
 
 ### M-008 — Mobile not in main `ci.yml`
 
-- [ ] **P1** — Required check on `main`
+- [x] **P1** — Mobile job in main `ci.yml` (analyze + test)
 
 **Problem:** Mobile CI only runs via `mobile-build.yml` on `main`/`mobile` when `mobile/**` changes.
 

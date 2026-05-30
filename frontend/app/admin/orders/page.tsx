@@ -43,7 +43,7 @@ export default function AdminOrdersPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accessToken, filter]);
 

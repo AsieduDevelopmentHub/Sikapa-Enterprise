@@ -4,7 +4,7 @@ Next.js storefront for Sikapa. Public env vars use the `NEXT_PUBLIC_` prefix and
 
 ## Requirements
 
-- Node.js 18+ (see `package.json` for scripts)
+- Node.js 20 LTS (matches CI in `.github/workflows/ci.yml`; see `package.json` for scripts)
 
 ## Local development
 
@@ -48,11 +48,11 @@ See [docs/hosting/vercel.md](docs/hosting/vercel.md).
 - Sign-in / Register supports **Keep me signed in on this device**. When checked (default), access and refresh tokens persist in **`localStorage`** until logout. When unchecked, tokens use **`sessionStorage`** (typically cleared when the browser session ends).
 - Token refresh on **401** uses the refresh token from the active storage bucket (`frontend/lib/auth-storage.ts`).
 - Google OAuth completes via `/auth/google/callback` and persists tokens in **`localStorage`**.
-- Full detail: [../docs/AUTH_SESSION_AND_ADMIN.md](../docs/AUTH_SESSION_AND_ADMIN.md).
+- Full detail: [../docs/operations/auth-session-and-admin.md](../docs/operations/auth-session-and-admin.md).
 
 ## Related documentation
 
 - [../docs/README.md](../docs/README.md) — documentation hub  
-- [../docs/ENVIRONMENT.md](../docs/ENVIRONMENT.md) — all env vars  
-- [../docs/OPERATIONS.md](../docs/OPERATIONS.md) — CORS, tokens, troubleshooting  
-- [../docs/AUTH_SESSION_AND_ADMIN.md](../docs/AUTH_SESSION_AND_ADMIN.md) — sessions, admin RBAC overview  
+- [../docs/environment/environment.md](../docs/environment/environment.md) — all env vars  
+- [../docs/operations/operations.md](../docs/operations/operations.md) — CORS, tokens, troubleshooting  
+- [../docs/operations/auth-session-and-admin.md](../docs/operations/auth-session-and-admin.md) — sessions, admin RBAC overview  

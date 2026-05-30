@@ -23,7 +23,10 @@ class ShopScreen extends ConsumerStatefulWidget {
 class _ShopScreenState extends ConsumerState<ShopScreen> {
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
+  Timer? _suggestDebounce;
   String _search = '';
+  List<Product> _suggestResults = const [];
+  bool _suggestLoading = false;
   int? _categoryId;
   String _sortBy = 'created_at';
   String _sortOrder = 'desc';
@@ -35,6 +38,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _suggestDebounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -44,6 +48,36 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     _debounce = Timer(const Duration(milliseconds: 350), () {
       if (!mounted) return;
       setState(() => _search = value.trim());
+    });
+
+    _suggestDebounce?.cancel();
+    final trimmed = value.trim();
+    if (trimmed.length < 2) {
+      setState(() {
+        _suggestResults = const [];
+        _suggestLoading = false;
+      });
+      return;
+    }
+    _suggestDebounce = Timer(const Duration(milliseconds: 250), () async {
+      if (!mounted) return;
+      setState(() => _suggestLoading = true);
+      try {
+        final rows = await ref
+            .read(catalogServiceProvider)
+            .suggest(trimmed, limit: 6);
+        if (!mounted) return;
+        setState(() {
+          _suggestResults = rows;
+          _suggestLoading = false;
+        });
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _suggestResults = const [];
+          _suggestLoading = false;
+        });
+      }
     });
   }
 
@@ -243,13 +277,52 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: _onSearchChanged,
-              decoration: const InputDecoration(
-                hintText: 'Search products',
-                prefixIcon: Icon(Icons.search, color: SikapaColors.textMuted),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _searchCtrl,
+                  onChanged: _onSearchChanged,
+                  decoration: const InputDecoration(
+                    hintText: 'Search products',
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: SikapaColors.textMuted,
+                    ),
+                  ),
+                ),
+                if (_suggestLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: LinearProgressIndicator(minHeight: 2),
+                  )
+                else if (_suggestResults.isNotEmpty)
+                  Material(
+                    elevation: 2,
+                    borderRadius: BorderRadius.circular(8),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _suggestResults.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        final p = _suggestResults[i];
+                        return ListTile(
+                          dense: true,
+                          title: Text(p.name),
+                          subtitle: Text('GHS ${p.price.toStringAsFixed(2)}'),
+                          onTap: () {
+                            setState(() {
+                              _searchCtrl.text = p.name;
+                              _search = p.name;
+                              _suggestResults = const [];
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
           SizedBox(

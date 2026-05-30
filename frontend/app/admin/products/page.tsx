@@ -1,26 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import { adminDeleteProduct, adminFetchProducts, type AdminProduct } from "@/lib/api/admin";
 import { getBackendOrigin } from "@/lib/api/client";
+import { invalidateCatalogQueries } from "@/lib/catalog-cache";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminProductTable } from "@/components/admin/AdminProductTable";
 import { AdminTableSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 export default function AdminProductsPage() {
   const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
   const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const [rows, setRows] = useState<AdminProduct[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const data = await adminFetchProducts(accessToken, { limit: 100 });
@@ -28,18 +32,17 @@ export default function AdminProductsPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken]);
 
   const handleDelete = useCallback(
     async (productId: number) => {
       try {
         await adminDeleteProduct(accessToken!, productId);
+        await invalidateCatalogQueries(queryClient);
         await load();
       } catch (e) {
         await alertDialog(e instanceof Error ? e.message : "Delete failed", {
@@ -47,7 +50,7 @@ export default function AdminProductsPage() {
         });
       }
     },
-    [accessToken, alertDialog, load]
+    [accessToken, alertDialog, load, queryClient]
   );
 
   const handleConfirm = useCallback(

@@ -21,27 +21,21 @@ from passlib.context import CryptContext
 from passlib.exc import MissingBackendError, UnknownHashError
 
 from app.core.startup_checks import is_production_environment
+from app.core.settings import get_settings
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+_settings = get_settings()
 
 # ---------------------------------------------------------------------------
 # JWT configuration
 # ---------------------------------------------------------------------------
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    if is_production_environment():
-        raise ValueError(
-            "FATAL: SECRET_KEY environment variable must be set in production. "
-            "Generate with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
-        )
-    logger.warning("⚠️  SECRET_KEY not set — using unsafe default for development only!")
-    SECRET_KEY = "UNSAFE-DEV-KEY-CHANGE-IN-PRODUCTION"
+SECRET_KEY = _settings.resolved_secret_key()
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+ACCESS_TOKEN_EXPIRE_MINUTES = _settings.access_token_expire_minutes
+REFRESH_TOKEN_EXPIRE_DAYS = _settings.refresh_token_expire_days
 
 if ACCESS_TOKEN_EXPIRE_MINUTES > 1440:  # 24 hours
     logger.warning("⚠️  ACCESS_TOKEN_EXPIRE_MINUTES is > 24h. Consider reducing for security.")

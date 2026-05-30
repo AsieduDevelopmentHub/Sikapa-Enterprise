@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminFetchDashboard,
@@ -17,6 +17,7 @@ import {
   SkeletonDonut,
   SkeletonStatGrid,
 } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -40,9 +41,9 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const [dRes, rRes] = await Promise.allSettled([
@@ -67,14 +68,14 @@ export default function AdminAnalyticsPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load analytics.");
     } finally {
-      setLoading(false);
-      setLoaded(true);
+      if (!opts?.silent) {
+        setLoading(false);
+        setLoaded(true);
+      }
     }
   }, [accessToken, days]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken, days]);
 
   const showSkeleton = loading && !loaded;
 

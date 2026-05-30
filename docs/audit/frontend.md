@@ -9,7 +9,7 @@
 
 ### F-001 — Token storage is client-only
 
-- [ ] **P2** — Document security model
+- [x] **P2** — Documented in [frontend-auth.md](../security/frontend-auth.md)
 
 **Problem:** Access/refresh tokens in `localStorage` or `sessionStorage` (`lib/auth-storage.ts`).
 
@@ -27,7 +27,7 @@
 
 ### F-003 — Protected routes are client-side only
 
-- [ ] **P1** — Add server-side admin gate
+- [x] **P1** — Server-side admin gate (`sikapa_session` HttpOnly cookie + `proxy.ts` / `proxy-admin-gate.ts`)
 
 **Problem:** Admin (`AdminShell.tsx`), checkout, orders, and account pages gate in React — not in `proxy.ts` or server layouts. URLs are reachable; unauthorized users see sign-in UI instead of redirects.
 
@@ -43,7 +43,7 @@
 
 ### F-004 — Admin RBAC is client-side nav only
 
-- [ ] **P2** — Test permission matrix
+- [x] **P2** — Vitest permission matrix tests in `__tests__/admin-permissions.test.ts`
 
 **Problem:** `lib/admin-permissions.ts` controls nav and `AdminShell` — API still enforces server-side, but UI can flash wrong nav.
 
@@ -55,15 +55,14 @@
 
 ### F-005 — Placeholder smoke test only
 
-- [ ] **P0** — Replace CI smoke test with real tests
+- [x] **P0** — Real Vitest suites added (API client, admin permissions, JWT, DSA)
+- [ ] **P2** — Optional expansion: auth-storage, 401 refresh retry, checkout validation, remove `ci-smoke.test.ts`
 
-**Problem:** `frontend/__tests__/ci-smoke.test.ts` only asserts `1 + 1 === 2`. Testing Library is installed but unused.
-
-**Priority test targets:**
+**Priority test targets (optional):**
 
 - [ ] `lib/api/client.ts` — 401 refresh retry, maintenance 503 event
 - [ ] `lib/api/error-message.ts` — friendly HTTP messages
-- [ ] `lib/admin-permissions.ts` — role/permission matrix
+- [x] `lib/admin-permissions.ts` — role/permission matrix
 - [ ] `lib/auth-storage.ts` — remember-me vs session bucket
 - [ ] Auth form Zod validation (`AccountAuthForm`)
 - [ ] Checkout shipping validation
@@ -86,7 +85,7 @@
 
 ### F-007 — No route-level `loading.tsx`
 
-- [ ] **P2** — Add Suspense boundaries at route level
+- [x] **P2** — Added for `/shop`, `/admin`, `/checkout`, `/orders`
 
 **Problem:** No `loading.tsx` files under `app/`; skeletons are component-level only.
 
@@ -96,14 +95,15 @@
 
 ### F-008 — Accessibility gaps
 
-- [ ] **P2** — Baseline a11y improvements
+- [x] **P2** — Baseline done (skip link, focus-visible, toast roles)
+- [ ] **P3** — Skeleton live regions (optional polish)
 
 **Gaps:**
 
-- [ ] No skip-to-content link
-- [ ] Limited `focus-visible` styling
+- [x] Skip-to-content link
+- [x] `focus-visible` styling
 - [ ] Skeleton screens use `aria-hidden` without complementary live region
-- [ ] Toast lacks error vs success `role` distinction
+- [x] Toast error vs success `role` distinction
 
 **Files:** `frontend/app/layout.tsx`, `frontend/context/ToastContext.tsx`, `frontend/components/StorefrontSkeletons.tsx`
 
@@ -115,7 +115,7 @@
 
 ### F-009 — Unused Radix UI packages
 
-- [ ] **P2** — Remove or adopt
+- [x] **P2** — Removed from `package.json`
 
 **Problem:** `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-slot` in `package.json` — zero imports. Custom dialogs used instead.
 
@@ -125,7 +125,7 @@
 
 ### F-010 — ESLint / Next version skew
 
-- [ ] **P2** — Align versions
+- [ ] **P2** — `next@16.2.6` patched; `eslint-config-next@16` requires ESLint 9 flat config migration (deferred)
 
 **Problem:** `next@16.2.3` with `eslint-config-next@15.5.13`.
 
@@ -145,11 +145,9 @@
 
 ### F-012 — Supabase env vars in Vercel doc only
 
-- [ ] **P2** — Align docs and code
+- [x] **P2** — Resolved
 
-**Problem:** `frontend/docs/hosting/vercel.md` mentions `NEXT_PUBLIC_SUPABASE_*`; not in `.env.example`; no Supabase client — only `types/supabase.ts` and URL helper in `lib/clean-image-url.ts`.
-
-**Fix:** Remove from Vercel doc or document why types exist without client.
+Vercel doc no longer lists unused `NEXT_PUBLIC_SUPABASE_*`; environment hub explains API-served Storage URLs only.
 
 ---
 

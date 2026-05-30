@@ -75,7 +75,7 @@ The frontend application relies on environment variables for API communication a
 | Variable | Description |
 |----------|-------------|
 | `NEXT_PUBLIC_API_URL` | Full API v1 base URL. Must end with `/api/v1` and should not include a trailing slash. Example: `http://localhost:8000/api/v1` |
-| `NEXT_PUBLIC_SUPABASE_*` | Optional Supabase client-side configuration values. |
+| `NEXT_PUBLIC_SUPABASE_*` | Not used by the default Next.js storefront (no Supabase client). Image URLs may point at Supabase Storage CDN paths from the API. |
 | `NEXT_PUBLIC_WHATSAPP_*` | Optional WhatsApp support or contact integration settings. |
 
 ## API URL Requirements

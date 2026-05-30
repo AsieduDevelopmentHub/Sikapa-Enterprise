@@ -359,7 +359,7 @@ def _apply_successful_payment(session: Session, order: Order, reference: str) ->
 
     try:
         from app.core.audit import AuditLogger
-        from app.core.cache import cache
+        from app.core.cache import invalidate_admin_operational_cache
         AuditLogger.log(
             session,
             user_id=order.user_id,
@@ -372,7 +372,7 @@ def _apply_successful_payment(session: Session, order: Order, reference: str) ->
                 "status": {"old": prev_status, "new": order.status},
             },
         )
-        cache.delete_pattern("admin:dashboard:*")
+        invalidate_admin_operational_cache()
     except Exception:
         pass
 

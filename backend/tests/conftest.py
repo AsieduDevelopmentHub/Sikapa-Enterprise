@@ -8,8 +8,6 @@ from typing import Generator
 # Test environment must be set before importing the FastAPI app.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
-os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-key"
-os.environ["JWT_REFRESH_SECRET_KEY"] = "test-jwt-refresh-secret-key"
 os.environ["RESEND_API_KEY"] = "test-resend-api-key"
 os.environ["EMAIL_FROM"] = "test@example.com"
 os.environ["FRONTEND_URL"] = "http://localhost:3000"
@@ -21,6 +19,8 @@ os.environ["TESTING"] = "true"
 # Match CI: in-memory rate limits (avoid Redis from backend/.env during tests).
 os.environ["REDIS_URL"] = ""
 os.environ["PAYSTACK_SECRET_KEY"] = ""
+os.environ["PAYSTACK_WEBHOOK_IP_ALLOWLIST"] = ""
+os.environ["API_RATE_LIMIT_ENABLED"] = "false"
 
 import pytest
 from httpx import AsyncClient
@@ -90,17 +90,19 @@ def test_session(test_engine) -> Generator[Session, None, None]:
 @pytest.fixture(autouse=True)
 def _reset_rate_limits():
     """Clear SlowAPI counters between tests so limits do not leak across tests."""
-    from app.core.rate_limit import limiter
+    from app.core.rate_limit import limiter, reset_api_path_rate_limiters
 
     try:
         limiter.reset()
     except Exception:
         pass
+    reset_api_path_rate_limiters()
     yield
     try:
         limiter.reset()
     except Exception:
         pass
+    reset_api_path_rate_limiters()
 
 
 @pytest.fixture(scope="function")
@@ -124,8 +126,6 @@ def set_test_env():
     """Set test environment variables."""
     os.environ["DATABASE_URL"] = "sqlite:///:memory:"
     os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
-    os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-key"
-    os.environ["JWT_REFRESH_SECRET_KEY"] = "test-jwt-refresh-secret-key"
     os.environ["RESEND_API_KEY"] = "test-resend-api-key"  # For testing email service
     os.environ["EMAIL_FROM"] = "test@example.com"
     os.environ["FRONTEND_URL"] = "http://localhost:3000"

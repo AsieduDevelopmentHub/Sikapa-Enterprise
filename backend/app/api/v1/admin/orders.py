@@ -8,13 +8,14 @@ from sqlmodel import Session, select
 from pydantic import BaseModel
 
 from app.core.audit import AuditLogger
-from app.core.cache import cache
+from app.core.cache import invalidate_admin_operational_cache
 from app.db import get_session
 from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Order, Product
-from app.api.v1.admin.schemas import OrderManagementRead
+from app.api.v1.admin.schemas import OrderManagementRead, AdminOrderListPage
 from app.api.v1.admin.services import (
     get_all_orders_admin,
+    get_orders_admin_page,
     update_order_status,
 )
 from app.api.v1.orders.schemas import (
@@ -71,12 +72,34 @@ async def list_orders_admin(
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_orders")),
 ):
-    """List all orders for admin management."""
+    """List all orders for admin management (offset pagination)."""
     return await get_all_orders_admin(
         session,
         skip=skip,
         limit=limit,
         status=status,
+    )
+
+
+@router.get("/page", response_model=AdminOrderListPage)
+async def list_orders_admin_page(
+    limit: int = Query(50, ge=1, le=100),
+    status: Optional[str] = Query(None),
+    cursor: Optional[str] = Query(None, description="Opaque cursor from prior page"),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin_permission("manage_orders")),
+):
+    """Keyset-paginated admin orders (`next_cursor` for following pages)."""
+    page = await get_orders_admin_page(
+        session,
+        limit=limit,
+        status=status,
+        cursor=cursor,
+    )
+    return AdminOrderListPage(
+        items=[OrderManagementRead.model_validate(o) for o in page["items"]],
+        next_cursor=page["next_cursor"],
+        has_more=page["has_more"],
     )
 
 
@@ -136,7 +159,7 @@ async def admin_paystack_refund(
         },
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_admin_operational_cache()
     return PaystackRefundResponse(**data)
 
 
@@ -161,7 +184,7 @@ async def update_order_status_endpoint(
         changes={"status": {"old": prev_status, "new": order.status}},
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_admin_operational_cache()
     return order
 
 
@@ -216,7 +239,7 @@ async def update_order_tracking(
         },
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_admin_operational_cache()
     return order
 
 
@@ -265,7 +288,7 @@ async def update_order_shipping(
         changes=changes,
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_admin_operational_cache()
     return order
 
 

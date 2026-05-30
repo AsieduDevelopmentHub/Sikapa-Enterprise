@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 from app.models import CartItem, Product, ProductVariant
 from app.api.v1.cart.schemas import CartItemCreateSchema, CartItemUpdateSchema
 from app.api.v1.wishlist.services import list_wishlist
+from app.core.dsa.cart_index import find_cart_line, index_cart_lines
 
 
 async def get_user_cart(session: Session, user_id: int) -> list[CartItem]:
@@ -66,15 +67,8 @@ async def add_to_cart(
             + (f" for {variant.name}" if variant else ""),
         )
 
-    stmt = select(CartItem).where(
-        CartItem.user_id == user_id,
-        CartItem.product_id == item.product_id,
-    )
-    if item.variant_id is None:
-        stmt = stmt.where(CartItem.variant_id.is_(None))  # type: ignore[attr-defined]
-    else:
-        stmt = stmt.where(CartItem.variant_id == item.variant_id)
-    existing = session.exec(stmt).first()
+    cart_index = index_cart_lines(await get_user_cart(session, user_id))
+    existing = find_cart_line(cart_index, item.product_id, item.variant_id)
 
     if existing:
         new_qty = existing.quantity + item.quantity
@@ -154,6 +148,18 @@ async def remove_from_cart(session: Session, item_id: int, user_id: int) -> None
 
     session.delete(item)
     session.commit()
+
+
+async def merge_cart_lines(
+    session: Session,
+    user_id: int,
+    incoming: list[CartItemCreateSchema],
+) -> list[CartItem]:
+    """Merge multiple lines using an in-memory hash map — O(n + m)."""
+    results: list[CartItem] = []
+    for line in incoming:
+        results.append(await add_to_cart(session, user_id, line))
+    return results
 
 
 async def clear_cart(session: Session, user_id: int) -> None:

@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { applyAdminAuthGate } from "@/lib/proxy-admin-gate";
+
 /*
  * Next.js 16 proxy (formerly middleware). Combines two responsibilities:
  *   1. Maintenance gate: when NEXT_PUBLIC_MAINTENANCE_MODE=true, rewrite all
@@ -108,6 +110,9 @@ export function proxy(request: NextRequest) {
       return res;
     }
   }
+
+  const adminAuth = applyAdminAuthGate(request);
+  if (adminAuth) return adminAuth;
 
   const adminResponse = applyAdminRules(request);
   if (adminResponse) return adminResponse;

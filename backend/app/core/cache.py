@@ -23,6 +23,8 @@ import logging
 import os
 from typing import Any
 
+from app.core.dsa.lru_cache import LRUCache
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -35,49 +37,35 @@ TTL_SEARCH = 60            # 1 min  — search results (more volatile)
 TTL_USER_PROFILE = 180     # 3 min  — cached user profile reads
 
 
-import time
-
 class InMemoryCache:
     """
-    Simple in-memory TTL cache for 'lite' deployments without Redis.
-    Limits growth by number of keys to avoid memory leaks.
+    In-memory TTL cache with LRU eviction when Redis is unavailable.
     """
+
     def __init__(self, maxsize: int = 1000) -> None:
-        self._data: dict[str, tuple[Any, float]] = {}
-        self._maxsize = maxsize
+        self._lru: LRUCache[str, Any] = LRUCache(maxsize=maxsize)
 
     def get(self, key: str) -> Any | None:
-        if key not in self._data:
-            return None
-        val, expiry = self._data[key]
-        if time.time() > expiry:
-            del self._data[key]
-            return None
-        return val
+        return self._lru.get(key)
 
     def set(self, key: str, value: Any, ttl: int = 300) -> None:
-        # Basic eviction if full
-        if len(self._data) >= self._maxsize:
-            # Delete first key found (not perfect LRU but fast)
-            first_key = next(iter(self._data))
-            del self._data[first_key]
-        
-        self._data[key] = (value, time.time() + ttl)
+        self._lru.set(key, value, ttl=float(ttl))
 
     def delete(self, key: str) -> None:
-        self._data.pop(key, None)
+        self._lru.delete(key)
 
     def delete_pattern(self, pattern: str) -> None:
         import fnmatch
-        keys_to_del = [k for k in self._data.keys() if fnmatch.fnmatch(k, pattern)]
-        for k in keys_to_del:
-            del self._data[k]
+
+        for key in self._lru.keys():
+            if fnmatch.fnmatch(key, pattern):
+                self._lru.delete(key)
 
     def ping(self) -> bool:
         return True
 
     def close(self) -> None:
-        self._data.clear()
+        self._lru.clear()
 
 
 class RedisCache:
@@ -158,7 +146,7 @@ def _build_cache() -> RedisCache | InMemoryCache:
         # Fallback to in-memory if no Redis URL or just localhost (likely dev)
         # unless user explicitly wants Redis on localhost. 
         # But for this user, they don't want Redis billing.
-        logger.info("Using InMemoryCache (LRU-lite)")
+        logger.info("Using InMemoryCache (LRU)")
         return InMemoryCache()
     try:
         c = RedisCache(url)
@@ -172,3 +160,25 @@ def _build_cache() -> RedisCache | InMemoryCache:
 
 
 cache = _build_cache()
+
+
+def invalidate_admin_operational_cache() -> None:
+    """Bust admin dashboard / analytics aggregates after orders, payments, etc."""
+    cache.delete_pattern("admin:dashboard:*")
+
+
+def invalidate_storefront_catalog_cache() -> None:
+    """
+    Bust public product, category, and search caches after catalog mutations
+    or stock changes so storefront reads reflect admin updates immediately.
+    """
+    cache.delete_pattern("products:*")
+    cache.delete_pattern("product:*")
+    cache.delete_pattern("categories:*")
+    cache.delete_pattern("category:*")
+    try:
+        from app.core.search_index import invalidate_product_search_index
+
+        invalidate_product_search_index()
+    except Exception as exc:
+        logger.warning("search index invalidation failed: %s", exc)

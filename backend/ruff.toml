@@ -1,0 +1,9 @@
+target-version = "py311"
+line-length = 100
+
+# Start with syntax/runtime errors only; expand rules as the codebase is cleaned up.
+[lint]
+select = ["E9", "F63", "F811", "F821", "F822", "F823"]
+
+[format]
+quote-style = "double"

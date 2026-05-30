@@ -1,0 +1,35 @@
+# Optional pre-commit hooks (D-015). Install: pip install pre-commit && pre-commit install
+# Does not replace CI — runs quick checks on staged files only.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=5120"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.9
+    hooks:
+      - id: ruff
+        name: ruff (backend)
+        args: [--fix]
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: api-path-sync
+        name: API path sync (web vs mobile)
+        entry: python scripts/check_api_path_sync.py
+        language: system
+        pass_filenames: false
+        files: ^(frontend/lib/api/v1-paths\.ts|mobile/lib/src/core/api/v1_paths\.dart)$
+
+      - id: frontend-eslint
+        name: eslint (frontend staged)
+        entry: bash -c 'cd frontend && npx eslint --max-warnings 0 "$@"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$

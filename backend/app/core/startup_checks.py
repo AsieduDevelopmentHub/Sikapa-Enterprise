@@ -93,9 +93,11 @@ def validate_production_config_or_raise() -> None:
         )
 
     if os.getenv("UPLOAD_SERVE_LOCAL", "true").strip().lower() in {"1", "true", "yes"}:
-        logger.warning(
-            "UPLOAD_SERVE_LOCAL=true in production — prefer Supabase storage and "
-            "set UPLOAD_SERVE_LOCAL=false on Render."
+        logger.critical(
+            "Production startup blocked: UPLOAD_SERVE_LOCAL=true serves files from disk."
+        )
+        raise RuntimeError(
+            "Production requires UPLOAD_SERVE_LOCAL=false — use Supabase storage for uploads."
         )
 
 

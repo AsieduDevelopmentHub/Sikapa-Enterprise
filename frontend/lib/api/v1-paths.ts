@@ -28,6 +28,7 @@ export const V1 = {
     detail: (id: number) => `/products/${id}`,
     bySlug: (slug: string) => `/products/slug/${encodeURIComponent(slug)}`,
     search: "/products/search",
+    suggest: "/products/suggest",
   },
   cart: {
     list: "/cart/",

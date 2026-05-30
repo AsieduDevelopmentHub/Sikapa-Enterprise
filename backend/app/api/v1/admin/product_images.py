@@ -17,6 +17,7 @@ from sqlmodel import Session, select
 
 from app.api.v1.admin.services import upload_product_image
 from app.api.v1.auth.dependencies import require_admin_permission
+from app.core.cache import invalidate_storefront_catalog_cache
 from app.core.sanitization import sanitize_plain_text
 from app.db import get_session
 from app.models import Product, ProductImage, User
@@ -105,6 +106,7 @@ async def upload_product_gallery_image(
     session.add(row)
     session.commit()
     session.refresh(row)
+    invalidate_storefront_catalog_cache()
     return ProductImageRead.model_validate(row)
 
 
@@ -138,6 +140,7 @@ async def set_primary_image(
 
     session.commit()
     session.refresh(target)
+    invalidate_storefront_catalog_cache()
     return ProductImageRead.model_validate(target)
 
 
@@ -173,6 +176,7 @@ async def reorder_images(
         img.sort_order = idx
         session.add(img)
     session.commit()
+    invalidate_storefront_catalog_cache()
     return [ProductImageRead.model_validate(img) for img in _load_images(session, product_id)]
 
 
@@ -210,3 +214,4 @@ async def delete_product_image(
             product.image_url = None
             session.add(product)
             session.commit()
+    invalidate_storefront_catalog_cache()
