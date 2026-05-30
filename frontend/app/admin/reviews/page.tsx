@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
+import { ReviewMediaGallery } from "@/components/reviews/ReviewMediaGallery";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/lib/api/admin";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminReviewsListSkeleton } from "@/components/admin/Skeleton";
+import { getBackendOrigin } from "@/lib/api/client";
 import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 export default function AdminReviewsPage() {
@@ -55,10 +57,15 @@ export default function AdminReviewsPage() {
     return rows.filter((r) => {
       const productName = products[r.product_id] ?? "";
       const userName = users[r.user_id] ?? "";
-      const hay = `${r.title} ${r.content ?? ""} ${productName} ${userName} ${r.rating}`.toLowerCase();
+      const mediaNote = r.media?.length ? `${r.media.length} photos` : "";
+      const hay = `${r.title} ${r.content ?? ""} ${productName} ${userName} ${r.rating} ${mediaNote}`.toLowerCase();
       return hay.includes(q);
     });
   }, [rows, query, products, users]);
+
+  const backendOrigin = typeof window !== "undefined" ? getBackendOrigin() : "";
+  const resolveMediaUrl = (url: string): string =>
+    url.startsWith("http") ? url : `${backendOrigin}${url}`;
 
   return (
     <div className="w-full min-w-0 max-w-full">
@@ -94,6 +101,14 @@ export default function AdminReviewsPage() {
                 {r.content && (
                   <p className="mt-2 break-words text-small text-sikapa-text-secondary">{r.content}</p>
                 )}
+                {r.media && r.media.length > 0 ? (
+                  <div className="mt-3">
+                    <p className="text-[11px] font-semibold text-sikapa-text-muted">
+                      {r.media.length} attached file{r.media.length === 1 ? "" : "s"}
+                    </p>
+                    <ReviewMediaGallery media={r.media} resolveUrl={resolveMediaUrl} />
+                  </div>
+                ) : null}
                 <Link
                   href={`/product/${r.product_id}`}
                   className="mt-2 inline-block text-[11px] font-semibold text-sikapa-gold hover:underline"
@@ -109,7 +124,7 @@ export default function AdminReviewsPage() {
                     if (!accessToken) return;
                     const ok = await confirmDialog({
                       title: "Delete review",
-                      message: "Delete this review? This cannot be undone.",
+                      message: "Delete this review and all attached photos? This cannot be undone.",
                       confirmLabel: "Delete",
                       variant: "danger",
                     });

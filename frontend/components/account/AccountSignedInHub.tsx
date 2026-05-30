@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/auth";
 import { newsletterSubscribe, newsletterUnsubscribe } from "@/lib/api/subscriptions";
 import { AccountOrdersPanel } from "@/components/account/AccountOrdersPanel";
+import { AccountReviewsPanel } from "@/components/account/AccountReviewsPanel";
 import {
   GHANA_CITY_OTHER,
   GHANA_REGIONS,
@@ -40,6 +41,7 @@ export type AccountPanel =
   | "verify"
   | "newsletter"
   | "orders"
+  | "reviews"
   | "danger";
 
 type Panel = AccountPanel;
@@ -393,6 +395,11 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
               onClick={() => setPanel("orders")}
             />
             <NavRow
+              label="My reviews"
+              hint="Photos, feedback, and delete mistakes"
+              onClick={() => setPanel("reviews")}
+            />
+            <NavRow
               label="Profile & settings"
               hint="Name, username, email, phone"
               onClick={() => setPanel("settings")}
@@ -444,6 +451,8 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
       )}
 
       {panel === "orders" && <AccountOrdersPanel />}
+
+      {panel === "reviews" && <AccountReviewsPanel />}
 
       {panel === "settings" && (
         <section className="rounded-[12px] bg-white p-5 shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-900 dark:ring-white/10">

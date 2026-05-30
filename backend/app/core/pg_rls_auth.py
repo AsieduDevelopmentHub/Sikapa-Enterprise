@@ -298,3 +298,13 @@ def emailsubscription_by_verify_token(session: Session, token: str) -> EmailSubs
         {"t": token},
     ).mappings().first()
     return EmailSubscription.model_validate(dict(row)) if row else None
+
+
+def delete_review_media_for_moderation(session: Session, review_id: int) -> None:
+    """Delete all reviewmedia rows for a review (bypasses RLS for admin moderation)."""
+    if not pg_rls_enabled():
+        return
+    session.connection().execute(
+        text("SELECT app.delete_review_media_rows(:rid)"),
+        {"rid": int(review_id)},
+    )

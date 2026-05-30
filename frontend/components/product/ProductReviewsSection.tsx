@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StarRating } from "@/components/StarRating";
+import { ReviewMediaGallery } from "@/components/reviews/ReviewMediaGallery";
+import { ReviewMediaManager } from "@/components/reviews/ReviewMediaManager";
 import { useAuth } from "@/context/AuthContext";
+import { useDialog } from "@/context/DialogContext";
 import {
   reviewsCreate,
+  reviewsDelete,
   reviewsForProduct,
-  reviewsUploadMedia,
+  reviewsMine,
   reviewsWriteEligibility,
-  type ReviewMediaRow,
   type ReviewRow,
 } from "@/lib/api/reviews";
 import { getBackendOrigin } from "@/lib/api/client";
@@ -21,113 +24,11 @@ import {
 
 type Props = { productId: number };
 
-function ReviewMediaGallery({
-  media,
-  resolveUrl,
-}: {
-  media: ReviewMediaRow[];
-  resolveUrl: (url: string) => string;
-}) {
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState<Record<number, boolean>>({});
-
-  useEffect(() => {
-    if (!lightboxUrl) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLightboxUrl(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [lightboxUrl]);
-
-  useEffect(() => {
-    if (!lightboxUrl) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [lightboxUrl]);
-
-  return (
-    <>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {media
-          .slice()
-          .sort((a, b) => a.sort_order - b.sort_order)
-          .map((m) => {
-            const url = resolveUrl(m.url);
-            if (m.kind === "video") {
-              return (
-                <video
-                  key={m.id}
-                  src={url}
-                  controls
-                  playsInline
-                  className="h-24 w-24 rounded-lg object-cover ring-1 ring-black/[0.05]"
-                />
-              );
-            }
-            return (
-              <button
-                key={m.id}
-                type="button"
-                className="sikapa-tap-static block h-20 w-20 overflow-hidden rounded-lg bg-sikapa-gray-soft ring-1 ring-black/[0.05]"
-                aria-label="View photo full size"
-                onClick={() => setLightboxUrl(url)}
-              >
-                <>
-                  {!loaded[m.id] && <span aria-hidden className="block h-full w-full animate-pulse bg-sikapa-gray-soft dark:bg-zinc-700" />}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt=""
-                    className={`h-full w-full object-cover ${loaded[m.id] ? "block" : "hidden"}`}
-                    onLoad={() => setLoaded((s) => ({ ...s, [m.id]: true }))}
-                  />
-                </>
-              </button>
-            );
-          })}
-      </div>
-
-      {lightboxUrl ? (
-        <div
-          className="fixed inset-0 z-[200] cursor-zoom-out bg-black/90 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Review photo"
-          onClick={() => setLightboxUrl(null)}
-        >
-          <button
-            type="button"
-            className="sikapa-tap-static absolute right-3 top-3 z-[1] flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/15 text-xl font-light text-white backdrop-blur-sm hover:bg-white/25"
-            aria-label="Close"
-            onClick={(e) => {
-              e.stopPropagation();
-              setLightboxUrl(null);
-            }}
-          >
-            ×
-          </button>
-          <div className="flex h-full w-full items-center justify-center p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightboxUrl}
-              alt="Customer review photo"
-              className="max-h-[85vh] max-w-full cursor-default rounded-lg object-contain shadow-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
 export function ProductReviewsSection({ productId }: Props) {
   const { accessToken, user } = useAuth();
+  const { confirm: confirmDialog, alert: alertDialog } = useDialog();
   const [list, setList] = useState<ReviewRow[]>([]);
+  const [myReview, setMyReview] = useState<ReviewRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -136,9 +37,6 @@ export function ProductReviewsSection({ productId }: Props) {
   const [submitBusy, setSubmitBusy] = useState(false);
   const [canReview, setCanReview] = useState(false);
   const [eligibilityLoaded, setEligibilityLoaded] = useState(false);
-  const [pendingMediaFor, setPendingMediaFor] = useState<number | null>(null);
-  const [mediaUploadBusy, setMediaUploadBusy] = useState(false);
-  const [mediaErr, setMediaErr] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
 
@@ -146,14 +44,18 @@ export function ProductReviewsSection({ productId }: Props) {
     setLoading(true);
     setErr(null);
     try {
-      const rows = await reviewsForProduct(productId, { limit: 50 });
+      const [rows, mine] = await Promise.all([
+        reviewsForProduct(productId, { limit: 50 }),
+        accessToken ? reviewsMine(accessToken).catch(() => [] as ReviewRow[]) : Promise.resolve([] as ReviewRow[]),
+      ]);
       setList(rows);
+      setMyReview(mine.find((r) => r.product_id === productId) ?? null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not load reviews");
     } finally {
       setLoading(false);
     }
-  }, [productId]);
+  }, [productId, accessToken]);
 
   useEffect(() => {
     if (shouldLoad) void load();
@@ -205,7 +107,7 @@ export function ProductReviewsSection({ productId }: Props) {
     setSubmitBusy(true);
     setErr(null);
     try {
-      const created = await reviewsCreate(accessToken, {
+      await reviewsCreate(accessToken, {
         product_id: productId,
         rating,
         title: tRaw,
@@ -215,7 +117,6 @@ export function ProductReviewsSection({ productId }: Props) {
       setContent("");
       setRating(5);
       setCanReview(false);
-      setPendingMediaFor(created.id);
       await load();
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : "Could not submit review");
@@ -224,19 +125,22 @@ export function ProductReviewsSection({ productId }: Props) {
     }
   }
 
-  async function uploadMedia(reviewId: number, files: FileList | null) {
-    if (!accessToken || !files || files.length === 0) return;
-    setMediaUploadBusy(true);
-    setMediaErr(null);
+  async function deleteMyReview() {
+    if (!accessToken || !myReview) return;
+    const ok = await confirmDialog({
+      title: "Delete your review",
+      message: "Remove your review and all photos? This cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
-      for (const file of Array.from(files).slice(0, 5)) {
-        await reviewsUploadMedia(accessToken, reviewId, file);
-      }
+      await reviewsDelete(accessToken, myReview.id);
       await load();
     } catch (ex) {
-      setMediaErr(ex instanceof Error ? ex.message : "Upload failed");
-    } finally {
-      setMediaUploadBusy(false);
+      await alertDialog(ex instanceof Error ? ex.message : "Could not delete review", {
+        variant: "error",
+      });
     }
   }
 
@@ -274,6 +178,7 @@ export function ProductReviewsSection({ productId }: Props) {
                   {r.reviewer_name ? (
                     <p className="mt-0.5 text-[11px] font-medium text-sikapa-text-muted dark:text-zinc-500">
                       {r.reviewer_name}
+                      {myReview?.id === r.id ? " · You" : ""}
                     </p>
                   ) : null}
                 </div>
@@ -290,38 +195,34 @@ export function ProductReviewsSection({ productId }: Props) {
         </ul>
       )}
 
-      {pendingMediaFor && accessToken ? (
-        <div className="mt-4 rounded-[10px] bg-sikapa-cream/70 p-4 ring-1 ring-sikapa-gold/30 dark:bg-zinc-800/60 dark:ring-sikapa-gold/40">
-          <p className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
-            Add photos or a video to your review
-          </p>
+      {accessToken && myReview ? (
+        <div className="mt-6 rounded-[10px] bg-sikapa-cream/70 p-4 ring-1 ring-sikapa-gold/30 dark:bg-zinc-800/60 dark:ring-sikapa-gold/40">
+          <p className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">Your review</p>
           <p className="mt-1 text-[11px] text-sikapa-text-muted dark:text-zinc-500">
-            Up to 5 files. Images ≤ 8MB, videos ≤ 50MB.
+            Add or remove photos, or delete your entire review.
           </p>
-          <input
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            disabled={mediaUploadBusy}
-            onChange={(e) => void uploadMedia(pendingMediaFor, e.target.files)}
-            className="mt-2 block w-full text-small"
-          />
-          {mediaErr && (
-            <p className="mt-2 rounded-[10px] bg-red-50 px-3 py-2 text-small text-red-800">{mediaErr}</p>
-          )}
+          <div className="mt-3">
+            <ReviewMediaManager
+              reviewId={myReview.id}
+              media={myReview.media ?? []}
+              accessToken={accessToken}
+              resolveUrl={resolveMediaUrl}
+              onChanged={load}
+            />
+          </div>
           <button
             type="button"
-            onClick={() => setPendingMediaFor(null)}
-            className="mt-3 inline-flex text-[11px] font-semibold text-sikapa-text-muted hover:text-sikapa-text-primary"
+            onClick={() => void deleteMyReview()}
+            className="mt-3 text-[11px] font-semibold text-red-700 hover:underline dark:text-red-300"
           >
-            Skip for now
+            Delete my review
           </button>
         </div>
       ) : null}
 
-      {accessToken && user && eligibilityLoaded && !canReview && (
+      {accessToken && user && eligibilityLoaded && !canReview && !myReview && (
         <p className="mt-4 rounded-[10px] bg-sikapa-gray-soft/80 px-3 py-2 text-small text-sikapa-text-secondary dark:bg-zinc-800 dark:text-zinc-300">
-          You can post a review after you have bought this product. Everyone can read reviews here.
+          You can post a review after you have bought this product and it is marked delivered. Everyone can read reviews here.
         </p>
       )}
 

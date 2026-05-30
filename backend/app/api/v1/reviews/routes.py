@@ -21,6 +21,7 @@ from app.api.v1.reviews.schemas import (
     ReviewMediaRead,
     ReviewPublic,
     ReviewSchema,
+    ReviewWithMediaSchema,
     ReviewWriteEligibility,
 )
 from app.api.v1.reviews.services import (
@@ -92,7 +93,7 @@ async def get_product_reviews_endpoint(
     )
 
 
-@router.get("/user/me", response_model=List[ReviewSchema])
+@router.get("/user/me", response_model=List[ReviewWithMediaSchema])
 async def get_user_reviews_endpoint(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user)

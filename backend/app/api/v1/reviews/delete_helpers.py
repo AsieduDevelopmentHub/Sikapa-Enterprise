@@ -1,6 +1,8 @@
 """Shared review deletion (media files + database rows)."""
+from sqlalchemy import delete as sa_delete
 from sqlmodel import Session, select
 
+from app.core.pg_rls_auth import delete_review_media_for_moderation, pg_rls_enabled
 from app.core.storage_cleanup import delete_stored_file_by_url
 from app.models import Review, ReviewMedia
 
@@ -11,7 +13,12 @@ def _delete_review_media_rows(session: Session, review_id: int) -> None:
     ).all()
     for item in media:
         delete_stored_file_by_url(item.url)
-        session.delete(item)
+
+    if pg_rls_enabled():
+        delete_review_media_for_moderation(session, review_id)
+    else:
+        session.exec(sa_delete(ReviewMedia).where(ReviewMedia.review_id == review_id))
+    session.flush()
 
 
 def delete_review_and_media(session: Session, review: Review) -> None:
