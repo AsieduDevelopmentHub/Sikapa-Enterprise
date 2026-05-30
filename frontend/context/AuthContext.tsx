@@ -20,7 +20,12 @@ import {
   type TokenResponse,
   type UserProfile,
 } from "@/lib/api/auth";
-import { applyAuthTokens } from "@/lib/apply-auth-session";
+import {
+  applyAuthTokens,
+  AUTH_SESSION_APPLIED_EVENT,
+  normalizeAuthProfile,
+  type AuthSessionAppliedDetail,
+} from "@/lib/apply-auth-session";
 import { clearAllAuthTokens, readTokens } from "@/lib/auth-storage";
 import { clearSessionCookie } from "@/lib/session-cookie";
 import { resetClientSessionCache } from "@/lib/session-reset";
@@ -85,13 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const applySession = useCallback(async (tokens: TokenResponse, remember = true) => {
-    await applyAuthTokens(tokens, remember, queryClient);
+    await applyAuthTokens(tokens, remember, queryClient, false);
     setAccessToken(tokens.access_token);
-    const profile = await authFetchProfile(tokens.access_token);
-    setUser({
-      ...profile,
-      is_admin: Boolean(profile.is_admin),
-    });
+    setUser(normalizeAuthProfile(await authFetchProfile(tokens.access_token)));
   }, [queryClient]);
 
   const refreshProfile = useCallback(async () => {
@@ -103,11 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setAccessToken(token);
     try {
-      const profile = await authFetchProfile(token);
-      setUser({
-        ...profile,
-        is_admin: Boolean(profile.is_admin),
-      });
+      setUser(normalizeAuthProfile(await authFetchProfile(token)));
     } catch (e) {
       if (looksLikeAuthFailure(e)) {
         await clearTokens();
@@ -125,8 +122,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const onSessionApplied = (ev: Event) => {
+      const detail = (ev as CustomEvent<AuthSessionAppliedDetail>).detail;
+      if (!detail?.user || !detail.accessToken) return;
+      setUser(detail.user);
+      setAccessToken(detail.accessToken);
+      setLoading(false);
+    };
+    window.addEventListener(AUTH_SESSION_APPLIED_EVENT, onSessionApplied as EventListener);
+    return () =>
+      window.removeEventListener(AUTH_SESSION_APPLIED_EVENT, onSessionApplied as EventListener);
+  }, []);
+
+  useEffect(() => {
     const onExternalStore = () => {
-      void refreshProfile();
+      setUser(null);
+      setLoading(true);
+      void refreshProfile().finally(() => setLoading(false));
     };
     window.addEventListener("sikapa-auth-storage-updated", onExternalStore);
     return () => window.removeEventListener("sikapa-auth-storage-updated", onExternalStore);
@@ -141,13 +153,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const profile = await authFetchProfile(token);
+        const profile = normalizeAuthProfile(await authFetchProfile(token));
         if (!cancelled) {
           setAccessToken(token);
-          setUser({
-            ...profile,
-            is_admin: Boolean(profile.is_admin),
-          });
+          setUser(profile);
         }
       } catch (e) {
         if (!cancelled) {

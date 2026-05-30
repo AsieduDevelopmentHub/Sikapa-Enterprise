@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { authGoogleOAuthVerify2FA } from "@/lib/api/auth";
-import { applyAuthTokens } from "@/lib/apply-auth-session";
+import { applyExternalAuthSession } from "@/lib/apply-auth-session";
 import { sanitizeDigits, validateOtpCode } from "@/lib/validation/input";
 
 export default function GoogleOAuth2FAPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [pendingToken, setPendingToken] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,11 +40,7 @@ export default function GoogleOAuth2FAPage() {
     setBusy(true);
     try {
       const tokens = await authGoogleOAuthVerify2FA(pendingToken, digits);
-      try {
-        await applyAuthTokens(tokens, true);
-      } catch {
-        /* ignore */
-      }
+      await applyExternalAuthSession(tokens, true, queryClient);
       router.replace("/account");
     } catch (ex) {
       setError(ex instanceof Error ? ex.message : "Verification failed");
