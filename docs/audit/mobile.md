@@ -10,18 +10,9 @@
 
 ### M-001 — pubspec version out of sync with release tags
 
-- [ ] **P1** — Align version with GitHub releases
+- [x] **P1** — Resolved (`version: 1.2.1+3` matches `mobile-v1.2.1`)
 
-**Problem:** `mobile/pubspec.yaml` shows `1.1.0+2`; README and releases reference `mobile-v1.2.1`.
-
-**Fix:**
-
-```yaml
-# mobile/pubspec.yaml
-version: 1.2.1+3  # match tag + build number convention
-```
-
-Add a pre-tag checklist step in `mobile/README.md` and `.github/workflows/README.md`.
+**Ongoing:** Bump `mobile/pubspec.yaml` before each `mobile-v*` tag (see `mobile/README.md` release checklist).
 
 ---
 

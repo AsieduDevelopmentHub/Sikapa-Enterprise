@@ -122,11 +122,9 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-008 — Stale CI env vars
 
-- [ ] **P3**
+- [x] **P3** — Resolved
 
-**Problem:** `JWT_SECRET_KEY` / `JWT_REFRESH_SECRET_KEY` in CI — app uses `SECRET_KEY`.
-
-**Files:** `.github/workflows/ci.yml`, `scripts/ci-local.ps1`
+CI and `scripts/ci-local.ps1` set **`SECRET_KEY`** only (legacy `JWT_SECRET_*` removed).
 
 ---
 
@@ -158,21 +156,17 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-011 — Render blueprint vs docs path
 
-- [ ] **P1**
+- [x] **P1** — Resolved
 
-**Problem:** `backend/docs/hosting/render.md` says `render.yaml` at repo root; file is `backend/render.yaml`.
-
-**Fix:** Update doc; confirm Render "Root Directory" is `backend`.
+`backend/docs/hosting/render.md` documents `backend/render.yaml` with Render Root Directory = `backend`.
 
 ---
 
 ### D-012 — Postgres backup script not wired
 
-- [ ] **P2**
+- [x] **P2** — Resolved (docs linked; cron remains operator-owned)
 
-**File:** `scripts/backup-postgres.sh` — manual only; not in cron or docs hub.
-
-**Fix:** Link from `docs/operations/operations.md`; document schedule for operators.
+**File:** `scripts/backup-postgres.sh` — linked from `docs/README.md`, `docs/operations/operations.md`, and production deployment guide.
 
 ---
 

@@ -10,6 +10,7 @@ Start here. Docs use **lowercase paths** and **kebab-case** filenames, grouped b
 | **Data structures & algorithms** | [architecture/data-structures-and-algorithms.md](./architecture/data-structures-and-algorithms.md) |
 | **System audit & gap checklist** | [audit/README.md](./audit/README.md) |
 | **Running services, deploys, JWT, CORS, health** | [operations/operations.md](./operations/operations.md) |
+| **PostgreSQL manual backup script** | [../scripts/backup-postgres.sh](../scripts/backup-postgres.sh) |
 | **Auth endpoints, tokens, 2FA (API)** | [../backend/docs/api/authentication.md](../backend/docs/api/authentication.md) |
 | **Browser “Remember me”, JWT refresh, admin RBAC** | [operations/auth-session-and-admin.md](./operations/auth-session-and-admin.md) |
 | **API examples & integration** | [../backend/docs/api/api-reference.md](../backend/docs/api/api-reference.md) |

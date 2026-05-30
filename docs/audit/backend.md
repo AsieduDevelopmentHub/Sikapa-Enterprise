@@ -164,11 +164,9 @@
 
 ### B-011 — Backend README references missing files
 
-- [ ] **P1** — Fix README
+- [x] **P1** — Resolved
 
-**Problem:** `backend/README.md` references `python start_local.py` and `tests/test_auth.py` — neither exists.
-
-**Fix:** Use `uvicorn app.main:app --reload` and `pytest tests/`.
+`backend/README.md` documents `uvicorn` and `pytest tests/` (no `start_local.py` / `test_auth.py`).
 
 ---
 
@@ -184,11 +182,9 @@
 
 ### B-013 — Stale CI env vars
 
-- [ ] **P3** — Clean CI env
+- [x] **P3** — Resolved
 
-**Problem:** CI sets `JWT_SECRET_KEY` / `JWT_REFRESH_SECRET_KEY`; app uses `SECRET_KEY` only.
-
-**Files:** `.github/workflows/ci.yml`, `scripts/ci-local.ps1`
+Test harnesses use `SECRET_KEY` only (see D-008 in [devops-ci.md](./devops-ci.md#d-008)).
 
 ---
 

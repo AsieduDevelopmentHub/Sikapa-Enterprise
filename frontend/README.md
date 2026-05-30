@@ -4,7 +4,7 @@ Next.js storefront for Sikapa. Public env vars use the `NEXT_PUBLIC_` prefix and
 
 ## Requirements
 
-- Node.js 18+ (see `package.json` for scripts)
+- Node.js 20 LTS (matches CI in `.github/workflows/ci.yml`; see `package.json` for scripts)
 
 ## Local development
 

@@ -145,11 +145,9 @@
 
 ### F-012 — Supabase env vars in Vercel doc only
 
-- [ ] **P2** — Align docs and code
+- [x] **P2** — Resolved
 
-**Problem:** `frontend/docs/hosting/vercel.md` mentions `NEXT_PUBLIC_SUPABASE_*`; not in `.env.example`; no Supabase client — only `types/supabase.ts` and URL helper in `lib/clean-image-url.ts`.
-
-**Fix:** Remove from Vercel doc or document why types exist without client.
+Vercel doc no longer lists unused `NEXT_PUBLIC_SUPABASE_*`; environment hub explains API-served Storage URLs only.
 
 ---
 

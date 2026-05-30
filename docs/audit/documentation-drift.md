@@ -2,47 +2,33 @@
 
 Items where docs disagree with the repo. Fix these to reduce onboarding and deploy mistakes.
 
+**Last cleanup:** May 2026 — items below marked `[x]` were verified against the current tree.
+
 ---
 
 ## Broken or stale paths
 
 ### DOC-001 — Legacy `android/` folder referenced
 
-- [ ] **P1**
+- [x] **P1** — Resolved
 
-**Problem:** These reference a root `android/` WebView wrapper that does not exist (only `mobile/android/`):
-
-- `docs/README.md` — hub layout diagram (lowercase subfolders: `audit/`, `environment/`, `operations/`, etc.)
-- Root `README.md` — repository structure lists `android/`
-
-**Fix:** Remove or replace with `mobile/`; link `mobile/README.md`.
+Root `README.md` and `docs/README.md` no longer list a repo-root `android/` folder. Flutter Android lives under `mobile/android/` only (see `mobile/README.md`).
 
 ---
 
 ### DOC-002 — `render.yaml` location
 
-- [ ] **P1**
+- [x] **P1** — Resolved
 
-| Doc says | Actual |
-|----------|--------|
-| Repo root | `backend/render.yaml` |
-
-**Files:** `backend/docs/hosting/render.md`, `docs/deployment/production-deployment.md`
-
-**Fix:** State "Root Directory = `backend` on Render"; blueprint path is `backend/render.yaml`.
+Blueprint path: `backend/render.yaml`. Render **Root Directory** = `backend`. Documented in `backend/docs/hosting/render.md` and production deployment guide.
 
 ---
 
 ### DOC-003 — Backend README missing commands
 
-- [ ] **P1**
+- [x] **P1** — Resolved
 
-**Problem:** `backend/README.md` references:
-
-- `python start_local.py` — **does not exist**
-- `tests/test_auth.py` — **does not exist** (use `tests/test_auth_e2e.py`)
-
-**Fix:** Document `uvicorn app.main:app --reload` and `pytest tests/`.
+`backend/README.md` documents `uvicorn app.main:app --reload` and `pytest tests/` (including `test_auth_e2e.py`). No references to `start_local.py` or `tests/test_auth.py`.
 
 ---
 
@@ -50,44 +36,33 @@ Items where docs disagree with the repo. Fix these to reduce onboarding and depl
 
 ### DOC-004 — Frontend API URL name
 
-- [ ] **P1**
+- [x] **P1** — Resolved
 
-| Doc | Correct var |
-|-----|-------------|
-| `docs/deployment/production-deployment.md` uses `NEXT_PUBLIC_API_BASE_URL` | `NEXT_PUBLIC_API_URL` |
-
-**Canonical:** `frontend/.env.example`, `docs/environment/environment.md`
+`docs/deployment/production-deployment.md` and Vercel docs use `NEXT_PUBLIC_API_URL` (canonical: `frontend/.env.example`, `docs/environment/environment.md`).
 
 ---
 
 ### DOC-005 — Supabase vars in Vercel doc only
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-**Problem:** `frontend/docs/hosting/vercel.md` mentions `NEXT_PUBLIC_SUPABASE_URL` / `ANON_KEY`; not in `frontend/.env.example`; no Supabase client in frontend code.
-
-**Fix:** Remove from Vercel doc or explain generated types-only usage.
+`frontend/docs/hosting/vercel.md` no longer lists unused `NEXT_PUBLIC_SUPABASE_*` vars. `docs/environment/environment.md` notes the storefront has no Supabase JS client.
 
 ---
 
 ### DOC-006 — Backend `.env.example` incomplete entries
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-**Problem:** Supabase and Resend mentioned in comments but missing explicit keys:
-
-- `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
-- `RESEND_API_KEY`, `EMAIL_FROM`
-
-**Fix:** Add to `backend/.env.example` (code reads them in `app/core/supabase.py`, email service).
+`backend/.env.example` includes `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, and `EMAIL_ENABLED`.
 
 ---
 
 ### DOC-007 — Stale CI env var names in docs
 
-- [ ] **P3**
+- [x] **P3** — Resolved
 
-If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
+CI, `scripts/ci-local.ps1`, and `backend/tests/conftest.py` use **`SECRET_KEY`** only. Legacy `JWT_SECRET_KEY` / `JWT_REFRESH_SECRET_KEY` removed from test harnesses.
 
 ---
 
@@ -95,26 +70,17 @@ If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
 
 ### DOC-008 — Node version
 
-- [ ] **P3**
+- [x] **P3** — Resolved
 
-| Doc | CI |
-|-----|-----|
-| `frontend/README.md` says Node 18+ | Node 20 in `ci.yml` |
-
-**Fix:** Align README to Node 20 LTS.
+`frontend/README.md` specifies Node 20 LTS (matches `.github/workflows/ci.yml`).
 
 ---
 
 ### DOC-009 — Mobile version vs release tag
 
-- [ ] **P1**
+- [x] **P1** — Resolved
 
-| Source | Version |
-|--------|---------|
-| `mobile/pubspec.yaml` | `1.1.0+2` |
-| README / GitHub release | `mobile-v1.2.1` |
-
-**Fix:** See [mobile.md](./mobile.md#m-001).
+`mobile/pubspec.yaml`: `1.2.1+3` aligns with `mobile-v1.2.1`. See [mobile.md](./mobile.md#m-001).
 
 ---
 
@@ -122,14 +88,9 @@ If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
 
 ### DOC-010 — pyproject vs root LICENSE
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-| File | License |
-|------|---------|
-| Root `LICENSE` | Proprietary |
-| `backend/pyproject.toml` | Declares `MIT` |
-
-**Fix:** Change `pyproject.toml` to proprietary or remove license field to match root `LICENSE`.
+`backend/pyproject.toml` declares `license = { text = "Proprietary" }`, matching root `LICENSE`.
 
 ---
 
@@ -139,7 +100,7 @@ If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
 
 - [x] **P2** — Resolved
 
-**Location:** [docs/contributing/contributing.md](../contributing/contributing.md). GitHub discovery: [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md) (pointer only).
+**Location:** [docs/contributing/contributing.md](../contributing/contributing.md). GitHub: [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md).
 
 ---
 
@@ -147,7 +108,7 @@ If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
 
 - [x] **P2** — Resolved
 
-**Location:** [docs/security/security-policy.md](../security/security-policy.md). GitHub discovery: [.github/SECURITY.md](../../.github/SECURITY.md) (pointer only).
+**Location:** [docs/security/security-policy.md](../security/security-policy.md). GitHub: [.github/SECURITY.md](../../.github/SECURITY.md).
 
 ---
 
@@ -161,9 +122,9 @@ If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
 
 ### DOC-014 — backup-postgres.sh
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-**File:** `scripts/backup-postgres.sh` — not linked from `docs/README.md` or `docs/operations/operations.md`.
+Linked from `docs/README.md`, `docs/operations/operations.md`, and `docs/deployment/production-deployment.md`. Script: `scripts/backup-postgres.sh`.
 
 ---
 
@@ -171,15 +132,9 @@ If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
 
 ### DOC-015 — Link audit folder from docs hub
 
-- [ ] **P3**
+- [x] **P3** — Resolved
 
-**Fix:** Add row to `docs/README.md`:
-
-```markdown
-| **System audit & gap checklist** | [audit/README.md](./audit/README.md) |
-```
-
-Also fix DOC-001 items in the same file while editing.
+`docs/README.md` includes [audit/README.md](./audit/README.md) in quick links.
 
 ---
 
@@ -187,8 +142,10 @@ Also fix DOC-001 items in the same file while editing.
 
 ### DOC-016 — Render blueprint missing optional keys
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-**Problem:** `backend/render.yaml` lists core vars; operators must manually add Paystack, Resend, Google OAuth, Supabase.
+`backend/render.yaml` comments list Dashboard-only vars; full checklist in `backend/docs/hosting/render.md`.
 
-**Fix:** Add commented placeholders in `render.yaml` or a "Render env checklist" section in `backend/docs/hosting/render.md`.
+---
+
+*Re-open an item if the repo drifts again; update [remediation-roadmap.md](./remediation-roadmap.md) when closing gaps.*

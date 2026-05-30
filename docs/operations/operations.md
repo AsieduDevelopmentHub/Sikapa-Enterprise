@@ -215,7 +215,7 @@ Apply **before** switching traffic to a new release. Downgrades are intentionall
 
 Scheduled backups are **host-specific** (Render Postgres, RDS, Neon, etc.): enable automated snapshots in your provider dashboard.
 
-Optional manual dump when you have `DATABASE_URL` and `pg_dump` locally — see [`../scripts/backup-postgres.sh`](../scripts/backup-postgres.sh). Run via cron only on a secured machine with secrets injected from your vault.
+Optional manual dump when you have `DATABASE_URL` and `pg_dump` locally — see [`../../scripts/backup-postgres.sh`](../../scripts/backup-postgres.sh). Run via cron only on a secured machine with secrets injected from your vault.
 
 ---
 

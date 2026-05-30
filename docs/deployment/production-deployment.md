@@ -147,13 +147,13 @@ postgresql://sikapa_app:password@host:5432/sikapa_prod
 
 ### Backups
 
+- Enable automated snapshots on your Postgres host (Render, Supabase, RDS, etc.).
+- Optional manual logical backup: [`scripts/backup-postgres.sh`](../../scripts/backup-postgres.sh) (requires `pg_dump` and `DATABASE_URL` on a secure runner).
+
 ```bash
-# Automated backup script (cron daily)
-#!/bin/bash
-BACKUP_FILE="/backups/sikapa_$(date +%Y%m%d).sql"
-pg_dump "$DATABASE_URL" > "$BACKUP_FILE"
-# Upload to cloud storage
-aws s3 cp "$BACKUP_FILE" s3://backups-bucket/
+export DATABASE_URL="postgresql://..."
+export BACKUP_OUT_DIR=/secure/backups
+bash scripts/backup-postgres.sh
 ```
 
 ### Migrations

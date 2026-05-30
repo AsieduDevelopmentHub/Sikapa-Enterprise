@@ -65,8 +65,6 @@ if ($runBackend) {
             Set-Location "$Root\backend"
             $env:DATABASE_URL = "sqlite:///:memory:"
             $env:SECRET_KEY = "ci-secret-key-for-testing-only"
-            $env:JWT_SECRET_KEY = "ci-jwt-secret-for-testing"
-            $env:JWT_REFRESH_SECRET_KEY = "ci-jwt-refresh-secret"
             $env:RESEND_API_KEY = "test-resend-api-key"
             $env:EMAIL_FROM = "test@example.com"
             $env:FRONTEND_URL = "http://localhost:3000"

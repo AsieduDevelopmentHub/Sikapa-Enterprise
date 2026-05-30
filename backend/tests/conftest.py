@@ -8,8 +8,6 @@ from typing import Generator
 # Test environment must be set before importing the FastAPI app.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
-os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-key"
-os.environ["JWT_REFRESH_SECRET_KEY"] = "test-jwt-refresh-secret-key"
 os.environ["RESEND_API_KEY"] = "test-resend-api-key"
 os.environ["EMAIL_FROM"] = "test@example.com"
 os.environ["FRONTEND_URL"] = "http://localhost:3000"
@@ -127,8 +125,6 @@ def set_test_env():
     """Set test environment variables."""
     os.environ["DATABASE_URL"] = "sqlite:///:memory:"
     os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
-    os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-key"
-    os.environ["JWT_REFRESH_SECRET_KEY"] = "test-jwt-refresh-secret-key"
     os.environ["RESEND_API_KEY"] = "test-resend-api-key"  # For testing email service
     os.environ["EMAIL_FROM"] = "test@example.com"
     os.environ["FRONTEND_URL"] = "http://localhost:3000"

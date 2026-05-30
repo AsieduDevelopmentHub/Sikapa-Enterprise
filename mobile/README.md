@@ -124,11 +124,12 @@ Android and iOS binaries on every push that touches `mobile/**` (or via manual d
 - `ios-<run>` — `sikapa-storefront-unsigned.ipa` (built with `--no-codesign`; re-sign before
   distributing through TestFlight or sideloading)
 
-To cut a versioned **GitHub Release** with all binaries attached, push a tag matching `mobile-v*`:
+To cut a versioned **GitHub Release** with all binaries attached, push a tag matching `mobile-v*`.
+First bump `version` in `pubspec.yaml` to match the tag (e.g. `1.2.1+3` for `mobile-v1.2.1`).
 
 ```bash
-git tag mobile-v1.0.0
-git push origin mobile-v1.0.0
+git tag mobile-v1.2.1
+git push origin mobile-v1.2.1
 ```
 
 The workflow honours optional repository configuration under
