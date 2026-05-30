@@ -1,15 +1,13 @@
 import { HelpArticle } from "@/components/help/HelpArticle";
 import { StoreLocationMap } from "@/components/help/StoreLocationMap";
 import { getWhatsAppChatUrl } from "@/lib/contact";
-
 import { pageMetadata } from "@/lib/seo";
+import { SIKAPA_SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata = pageMetadata("Contact support", {
-  description: "Reach Sikapa Enterprise customer support — WhatsApp, email paths, and response expectations.",
+  description: "Reach Sikapa Enterprise customer support — WhatsApp, email, store map, and response expectations.",
   path: "/help/contact",
 });
-
-const SUPPORT_EMAIL = "support@sikapa.com";
 
 export default function HelpContactPage() {
   return (
@@ -29,8 +27,8 @@ export default function HelpContactPage() {
         </li>
         <li>
           <strong>Email:</strong>{" "}
-          <a className="font-semibold text-sikapa-gold hover:underline" href={`mailto:${SUPPORT_EMAIL}`}>
-            {SUPPORT_EMAIL}
+          <a className="font-semibold text-sikapa-gold hover:underline" href={`mailto:${SIKAPA_SUPPORT_EMAIL}`}>
+            {SIKAPA_SUPPORT_EMAIL}
           </a>
         </li>
       </ul>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FaHeadset, FaLocationPin, FaShop, FaTrustAuthentic, FaTrustLock, FaTrustTruck } from "@/components/FaIcons";
-import { SIKAPA_LOCATION_LINE, whatsappHelpUrl } from "@/lib/site";
+import { SIKAPA_LOCATION_LINE, SIKAPA_STORE_MAP_HREF, whatsappHelpUrl } from "@/lib/site";
 
 const values = [
   {
@@ -141,6 +141,13 @@ export function HomeTrustAndLogistics() {
               <p className="mt-1.5 text-small leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">
                 Pickup, advice, or browsing in person — confirm hours before you travel.
               </p>
+              <Link
+                href={SIKAPA_STORE_MAP_HREF}
+                className="sikapa-tap mt-2.5 inline-flex items-center gap-1.5 text-small font-semibold text-sikapa-crimson underline-offset-2 hover:underline dark:text-sikapa-gold"
+              >
+                Open in map
+                <span aria-hidden>→</span>
+              </Link>
             </div>
           </div>
         </div>

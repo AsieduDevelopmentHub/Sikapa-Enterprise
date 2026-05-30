@@ -13,15 +13,12 @@ import {
 } from "@/lib/api/admin";
 import { invalidateCatalogQueries } from "@/lib/catalog-cache";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
+import {
+  StockSearchSelect,
+  stockOptionValue,
+} from "@/components/admin/StockSearchSelect";
 import { AdminInventoryPageSkeleton } from "@/components/admin/Skeleton";
 import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
-
-function stockOptionValue(row: InventoryStockLevelRow): string {
-  if (row.kind === "variant" && row.variant_id != null) {
-    return `v-${row.product_id}-${row.variant_id}`;
-  }
-  return `p-${row.product_id}`;
-}
 
 function parseStockSelection(val: string): { product_id: number; variant_id?: number | null } {
   const mP = /^p-(\d+)$/.exec(val);
@@ -142,21 +139,13 @@ export default function AdminInventoryPage() {
               <label htmlFor="stock-select" className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted mb-1">
                 Product or Variant
               </label>
-              <select
-                id="stock-select"
+              <StockSearchSelect
+                rows={rows}
                 value={stockKey}
-                onChange={(e) => setStockKey(e.target.value)}
-                required
-                className="w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small"
-              >
-                <option value="">Select product or variant</option>
-                {rows.map((r) => (
-                  <option key={stockOptionValue(r)} value={stockOptionValue(r)}>
-                    {r.label}
-                    {r.kind === "variant" ? " · variant" : " · base product"}
-                  </option>
-                ))}
-              </select>
+                onChange={setStockKey}
+                disabled={adjusting}
+                placeholder="Type to search or pick from list…"
+              />
             </div>
             <div>
               <label htmlFor="delta-input" className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted mb-1">
@@ -187,7 +176,7 @@ export default function AdminInventoryPage() {
             <div className="sm:col-span-4 flex justify-end">
               <button
                 type="submit"
-                disabled={adjusting}
+                disabled={adjusting || !stockKey}
                 className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60"
               >
                 {adjusting ? "Saving…" : "Save adjustment"}

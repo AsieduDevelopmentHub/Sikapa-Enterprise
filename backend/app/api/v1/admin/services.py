@@ -6,6 +6,7 @@ import re
 from typing import Optional, List
 from datetime import datetime
 from fastapi import HTTPException, status, UploadFile
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash
@@ -16,7 +17,11 @@ from app.models import (
     Product,
     ProductVariant,
     Order,
+    OrderItem,
     Category,
+    CartItem,
+    WishlistItem,
+    Review,
     InventoryAdjustment,
     Coupon,
     BusinessSetting,
@@ -289,8 +294,33 @@ async def update_product_admin(
     return updated
 
 
+def _count_for_product(session: Session, model_cls, product_id: int) -> int:
+    return int(
+        session.exec(
+            select(func.count())
+            .select_from(model_cls)
+            .where(model_cls.product_id == product_id)  # type: ignore[attr-defined]
+        ).one()
+    )
+
+
 async def delete_product_admin(session: Session, product_id: int) -> None:
-    """Delete a product."""
+    """Delete a product when it is not referenced by orders or other protected data."""
+    await get_entity_or_404(session, Product, product_id)
+
+    blockers: list[tuple[int, str]] = [
+        (_count_for_product(session, OrderItem, product_id), "appears on customer orders"),
+        (_count_for_product(session, Review, product_id), "has customer reviews"),
+        (_count_for_product(session, CartItem, product_id), "is in customer carts"),
+        (_count_for_product(session, WishlistItem, product_id), "is on customer wishlists"),
+    ]
+    for count, reason in blockers:
+        if count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"This product {reason} and cannot be deleted. Deactivate it instead.",
+            )
+
     await delete_entity_safe(session, Product, product_id)
 
 
@@ -343,6 +373,23 @@ async def update_category_admin(
 async def delete_category_admin(session: Session, category_id: int) -> None:
     """Delete a category."""
     from app.core.cache import invalidate_storefront_catalog_cache
+
+    category = await get_entity_or_404(session, Category, category_id)
+    product_count = int(
+        session.exec(
+            select(func.count())
+            .select_from(Product)
+            .where(Product.category == category.slug)
+        ).one()
+    )
+    if product_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"{product_count} product(s) still use this category. "
+                "Reassign or remove those products first."
+            ),
+        )
 
     await delete_entity_safe(session, Category, category_id)
     invalidate_storefront_catalog_cache()

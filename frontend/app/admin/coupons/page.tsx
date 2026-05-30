@@ -92,57 +92,93 @@ export default function AdminCouponsPage() {
       <p className="mt-2 text-small text-sikapa-text-secondary">Create and manage discount codes.</p>
       <form
         onSubmit={(e) => void submit(e)}
-        className="mt-6 grid gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06] sm:grid-cols-3"
+        className="mt-6 grid gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-black/[0.06] sm:grid-cols-3 dark:bg-zinc-900 dark:ring-white/10"
       >
-        <input
-          required
-          placeholder="Code"
-          value={form.code}
-          onChange={(e) => setForm((s) => ({ ...s, code: e.target.value }))}
-          className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
-        />
-        <select
-          value={form.discount_type}
-          onChange={(e) => setForm((s) => ({ ...s, discount_type: e.target.value as "percent" | "fixed" }))}
-          className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
-        >
-          <option value="percent">Percent</option>
-          <option value="fixed">Fixed (GHS)</option>
-        </select>
-        <input
-          required
-          type="number"
-          min={0.01}
-          step="0.01"
-          placeholder="Discount value"
-          value={form.discount_value}
-          onChange={(e) => setForm((s) => ({ ...s, discount_value: e.target.value }))}
-          className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
-        />
-        <input
-          type="number"
-          min={1}
-          placeholder="Usage limit"
-          value={form.usage_limit}
-          onChange={(e) => setForm((s) => ({ ...s, usage_limit: e.target.value }))}
-          className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
-        />
-        <input
-          type="number"
-          min={0}
-          step="0.01"
-          placeholder="Min order amount"
-          value={form.min_order_amount}
-          onChange={(e) => setForm((s) => ({ ...s, min_order_amount: e.target.value }))}
-          className="rounded-lg border border-black/[0.08] px-3 py-2 text-small"
-        />
-        <button
-          type="submit"
-          disabled={creating}
-          className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60"
-        >
-          {creating ? "Creating…" : "Create coupon"}
-        </button>
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-400">
+          Code
+          <input
+            required
+            value={form.code}
+            onChange={(e) => setForm((s) => ({ ...s, code: e.target.value }))}
+            placeholder="e.g. WELCOME10"
+            className="mt-1 w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small normal-case dark:border-white/15 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+        </label>
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-400">
+          Discount type
+          <select
+            value={form.discount_type}
+            onChange={(e) =>
+              setForm((s) => ({ ...s, discount_type: e.target.value as "percent" | "fixed" }))
+            }
+            className="mt-1 w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small normal-case dark:border-white/15 dark:bg-zinc-800 dark:text-zinc-100"
+          >
+            <option value="percent">Percent</option>
+            <option value="fixed">Fixed (GHS)</option>
+          </select>
+        </label>
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-400">
+          Discount value
+          <input
+            required
+            type="number"
+            min={0.01}
+            step="0.01"
+            value={form.discount_value}
+            onChange={(e) => setForm((s) => ({ ...s, discount_value: e.target.value }))}
+            placeholder={form.discount_type === "percent" ? "10" : "25.00"}
+            className="mt-1 w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small normal-case dark:border-white/15 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+        </label>
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-400">
+          Usage limit
+          <input
+            type="number"
+            min={1}
+            value={form.usage_limit}
+            onChange={(e) => setForm((s) => ({ ...s, usage_limit: e.target.value }))}
+            placeholder="Optional — leave blank for unlimited"
+            className="mt-1 w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small normal-case dark:border-white/15 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+        </label>
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-400">
+          Min order (GHS)
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={form.min_order_amount}
+            onChange={(e) => setForm((s) => ({ ...s, min_order_amount: e.target.value }))}
+            className="mt-1 w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small normal-case dark:border-white/15 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+        </label>
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-400">
+          Starts at
+          <input
+            type="datetime-local"
+            value={form.starts_at}
+            onChange={(e) => setForm((s) => ({ ...s, starts_at: e.target.value }))}
+            className="mt-1 w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small normal-case dark:border-white/15 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+        </label>
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-sikapa-text-muted dark:text-zinc-400">
+          Expires at
+          <input
+            type="datetime-local"
+            value={form.expires_at}
+            onChange={(e) => setForm((s) => ({ ...s, expires_at: e.target.value }))}
+            className="mt-1 w-full rounded-lg border border-black/[0.08] px-3 py-2 text-small normal-case dark:border-white/15 dark:bg-zinc-800 dark:text-zinc-100"
+          />
+        </label>
+        <div className="flex items-end sm:col-span-3">
+          <button
+            type="submit"
+            disabled={creating}
+            className="rounded-full bg-sikapa-crimson px-4 py-2 text-small font-semibold text-white disabled:opacity-60"
+          >
+            {creating ? "Creating…" : "Create coupon"}
+          </button>
+        </div>
         {err ? (
           <p className="sm:col-span-3 rounded-lg bg-red-50 px-3 py-2 text-small text-red-800" role="alert">
             {err}
