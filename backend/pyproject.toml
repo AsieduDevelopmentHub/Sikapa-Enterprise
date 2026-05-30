@@ -2,6 +2,9 @@
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# B-012: Mirror backend/requirements.txt — install with `pip install -r requirements.txt`.
+# Production Docker uses requirements-prod.txt (excludes pytest).
+
 [project]
 name = "sikapa-backend"
 version = "0.1.0"
@@ -11,28 +14,32 @@ readme = "README.md"
 license = { text = "Proprietary" }
 
 [project.dependencies]
-fastapi = "^0.110.0"
-uvicorn = { extras = ["standard"], version = "^0.23.2" }
-python-multipart = "^0.0.9"
-"pydantic[email]" = "^2.10.6"
-pydantic-settings = "^2.5.2"
-email-validator = "^2.2.0"
-python-dotenv = "^1.0.1"
-supabase = "^2.10.0"
-psycopg2-binary = "^2.9.10"
-alembic = "^1.13.3"
-sqlmodel = "^0.0.21"
-authlib = "^1.3.2"
-cryptography = "^43.0.1"
-passlib = { extras = ["bcrypt"], version = "^1.7.4" }
+fastapi = "==0.110.0"
+uvicorn = { extras = ["standard"], version = "==0.23.2" }
+python-multipart = "==0.0.18"
+"pydantic[email]" = "==2.10.6"
+pydantic-settings = "==2.5.2"
+email-validator = "==2.2.0"
+python-dotenv = "==1.0.1"
+nh3 = "==0.2.18"
+supabase = "==2.10.0"
+psycopg2-binary = "==2.9.10"
+alembic = "==1.13.3"
+sqlmodel = "==0.0.21"
+authlib = "==1.3.2"
+cryptography = "==43.0.1"
+passlib = { extras = ["bcrypt"], version = "==1.7.4" }
 bcrypt = "==4.0.1"
-pyotp = "^2.9.0"
-"qrcode[pil]" = "^7.4.2"
-httpx = "^0.27.2"
-asyncpg = "^0.27.0"
-nh3 = "^0.2.18"
-"redis[hiredis]" = "^5.0.8"
-"celery[redis]" = "^5.4.0"
+pyotp = "==2.9.0"
+"qrcode[pil]" = "==7.4.2"
+slowapi = "==0.1.9"
+resend = "==0.7.2"
+"redis[hiredis]" = "==5.0.8"
+"celery[redis]" = "==5.4.0"
+reportlab = "==4.0.9"
+httpx = "==0.27.2"
+asyncpg = "==0.27.0"
+aiosqlite = "==0.20.0"
 
 [project.optional-dependencies]
 dev = [
@@ -42,11 +49,8 @@ dev = [
 ]
 
 [tool.coverage.run]
-# Infrastructure modules not exercised by the current CI suite; omit so the gate
-# reflects API/business logic coverage (see workflows.logs — was 49.45% at 50% gate).
 omit = [
     "app/core/email.py",
-    "app/core/errors.py",
     "app/core/logging_config.py",
     "app/core/validation.py",
 ]

@@ -6,24 +6,26 @@ from fastapi import Request
 from sqlalchemy import event, text
 from sqlmodel import Session, SQLModel, create_engine, select
 
+from app.core.settings import get_settings
+
 # Load environment variables from .env file (do not override CI/test/Render env).
 load_dotenv(override=False)
 
-# Get the backend directory path
+_settings = get_settings()
 backend_dir = Path(__file__).parent.parent
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{backend_dir}/db/sikapa.db")
 
 # Configure connection arguments based on database type
 connect_args = {}
 engine_kwargs = {
-    "echo": os.getenv("DEBUG", "false").lower() == "true",
+    "echo": _settings.debug,
 }
 
 if DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
 elif DATABASE_URL.startswith("postgresql"):
-    pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
-    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+    pool_size = _settings.db_pool_size
+    max_overflow = _settings.db_max_overflow
     engine_kwargs["pool_size"] = max(1, pool_size)
     engine_kwargs["max_overflow"] = max(0, max_overflow)
     engine_kwargs["pool_pre_ping"] = True
@@ -39,7 +41,7 @@ if DATABASE_URL.startswith("sqlite"):
 
     @event.listens_for(engine, "connect")
     def _sqlite_pragmas(dbapi_connection, _connection_record) -> None:
-        if os.getenv("SQLITE_WAL", "true").lower() != "true":
+        if not _settings.sqlite_wal:
             return
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")

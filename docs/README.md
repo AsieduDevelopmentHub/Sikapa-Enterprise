@@ -9,6 +9,8 @@ Start here. Docs use **lowercase kebab-case** filenames under topic subfolders (
 | **Environment variables (backend + frontend)** | [environment/environment.md](./environment/environment.md) |
 | **Data structures & algorithms** | [architecture/data-structures-and-algorithms.md](./architecture/data-structures-and-algorithms.md) |
 | **System audit & gap checklist** | [audit/README.md](./audit/README.md) |
+| **Contributing & local CI** | [../CONTRIBUTING.md](../CONTRIBUTING.md) |
+| **Security reporting** | [../SECURITY.md](../SECURITY.md) |
 | **Running services, deploys, JWT, CORS, health** | [operations/operations.md](./operations/operations.md) |
 | **Browser “Remember me”, JWT refresh, admin RBAC** | [operations/auth-session-and-admin.md](./operations/auth-session-and-admin.md) |
 | **Auth endpoints, tokens, 2FA** | [../backend/docs/api/authentication.md](../backend/docs/api/authentication.md) |

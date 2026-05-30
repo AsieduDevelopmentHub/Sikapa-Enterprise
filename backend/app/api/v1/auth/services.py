@@ -31,6 +31,7 @@ from app.core.security import (
     decode_access_token,
 )
 from app.core.email_service import email_service
+from app.core.errors import InvalidCredentialsError
 from app.db import apply_postgres_session_user
 from app.core.pg_rls_auth import (
     email_exists,
@@ -145,10 +146,7 @@ def authenticate_user(session: Session, identifier: str, password: str) -> User:
     ident = identifier.strip().lower()
     user = fetch_user_for_login(session, ident)
     if not user or not verify_password(password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username/email or password"
-        )
+        raise InvalidCredentialsError()
 
     if not user.is_active:
         raise HTTPException(

@@ -1,0 +1,42 @@
+# Local development stack (D-009).
+# Postgres + Redis for backend dev; run API and frontend on the host.
+#
+# Usage:
+#   docker compose up -d
+#   # backend/.env:
+#   DATABASE_URL=postgresql://sikapa:sikapa@localhost:5432/sikapa
+#   REDIS_URL=redis://localhost:6379/0
+#
+# Migrations: cd backend && alembic upgrade head
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sikapa
+      POSTGRES_PASSWORD: sikapa
+      POSTGRES_DB: sikapa
+    ports:
+      - "5432:5432"
+    volumes:
+      - sikapa_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sikapa -d sikapa"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  sikapa_pgdata:

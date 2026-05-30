@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import Request, status
+from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
@@ -63,4 +63,35 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={"detail": "This action could not be completed. Check that products exist and try again."},
+    )
+
+
+async def structured_http_exception_handler(
+    request: Request, exc: HTTPException
+) -> JSONResponse:
+    """Normalize structured ErrorResponse bodies to `{detail, error_code}` for clients."""
+    detail = exc.detail
+    headers = dict(getattr(exc, "headers", None) or {})
+
+    if isinstance(detail, dict):
+        err = detail.get("error")
+        if isinstance(err, dict) and err.get("message"):
+            body: dict[str, str] = {"detail": str(err["message"])}
+            if err.get("code"):
+                body["error_code"] = str(err["code"])
+            return JSONResponse(status_code=exc.status_code, content=body, headers=headers)
+        if isinstance(detail.get("detail"), str):
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": detail["detail"]},
+                headers=headers,
+            )
+
+    if isinstance(detail, str):
+        return JSONResponse(status_code=exc.status_code, content={"detail": detail}, headers=headers)
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(detail)},
+        headers=headers,
     )

@@ -2,7 +2,7 @@
 
 Phased plan to close audit gaps. Check items off here and in the area-specific docs.
 
-**Current focus:** Phase 3 hardening (Phase 1, 2, and 5 complete — May 2026)
+**Current focus:** Phase 4 complete — ongoing ops (May 2026)
 
 **Legend:** S = small (hours), M = medium (days), L = large (week+)
 
@@ -93,7 +93,7 @@ Goal: Production security and operability.
 
 ---
 
-## Phase 4 — Ops maturity (ongoing)
+## Phase 4 — Ops maturity ✅ Complete
 
 Goal: Maintainability and team scale.
 
@@ -112,15 +112,16 @@ Goal: Maintainability and team scale.
 
 ### Phase 4 master checklist
 
-- [ ] DOC-011 — CONTRIBUTING.md
-- [ ] DOC-012 — SECURITY.md
-- [ ] D-009 — docker-compose.yml
-- [ ] B-004 — Settings module
-- [ ] B-012 — Deps manifest unified
-- [ ] F-009 — Radix cleanup
-- [ ] F-007 — loading.tsx routes
-- [ ] F-008 — A11y improvements
-- [ ] D-015 — pre-commit (optional)
+- [x] DOC-011 — CONTRIBUTING.md
+- [x] DOC-012 — SECURITY.md
+- [x] D-009 — docker-compose.yml
+- [x] B-004 — Settings module (`app/core/settings.py`)
+- [x] B-012 — Deps manifest unified (requirements.txt canonical)
+- [x] F-009 — Radix cleanup
+- [x] F-007 — loading.tsx routes
+- [x] F-008 — A11y improvements
+- [x] D-015 — pre-commit (optional)
+- [x] B-008 — Structured errors adopted (login + handler)
 
 ---
 
