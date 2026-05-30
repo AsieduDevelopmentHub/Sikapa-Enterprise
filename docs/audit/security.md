@@ -145,7 +145,7 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 - [x] **P2** — Resolved
 
-**Location:** [docs/security/security-policy.md](../security/security-policy.md). GitHub: [.github/SECURITY.md](../../.github/SECURITY.md) redirects to canonical doc.
+**Location:** [.github/SECURITY.md](../../.github/SECURITY.md).
 
 ---
 
