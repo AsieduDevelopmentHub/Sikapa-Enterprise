@@ -140,7 +140,7 @@ def validate_sku(sku: str) -> str:
     sku = sku.strip().upper()
 
     if not re.match(ValidationRules.SKU_REGEX, sku):
-        raise ValueError("SKU must be 3-15 characters (alphanumeric and hyphens)")
+        raise ValueError("SKU must be 3-10 characters (alphanumeric and hyphens)")
 
     return sku
 

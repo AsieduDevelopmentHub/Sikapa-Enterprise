@@ -2,7 +2,7 @@
 
 Phased plan to close audit gaps. Check items off here and in the area-specific docs.
 
-**Current focus:** Phase 4 complete — ongoing ops (May 2026)
+**Current focus:** Phases 1–5 complete — incremental hardening & optional expansions (May 2026)
 
 **Legend:** S = small (hours), M = medium (days), L = large (week+)
 

@@ -20,16 +20,17 @@
 
 ### M-002 — Minimal test coverage
 
-- [ ] **P0** — Expand beyond splash widget test
+- [x] **P0** — Core tests added (`router_auth_test.dart`, `checkout_test.dart`, DSA)
+- [ ] **P2** — Optional: Paystack WebView mock, broader integration
 
-**Current:** `mobile/test/widget_test.dart` — boots app, finds "Sikapa" text.
+**Current:** `router_auth_test.dart`, `checkout_test.dart`, `widget_test.dart`, `dsa_test.dart`.
 
 **Priority tests:**
 
-- [ ] Auth redirect for protected routes (`router.dart`)
-- [ ] Checkout shipping options and order create body
-- [ ] Admin gate for non-admin users
-- [ ] API path constants match web (`v1_paths.dart` vs `frontend/lib/api/v1-paths.ts`)
+- [x] Auth redirect for protected routes (`router.dart`)
+- [x] Checkout shipping options and order create body
+- [x] Admin gate for non-admin users
+- [x] API path constants match web (CI script `check_api_path_sync.py`)
 - [ ] Paystack WebView flow (mock Dio)
 
 **Files:** `mobile/test/`, `mobile/lib/src/router.dart`
@@ -73,7 +74,7 @@
 
 ### M-005 — Dual path files must stay in sync
 
-- [ ] **P1** — Add CI check or shared codegen
+- [x] **P1** — CI check via `scripts/check_api_path_sync.py` + pre-commit hook
 
 **Problem:** Backend route changes require manual updates to both:
 
@@ -116,7 +117,7 @@
 
 ### M-008 — Mobile not in main `ci.yml`
 
-- [ ] **P1** — Required check on `main`
+- [x] **P1** — Mobile job in main `ci.yml` (analyze + test)
 
 **Problem:** Mobile CI only runs via `mobile-build.yml` on `main`/`mobile` when `mobile/**` changes.
 

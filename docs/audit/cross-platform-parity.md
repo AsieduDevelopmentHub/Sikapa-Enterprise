@@ -68,9 +68,9 @@ When backend routes change, update **both**:
 | Token storage | localStorage / sessionStorage | flutter_secure_storage |
 | Route protection | Client components | go_router redirects |
 | Admin RBAC | `admin-permissions.ts` | Mirrors web permissions |
-| Server-side session | ❌ | N/A |
+| Server-side session | ✅ `sikapa_session` cookie + proxy gate | N/A |
 
-**Shared gap:** No server-validated session for web admin — [frontend.md](./frontend.md#f-003).
+**Web admin:** Server-validated via HttpOnly cookie — [frontend.md](./frontend.md#f-003) ✅
 
 ---
 
@@ -78,16 +78,16 @@ When backend routes change, update **both**:
 
 | Aspect | Web | Mobile |
 |--------|-----|--------|
-| CI in `ci.yml` | ✅ lint, build, test | ❌ separate workflow |
+| CI in `ci.yml` | ✅ lint, build, test | ✅ analyze, test |
 | Release automation | Vercel deploy | `mobile-v*` tags → APK/AAB |
-| Version in manifest | `package.json` 0.1.0 | `pubspec.yaml` drift — [mobile.md](./mobile.md#m-001) |
+| Version in manifest | `package.json` 0.1.0 | `1.2.1+3` synced — [mobile.md](./mobile.md#m-001) |
 
 ---
 
 ## Parity action items
 
 - [ ] **P1** — Decide web-only admin features: port vs permanent web-only ([mobile.md](./mobile.md#m-004))
-- [ ] **P1** — API path sync check in CI ([mobile.md](./mobile.md#m-005))
+- [x] **P1** — API path sync check in CI ([mobile.md](./mobile.md#m-005))
 - [ ] **P2** — FCM admin push ([mobile.md](./mobile.md#m-003))
 - [ ] **P2** — Coupon CRUD on mobile (if required by product)
 - [ ] **P3** — Web shipped-order notifications (optional parity with mobile)

@@ -9,14 +9,8 @@
 
 ### D-001 — No automated dependency updates or audits
 
-- [ ] **P0**
-
-**Missing:**
-
-- [ ] `.github/dependabot.yml`
-- [ ] `npm audit` in frontend CI
-- [ ] `pip-audit` in backend CI
-- [ ] CodeQL or Trivy
+- [x] **P0** — Dependabot + npm audit + pip-audit in CI
+- [ ] **P2** — Hard-fail on audit findings (currently `continue-on-error: true`); CodeQL/Trivy optional
 
 **Fix — Dependabot example:**
 
@@ -66,7 +60,7 @@ Add CI steps after install:
 
 ### D-003 — Mobile excluded from `ci.yml`
 
-- [ ] **P1**
+- [x] **P1** — Mobile job in `ci.yml` (analyze + test)
 
 **Problem:** Backend + frontend PRs can merge without Flutter validation unless `mobile/**` changed on `mobile-build.yml` path filter.
 
@@ -76,7 +70,7 @@ Add CI steps after install:
 
 ### D-004 — No backend lint/type check
 
-- [ ] **P1**
+- [x] **P1** — Ruff in CI (`ruff check app tests`)
 
 **Problem:** CI only runs pytest — no Ruff, Black, mypy, or bandit.
 
@@ -94,7 +88,7 @@ Add `ruff.toml` or configure in `pyproject.toml`.
 
 ### D-005 — Frontend tests are smoke-only
 
-- [ ] **P0**
+- [x] **P0** — Real Vitest suites in CI (see [frontend.md](./frontend.md#f-005))
 
 See [frontend.md](./frontend.md#f-005).
 
@@ -102,7 +96,8 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-006 — Lighthouse non-gating
 
-- [ ] **P2**
+- [x] **P2** — `lighthouserc.json` accessibility min 0.9 set to `error`
+- [ ] **P3** — Workflow step still `continue-on-error: true` (does not block PR merge)
 
 **Problem:** `.github/workflows/lighthouse.yml` and step use `continue-on-error: true`; budgets in `lighthouserc.json` are warn-only.
 
@@ -132,7 +127,7 @@ CI and `scripts/ci-local.ps1` set **`SECRET_KEY`** only (legacy `JWT_SECRET_*` r
 
 ### D-009 — No docker-compose for local stack
 
-- [ ] **P2**
+- [x] **P2** — Root `docker-compose.yml` (Postgres + Redis)
 
 **Fix:** Add `docker-compose.yml` at repo root: postgres + redis + backend (optional frontend via host).
 
@@ -140,7 +135,7 @@ CI and `scripts/ci-local.ps1` set **`SECRET_KEY`** only (legacy `JWT_SECRET_*` r
 
 ### D-010 — Docker hardening
 
-- [ ] **P1**
+- [x] **P1** — Multi-stage, non-root, `requirements-prod.txt`
 
 **Problems:**
 
@@ -174,7 +169,7 @@ CI and `scripts/ci-local.ps1` set **`SECRET_KEY`** only (legacy `JWT_SECRET_*` r
 
 ### D-013 — No error tracking integrated
 
-- [ ] **P1**
+- [x] **P1** — Sentry env-gated on backend + frontend
 
 **Problem:** Docs mention Sentry/Datadog; not wired in code.
 
@@ -199,7 +194,7 @@ CI and `scripts/ci-local.ps1` set **`SECRET_KEY`** only (legacy `JWT_SECRET_*` r
 
 ### D-015 — No pre-commit lint/test hooks
 
-- [ ] **P2**
+- [x] **P2** — `.pre-commit-config.yaml` (Ruff, ESLint, API path sync)
 
 **Current:** `.githooks/` only strips commit trailers (opt-in via `git config core.hooksPath .githooks`).
 

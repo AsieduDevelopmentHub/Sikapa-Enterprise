@@ -9,8 +9,8 @@
 
 ### B-001 — Dead env vars (rate limit & DB pool)
 
-- [x] **P0** — Wire API rate limit env vars (**done** — sliding window + middleware)
-- [ ] **P0** — Wire `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` in `app/db.py` or remove from `.env.example`
+- [x] **P0** — Wire API rate limit env vars (**done** — sliding window + middleware in `main.py`)
+- [x] **P0** — Wire `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` in `app/db.py` via `settings.py`
 
 **Problem:** `backend/.env.example` documents settings that application code never reads.
 
@@ -31,7 +31,7 @@
 
 ### B-002 — Schema management split (Alembic vs `create_all`)
 
-- [ ] **P0** — Single source of truth for schema
+- [x] **P0** — Single source of truth for schema (dev gated behind `DEV_AUTO_CREATE_TABLES`, default off)
 
 **Problem:**
 
@@ -64,7 +64,7 @@
 
 ### B-004 — No centralized config
 
-- [ ] **P2** — Introduce pydantic-settings or equivalent
+- [x] **P2** — Introduce pydantic-settings (**done** — `app/core/settings.py`; incremental migration ongoing)
 
 **Problem:** Configuration is scattered `os.getenv()` calls across `main.py`, `db.py`, `security.py`, and service modules.
 
@@ -76,7 +76,8 @@
 
 ### B-005 — SlowAPI only on auth; in-memory without Redis
 
-- [ ] **P1** — Global rate limits + Redis on multi-instance deploy
+- [x] **P1** — Global prefix rate limits wired (`API_RATE_LIMIT_*` middleware)
+- [ ] **P1** — Redis-backed prefix limits on multi-instance deploy (SlowAPI auth limits use Redis; prefix limiter in-memory)
 
 **Problem:** Without `REDIS_URL`, SlowAPI uses in-memory storage — ineffective on multi-instance Render.
 
@@ -92,7 +93,7 @@
 
 ### B-006 — Dead import in auth routes
 
-- [ ] **P3** — Remove unused import
+- [x] **P3** — Removed unused `password_reset_limiter` import from `auth/routes.py`
 
 **Problem:** `password_reset_limiter` imported but unused in `app/api/v1/auth/routes.py`.
 
@@ -117,7 +118,7 @@
 
 ### B-008 — Structured errors unused
 
-- [ ] **P2** — Use or remove `app/core/errors.py`
+- [x] **P2** — Adopted for login path (`InvalidCredentialsError` + handler); broader route adoption optional
 
 **Problem:** `AuthenticationError`, `ValidationError`, etc. are defined but routes use plain `HTTPException`.
 
@@ -127,7 +128,7 @@
 
 ### B-009 — SKU validation mismatch
 
-- [ ] **P3** — Align docstring and regex
+- [x] **P3** — Error message aligned to regex (3–10 chars)
 
 **Problem:** `validate_sku()` docstring says 3–15 chars; `SKU_REGEX` allows 3–10.
 
@@ -139,14 +140,16 @@
 
 ### B-010 — Thin coverage outside auth/Paystack
 
-- [ ] **P0** — Add integration tests for money paths
+- [x] **P0** — Core money path tests added (`test_orders_paystack_flow.py`, `test_admin_permissions.py`)
+- [ ] **P1** — Broader coverage still open (webhook route, OAuth, RLS, catalog, returns/reviews)
 
-**Current tests (~48):** auth, rate limit, Paystack, email smoke, category resolve.
+**Current tests (~70):** auth, rate limit, Paystack, orders flow, admin RBAC, DSA, settings/errors.
 
-**Missing tests:**
+**Still missing (optional expansion):**
 
-- [ ] Admin API (products, orders, users, inventory, coupons, settings, analytics)
-- [ ] Cart → order create → Paystack init → webhook
+- [ ] Admin API breadth (products, orders CRUD beyond RBAC, inventory, coupons, analytics)
+- [x] Cart → order create → Paystack init (verify in `test_orders_paystack_flow.py`)
+- [ ] Paystack webhook **HTTP route** integration test
 - [ ] Public catalog/search
 - [ ] Returns and reviews (including media upload)
 - [ ] Google OAuth flow
@@ -172,7 +175,7 @@
 
 ### B-012 — Dual dependency manifests diverge
 
-- [ ] **P2** — Single Python dependency source
+- [x] **P2** — Single Python dependency source (`requirements.txt` canonical; `pyproject.toml` synced May 2026)
 
 **Problem:** `requirements.txt` and `pyproject.toml` disagree (e.g. `python-multipart`, missing slowapi/resend/nh3 in pyproject).
 
@@ -192,7 +195,7 @@ Test harnesses use `SECRET_KEY` only (see D-008 in [devops-ci.md](./devops-ci.md
 
 ### B-014 — Static `/uploads` mount in dev
 
-- [ ] **P2** — Guard production misconfiguration
+- [x] **P2** — Production fail-fast when `UPLOAD_SERVE_LOCAL=true` (`startup_checks.py`)
 
 **Problem:** `UPLOAD_SERVE_LOCAL=true` mounts local uploads; warned in startup but easy to misconfigure on prod.
 
