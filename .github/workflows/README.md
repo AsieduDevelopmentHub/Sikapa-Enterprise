@@ -49,7 +49,16 @@ Triggers: push/PR to **`main`** or **`dev/develop`**.
 
 ### `dev-develop-auto-pr.yml`
 
-After a push to **`dev/develop`**, opens a PR **`dev/develop` → `main`** only when staging is **at least 10 commits ahead** of `main` (configurable via workflow_dispatch). If a PR is already open, subsequent pushes still refresh auto-merge. Merges use **squash** to keep `main` history compact and limit Render redeploy noise. Requires `GH_ACTIONS_PR_TOKEN` for auto-merge.
+After a push to **`dev/develop`**, opens a PR **`dev/develop` → `main`** only when staging is **at least 10 commits ahead** of `main` (configurable via workflow_dispatch). If a PR is already open, subsequent pushes still refresh auto-merge. Merges use **squash** to keep `main` history compact and limit Render redeploy noise.
+
+**Secrets & repo settings (if auto-merge or sync dispatch fails):**
+
+| Issue | Fix |
+|-------|-----|
+| `Auto merge is not allowed` / `enablePullRequestAutoMerge` | Repo **Settings → General** → enable **Allow auto-merge**. Then **Settings → Pull requests** → allow squash merge. |
+| `GH_ACTIONS_PR_TOKEN` | Fine-grained PAT on the repo: **Contents** (write), **Pull requests** (write), **Actions** (write). Add as repo secret `GH_ACTIONS_PR_TOKEN`. |
+| `HTTP 403` on `gh workflow run` | Default `GITHUB_TOKEN` cannot always trigger other workflows. Use `GH_ACTIONS_PR_TOKEN` with **Actions: write**, and ensure **Settings → Actions → General → Workflow permissions** allows GitHub Actions to run workflows (not “Read repository contents” only). |
+| **trigger_sync** still 403 | Run **Sync main to dev/develop** manually (confirm `YES`) instead of chaining from auto-PR. |
 
 ### `sync-main-to-dev-develop.yml`
 

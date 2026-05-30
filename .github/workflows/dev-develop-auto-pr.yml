@@ -33,6 +33,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      # Required for `gh workflow run` when trigger_sync is enabled (else HTTP 403).
+      actions: write
     continue-on-error: true
     steps:
       - name: Checkout repository
@@ -86,10 +88,15 @@ jobs:
 
       - name: Dispatch sync main to dev/develop
         if: github.event_name == 'workflow_dispatch' && inputs.trigger_sync == true
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
         run: |
           set -euo pipefail
+          if [ -z "${{ secrets.GH_ACTIONS_PR_TOKEN }}" ]; then
+            echo "Note: trigger_sync often needs GH_ACTIONS_PR_TOKEN (PAT with actions:write)."
+            echo "Or run Sync manually: Actions → Sync main to dev/develop → confirm=YES"
+          fi
           echo "Dispatching Sync main to dev/develop..."
           gh workflow run sync-main-to-dev-develop.yml \
             --ref main \
