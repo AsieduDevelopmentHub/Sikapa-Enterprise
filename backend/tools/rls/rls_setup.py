@@ -134,6 +134,14 @@ def setup_rls_policies() -> None:
         $$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
         """,
         """
+        CREATE OR REPLACE FUNCTION app.delete_review_media_rows(p_review_id integer)
+        RETURNS void AS $$
+        BEGIN
+          DELETE FROM reviewmedia WHERE review_id = p_review_id;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+        """,
+        """
         CREATE OR REPLACE FUNCTION app.get_order_user_for_paystack(p_ref text)
         RETURNS integer AS $$
           SELECT user_id FROM "order" WHERE paystack_reference = p_ref LIMIT 1;

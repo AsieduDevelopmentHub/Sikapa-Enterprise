@@ -59,6 +59,11 @@ class ReviewSchema(BaseModel):
         from_attributes = True
 
 
+class ReviewWithMediaSchema(ReviewSchema):
+    """Review row with attached media (account + admin moderation)."""
+    media: List[ReviewMediaRead] = []
+
+
 class ReviewPublic(BaseModel):
     id: int
     product_id: int

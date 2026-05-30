@@ -6,7 +6,7 @@ from sqlmodel import Session, select, func
 
 from app.models import Review, Product, Order, OrderItem, ReviewMedia, User
 from app.core.pg_rls_auth import users_public_profiles_for_ids
-from app.api.v1.reviews.schemas import ReviewCreateSchema, ReviewMediaRead, ReviewPublic
+from app.api.v1.reviews.schemas import ReviewCreateSchema, ReviewMediaRead, ReviewPublic, ReviewWithMediaSchema
 
 
 def _media_for_reviews(session: Session, review_ids: list[int]) -> dict[int, list[ReviewMediaRead]]:
@@ -160,14 +160,28 @@ async def list_product_reviews_public(
     return out
 
 
-async def get_user_reviews(session: Session, user_id: int) -> list[Review]:
+def serialize_reviews_with_media(
+    session: Session, reviews: list[Review]
+) -> list[ReviewWithMediaSchema]:
+    if not reviews:
+        return []
+    media_by = _media_for_reviews(session, [r.id for r in reviews if r.id is not None])
+    out: list[ReviewWithMediaSchema] = []
+    for r in reviews:
+        base = ReviewWithMediaSchema.model_validate(r)
+        base.media = media_by.get(r.id, [])
+        out.append(base)
+    return out
+
+
+async def get_user_reviews(session: Session, user_id: int) -> list[ReviewWithMediaSchema]:
     """Get all reviews by a user."""
     reviews = session.exec(
         select(Review)
         .where(Review.user_id == user_id)
         .order_by(Review.created_at.desc())
     ).all()
-    return reviews
+    return serialize_reviews_with_media(session, reviews)
 
 
 async def delete_review(session: Session, review_id: int, user_id: int) -> None:

@@ -167,6 +167,7 @@ export type AdminReview = {
   title: string;
   content?: string | null;
   created_at: string;
+  media?: import("@/lib/api/reviews").ReviewMediaRow[];
 };
 
 export type InventoryAdjustmentRow = {
