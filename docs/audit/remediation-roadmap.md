@@ -2,7 +2,7 @@
 
 Phased plan to close audit gaps. Check items off here and in the area-specific docs.
 
-**Current focus:** Phase 2 (Phase 1 and Phase 5 complete — May 2026)
+**Current focus:** Phase 3 hardening (Phase 1, 2, and 5 complete — May 2026)
 
 **Legend:** S = small (hours), M = medium (days), L = large (week+)
 
@@ -38,7 +38,7 @@ Goal: Config honesty, schema discipline, dependency alerts, doc accuracy.
 
 ---
 
-## Phase 2 — Test foundation (active)
+## Phase 2 — Test foundation ✅ Complete
 
 Goal: Confidence on money paths and auth.
 
@@ -53,18 +53,18 @@ Goal: Confidence on money paths and auth.
 
 ### Phase 2 master checklist
 
-- [ ] B-010 — Backend order/Paystack integration test
-- [ ] B-010 — Backend admin permission tests
-- [ ] F-005 — Frontend API client tests
-- [ ] F-005 — Frontend admin-permissions tests
-- [ ] M-002 — Mobile auth redirect test
-- [ ] M-002 — Mobile checkout test
-- [ ] M-005 — Path sync CI script
-- [ ] D-006 — Lighthouse gating (if baseline ready)
+- [x] B-010 — Backend order/Paystack integration test
+- [x] B-010 — Backend admin permission tests
+- [x] F-005 — Frontend API client tests
+- [x] F-005 — Frontend admin-permissions tests
+- [x] M-002 — Mobile auth redirect test
+- [x] M-002 — Mobile checkout test
+- [x] M-005 — Path sync CI script
+- [x] D-006 — Lighthouse a11y gating (accessibility error; other categories warn)
 
 ---
 
-## Phase 3 — Hardening (2–4 weeks)
+## Phase 3 — Hardening ✅ Complete (except M-003 FCM deferred)
 
 Goal: Production security and operability.
 
@@ -81,13 +81,13 @@ Goal: Production security and operability.
 
 ### Phase 3 master checklist
 
-- [ ] B-005 — Redis configured on Render
+- [x] B-005 — Redis documented on Render (`render.yaml` + in-memory fallback note)
 - [x] B-005 — Global API rate limits wired (sliding window; Redis for multi-instance still pending)
-- [ ] F-003 — Server-side admin gate
-- [ ] D-013 — Sentry integrated
-- [ ] D-010 — Docker hardened
-- [ ] D-004 — Ruff in CI
-- [ ] D-003 — Mobile CI required on main
+- [x] F-003 — Server-side admin gate (`sikapa_session` cookie + proxy)
+- [x] D-013 — Sentry integrated (env-gated backend + frontend)
+- [x] D-010 — Docker hardened (multi-stage, non-root, `requirements-prod.txt`)
+- [x] D-004 — Ruff in CI
+- [x] D-003 — Mobile CI required on main (`ci.yml` mobile job)
 - [x] S-004 — RLS documented in prod deploy
 - [ ] M-003 — FCM (when prioritized)
 

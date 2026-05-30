@@ -162,7 +162,14 @@ def authenticate_user(session: Session, identifier: str, password: str) -> User:
 def create_user_tokens(user: User) -> dict:
     """Create access and refresh tokens for user."""
     subject = str(user.id)
-    access_token = create_access_token({"sub": subject})
+    claims = {
+        "sub": subject,
+        "is_admin": bool(user.is_admin),
+    }
+    role = (user.admin_role or "").strip()
+    if role:
+        claims["admin_role"] = role
+    access_token = create_access_token(claims)
     refresh_token = create_refresh_token({"sub": subject})
 
     return {
@@ -223,7 +230,14 @@ def refresh_access_token(session: Session, refresh_token: str) -> dict:
     _blacklist_token(session, user.id, refresh_token, payload)
 
     subject = str(user.id)
-    new_access_token = create_access_token({"sub": subject})
+    claims = {
+        "sub": subject,
+        "is_admin": bool(user.is_admin),
+    }
+    role = (user.admin_role or "").strip()
+    if role:
+        claims["admin_role"] = role
+    new_access_token = create_access_token(claims)
     new_refresh_token = create_refresh_token({"sub": subject})
 
     return {

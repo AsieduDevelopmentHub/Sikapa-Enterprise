@@ -78,6 +78,11 @@ if ($runBackend) {
             $env:PAYSTACK_SECRET_KEY = ""
             # Use project venv only — do not install into global Python.
             & $BackendPython -m pip install -r requirements.txt -q
+            & $BackendPython -m pip install ruff -q
+            & $BackendPython -m ruff check app tests
+            Set-Location $Root
+            & $BackendPython scripts/check_api_path_sync.py
+            Set-Location "$Root\backend"
             & $BackendPython -m pytest tests/ -v --tb=short --cov=app --cov-report=xml
         }
     } catch {

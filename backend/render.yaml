@@ -16,6 +16,10 @@ services:
       - key: CORS_ALLOW_CREDENTIALS
       - key: FRONTEND_URL
       - key: REDIS_URL
+        sync: false
+      # Attach a Render Redis instance and set REDIS_URL for shared rate limits,
+      # Celery, and cross-instance cache (B-005). Without Redis the API falls
+      # back to in-memory limits per instance.
       - key: USE_CELERY
         value: false
       - key: HTTPS_ENABLED

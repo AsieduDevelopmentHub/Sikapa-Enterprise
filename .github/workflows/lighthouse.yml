@@ -28,9 +28,8 @@ jobs:
       contents: read
       actions: read
       pull-requests: write
-    # Lighthouse is a signal, not a gate. Keep the job green while we burn in
-    # the numbers; flip to `false` when budgets in lighthouserc.json are real.
-    continue-on-error: true
+    # Accessibility is gated; performance/SEO remain advisory until budgets are tuned.
+    continue-on-error: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

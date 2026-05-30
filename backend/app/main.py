@@ -27,10 +27,13 @@ from app.core.startup_checks import (
     warn_dev_secret,
 )
 from app.core.cache import cache
+from app.core.observability import init_sentry
 from app.db import create_db_and_tables
 
 # Do not override env vars already set (CI, pytest conftest, Render dashboard).
 load_dotenv(override=False)
+
+init_sentry()
 
 logging.basicConfig(
     level=logging.INFO,

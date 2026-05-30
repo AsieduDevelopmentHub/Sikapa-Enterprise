@@ -1,6 +1,7 @@
 import { detectMaintenanceResponse, parseApiErrorBody } from "@/lib/api/error-message";
 import { V1 } from "@/lib/api/v1-paths";
 import { getActiveBucket, readTokens, writeTokens } from "@/lib/auth-storage";
+import { syncSessionCookie } from "@/lib/session-cookie";
 
 async function readErrorBody(res: Response): Promise<string> {
   return res.text().catch(() => "");
@@ -59,6 +60,7 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
       };
       const bucket = getActiveBucket();
       writeTokens(tokens.access_token, tokens.refresh_token ?? rt, bucket);
+      void syncSessionCookie(tokens.access_token);
       window.dispatchEvent(new CustomEvent("sikapa-auth-refreshed", { detail: tokens.access_token }));
       return tokens.access_token;
     } catch {

@@ -532,6 +532,8 @@ async def update_order_status(
     session.refresh(order)
 
     try:
+        from app.core.cache import invalidate_admin_operational_cache
+
         invalidate_admin_operational_cache()
     except Exception:
         pass

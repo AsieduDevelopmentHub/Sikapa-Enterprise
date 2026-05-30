@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { writeTokens } from "@/lib/auth-storage";
+import { syncSessionCookie } from "@/lib/session-cookie";
 
 export default function GoogleOAuthCallbackPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function GoogleOAuthCallbackPage() {
     if (access) {
       try {
         writeTokens(access, refresh, "local");
+        void syncSessionCookie(access);
         window.dispatchEvent(new Event("sikapa-auth-storage-updated"));
       } catch {
         /* ignore */
