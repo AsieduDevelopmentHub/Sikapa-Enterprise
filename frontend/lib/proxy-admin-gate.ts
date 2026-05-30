@@ -24,9 +24,10 @@ export function applyAdminAuthGate(request: NextRequest): NextResponse | null {
 
   if (allowed) return null;
 
-  const login = request.nextUrl.clone();
-  login.pathname = "/login";
   const fromPath = pathname.replace(/^\/admin/, "/system");
+  const login = request.nextUrl.clone();
+  login.pathname = "/account";
+  login.search = "";
   login.searchParams.set("from", fromPath);
   return NextResponse.redirect(login);
 }

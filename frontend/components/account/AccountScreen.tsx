@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 import { AccountAuthForm } from "@/components/auth/AccountAuthForm";
 import { AccountSignedInHub, type AccountPanel } from "@/components/account/AccountSignedInHub";
 import { useAuth } from "@/context/AuthContext";
 import { authPasswordResetRequest } from "@/lib/api/auth";
+import { sanitizeAdminReturnPath } from "@/lib/admin-return-path";
 import { formatOAuthErrorParam } from "@/lib/oauth";
+import { syncSessionCookie } from "@/lib/session-cookie";
 import { validateEmail } from "@/lib/validation/input";
 
 export function AccountScreen({ initialPanel }: { initialPanel?: AccountPanel } = {}) {
+  const router = useRouter();
   const { user, loading, accessToken } = useAuth();
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
@@ -27,6 +31,30 @@ export function AccountScreen({ initialPanel }: { initialPanel?: AccountPanel } 
     u.searchParams.delete("oauth_error");
     window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
   }, []);
+
+  useEffect(() => {
+    if (loading || !user || !accessToken) return;
+    const from = sanitizeAdminReturnPath(new URLSearchParams(window.location.search).get("from"));
+    if (!from) return;
+
+    if (!user.is_admin) {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("from");
+      window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      await syncSessionCookie(accessToken);
+      if (cancelled) return;
+      router.replace(from);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user, accessToken, router]);
 
   if (loading && !user) {
     return (

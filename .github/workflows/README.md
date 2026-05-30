@@ -49,7 +49,11 @@ Triggers: push/PR to **`main`** or **`dev/develop`**.
 
 ### `dev-develop-auto-pr.yml`
 
-After a push to **`dev/develop`**, opens a PR **`dev/develop` → `main`** only when staging is **at least 10 commits ahead** of `main` (configurable via workflow_dispatch). If a PR is already open, subsequent pushes still refresh auto-merge. Requires `GH_ACTIONS_PR_TOKEN` for auto-merge.
+After a push to **`dev/develop`**, opens a PR **`dev/develop` → `main`** only when staging is **at least 10 commits ahead** of `main` (configurable via workflow_dispatch). If a PR is already open, subsequent pushes still refresh auto-merge. Merges use **squash** to keep `main` history compact and limit Render redeploy noise. Requires `GH_ACTIONS_PR_TOKEN` for auto-merge.
+
+### `sync-main-to-dev-develop.yml`
+
+After every push to **`main`** (including squash promotes), resets **`dev/develop`** to match **`main`** exactly. That prevents the next auto-PR from replaying commits that are already on `main` under a squash commit (the usual cause of false merge conflicts). New staging work should land on **`dev/develop`** only after this sync finishes.
 
 ### `mobile-build.yml` (Android job)
 
@@ -95,3 +99,4 @@ Before marking mobile or backend work **complete**:
 2. Fix failures; re-run until green.
 3. Push to **`dev/develop`**; CI runs automatically.
 4. Open or use the auto PR **`dev/develop` → `main`** when ready for production.
+5. After squash merge, **`sync-main-to-dev-develop.yml`** resets **`dev/develop`** to **`main`** — continue new work on **`dev/develop`** from there.
