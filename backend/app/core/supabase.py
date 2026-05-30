@@ -1,8 +1,9 @@
 """
 Supabase storage helper.
 """
-import os
 import logging
+import mimetypes
+import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -16,6 +17,19 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET_NAME", "product-images")
 
 _supabase_client: Client | None = None
+
+
+def guess_content_type(path: str) -> str:
+    guessed, _ = mimetypes.guess_type(path)
+    return guessed or "application/octet-stream"
+
+
+def normalize_public_url(url: str | None) -> str | None:
+    """storage3 get_public_url() may append a bare '?' — Supabase returns 400 for that."""
+    if not url:
+        return None
+    cleaned = url.strip().rstrip("?")
+    return cleaned or None
 
 
 def get_supabase_client() -> Client | None:
@@ -63,6 +77,9 @@ def _ensure_bucket_exists(client: Client) -> None:
                             "image/webp",
                             "image/gif",
                             "image/svg+xml",
+                            "video/mp4",
+                            "video/webm",
+                            "video/quicktime",
                         ],
                     },
                 )
@@ -83,30 +100,38 @@ def get_public_url(path: str) -> str | None:
 
     try:
         response = client.storage.from_(SUPABASE_STORAGE_BUCKET).get_public_url(path)
+        raw = None
         if isinstance(response, str) and response:
-            return response
-        if isinstance(response, dict) and response.get("public_url"):
-            return response["public_url"]
+            raw = response
+        elif isinstance(response, dict) and response.get("public_url"):
+            raw = response["public_url"]
+        return normalize_public_url(raw)
     except Exception as e:
         logger.error(f"Error getting public URL for {path}: {e}")
     
     return None
 
 
-def upload_file(file_path: str, file_data: bytes) -> str | None:
+def upload_file(
+    file_path: str,
+    file_data: bytes,
+    *,
+    content_type: str | None = None,
+) -> str | None:
     """Upload a file to Supabase storage and return the public URL."""
     client = get_supabase_client()
     if not client:
         logger.warning("Supabase client not available for upload")
         return None
 
+    mime = content_type or guess_content_type(file_path)
     try:
         client.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
             path=file_path,
             file=file_data,
-            file_options={"content-type": "application/octet-stream"},
+            file_options={"content-type": mime, "upsert": "true"},
         )
-        logger.info(f"Uploaded file to Supabase: {file_path}")
+        logger.info(f"Uploaded file to Supabase: {file_path} ({mime})")
         return get_public_url(file_path)
     except Exception as e:
         logger.error(f"Error uploading file {file_path}: {e}")

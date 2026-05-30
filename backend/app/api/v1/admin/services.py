@@ -425,7 +425,7 @@ async def upload_product_image(
         )
 
     # Try Supabase upload first
-    public_url = upload_file(storage_path, file_bytes)
+    public_url = upload_file(storage_path, file_bytes, content_type=file.content_type or None)
 
     if public_url:
         logger.info("Successfully uploaded image to Supabase: %s", storage_path)

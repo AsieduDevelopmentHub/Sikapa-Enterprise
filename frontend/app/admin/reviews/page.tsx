@@ -14,7 +14,7 @@ import {
 } from "@/lib/api/admin";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminReviewsListSkeleton } from "@/components/admin/Skeleton";
-import { getBackendOrigin } from "@/lib/api/client";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 export default function AdminReviewsPage() {
@@ -63,9 +63,7 @@ export default function AdminReviewsPage() {
     });
   }, [rows, query, products, users]);
 
-  const backendOrigin = typeof window !== "undefined" ? getBackendOrigin() : "";
-  const resolveMediaUrl = (url: string): string =>
-    url.startsWith("http") ? url : `${backendOrigin}${url}`;
+  const resolveReviewMediaUrl = (url: string) => resolveMediaUrl(url);
 
   return (
     <div className="w-full min-w-0 max-w-full">
@@ -106,7 +104,7 @@ export default function AdminReviewsPage() {
                     <p className="text-[11px] font-semibold text-sikapa-text-muted">
                       {r.media.length} attached file{r.media.length === 1 ? "" : "s"}
                     </p>
-                    <ReviewMediaGallery media={r.media} resolveUrl={resolveMediaUrl} />
+                    <ReviewMediaGallery media={r.media} resolveUrl={resolveReviewMediaUrl} />
                   </div>
                 ) : null}
                 <Link

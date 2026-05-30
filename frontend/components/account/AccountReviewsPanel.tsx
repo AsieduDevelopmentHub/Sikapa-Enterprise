@@ -6,7 +6,7 @@ import { StarRating } from "@/components/StarRating";
 import { ReviewMediaManager } from "@/components/reviews/ReviewMediaManager";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
-import { getBackendOrigin } from "@/lib/api/client";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { fetchProductById } from "@/lib/api/products";
 import { reviewsDelete, reviewsMine, type ReviewRow } from "@/lib/api/reviews";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
@@ -50,9 +50,7 @@ export function AccountReviewsPanel() {
     void load();
   }, [load]);
 
-  const backendOrigin = typeof window !== "undefined" ? getBackendOrigin() : "";
-  const resolveMediaUrl = (url: string): string =>
-    url.startsWith("http") ? url : `${backendOrigin}${url}`;
+  const resolveReviewMediaUrl = (url: string) => resolveMediaUrl(url);
 
   async function removeReview(review: ReviewRow) {
     if (!accessToken) return;
@@ -146,7 +144,7 @@ export function AccountReviewsPanel() {
                   reviewId={r.id}
                   media={r.media ?? []}
                   accessToken={accessToken}
-                  resolveUrl={resolveMediaUrl}
+                  resolveUrl={resolveReviewMediaUrl}
                   onChanged={load}
                 />
               </div>
