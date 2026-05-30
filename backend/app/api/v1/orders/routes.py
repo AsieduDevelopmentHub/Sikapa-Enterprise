@@ -212,9 +212,13 @@ async def create_order(
         current_user.id
     )
     
-    # Invalidate admin analytics cache since a new order was placed
-    from app.core.cache import cache
-    cache.delete_pattern("admin:dashboard:*")
+    from app.core.cache import (
+        invalidate_admin_operational_cache,
+        invalidate_storefront_catalog_cache,
+    )
+
+    invalidate_admin_operational_cache()
+    invalidate_storefront_catalog_cache()
     
     return order
 

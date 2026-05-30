@@ -20,6 +20,7 @@ import {
 } from "@/lib/admin-permissions";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminStaffListSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 function PermissionsCheckboxes({
   catalog,
@@ -83,7 +84,7 @@ export default function AdminStaffPage() {
 
   const isSuperViewer = (me?.admin_role ?? "").toLowerCase() === "super_admin";
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
     try {
       const data = await adminFetchUsers(accessToken, { limit: 100 });
@@ -98,13 +99,11 @@ export default function AdminStaffPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setReady(true);
+      if (!opts?.silent) setReady(true);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken]);
 
   useEffect(() => {
     setPermDrafts((prev) => {

@@ -17,9 +17,11 @@ import {
   TRENDING_SEARCHES,
   addRecentSearch,
   clearRecentSearches,
-  matchesQuery,
   readRecentSearches,
 } from "@/lib/search-helpers";
+import { buildProductTrie } from "@/lib/dsa";
+import type { MockProduct } from "@/lib/mock-data";
+import { fetchProductSuggest, mapSuggestToMock } from "@/lib/api/products";
 import { cleanImageUrl } from "@/lib/clean-image-url";
 
 type Props = {
@@ -64,11 +66,36 @@ export function SearchAutocomplete({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
+  const productTrie = useMemo(() => buildProductTrie(products), [products]);
+  const [apiSuggestions, setApiSuggestions] = useState<MockProduct[]>([]);
+
+  useEffect(() => {
+    const q = term.trim().toLowerCase();
+    if (q.length < 2) {
+      setApiSuggestions([]);
+      return;
+    }
+    if (productTrie.searchPrefix(q, 1).length > 0) {
+      setApiSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchProductSuggest(q, MAX_SUGGESTIONS).then((rows) => {
+      if (cancelled) return;
+      setApiSuggestions(rows.map((r) => mapSuggestToMock(r, [])));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [term, productTrie]);
+
   const suggestions = useMemo(() => {
-    const q = term.trim();
+    const q = term.trim().toLowerCase();
     if (!q) return [];
-    return products.filter((p) => matchesQuery(p, q)).slice(0, MAX_SUGGESTIONS);
-  }, [products, term]);
+    const local = productTrie.searchPrefix(q, MAX_SUGGESTIONS);
+    if (local.length > 0) return local;
+    return apiSuggestions.slice(0, MAX_SUGGESTIONS);
+  }, [productTrie, term, apiSuggestions]);
 
   const matchedCategories = useMemo(() => {
     const q = term.trim().toLowerCase();

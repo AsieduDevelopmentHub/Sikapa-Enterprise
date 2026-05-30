@@ -57,7 +57,7 @@ npm run dev
 
 ### Next.js storefront: local vs session storage
 
-The web app stores JWTs in **`localStorage`** when the user checks **Keep me signed in** (default), and in **`sessionStorage`** when unchecked so the session ends with the browser/tab session. Refresh-token retries must read from the same store (see [AUTH_SESSION_AND_ADMIN.md](./AUTH_SESSION_AND_ADMIN.md)).
+The web app stores JWTs in **`localStorage`** when the user checks **Keep me signed in** (default), and in **`sessionStorage`** when unchecked so the session ends with the browser/tab session. Refresh-token retries must read from the same store (see [auth-session-and-admin.md](./auth-session-and-admin.md)).
 
 ## Login payload format
 
@@ -78,7 +78,7 @@ Rotating `SECRET_KEY` invalidates **all** existing JWTs. Operations impact:
 2. Expect **401** on all authenticated calls until users **sign in again**.
 3. Clear stored tokens in apps (localStorage / secure storage) if the client keeps retrying dead tokens.
 
-See [ENVIRONMENT.md](./ENVIRONMENT.md).
+See [environment.md](../environment/environment.md).
 
 ---
 
@@ -171,6 +171,8 @@ CI jobs no longer target a GitHub **Environment** named `CI` (that was a common 
 
 ## Deployment pointers
 
+See also [production-deployment.md](../deployment/production-deployment.md) for the full rollout checklist.
+
 - **Render (API):** [../backend/docs/hosting/render.md](../backend/docs/hosting/render.md) — set `DATABASE_URL`, strong `SECRET_KEY`, `CORS_ORIGINS`, `FRONTEND_URL`, Paystack keys, optional `HTTPS_ENABLED=false` behind the platform TLS terminator.
 - **Vercel (frontend):** [../frontend/docs/hosting/vercel.md](../frontend/docs/hosting/vercel.md) — set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, and image CDN hosts via `NEXT_PUBLIC_IMAGE_CDN_HOSTS` when needed.
 
@@ -213,7 +215,7 @@ Apply **before** switching traffic to a new release. Downgrades are intentionall
 
 Scheduled backups are **host-specific** (Render Postgres, RDS, Neon, etc.): enable automated snapshots in your provider dashboard.
 
-Optional manual dump when you have `DATABASE_URL` and `pg_dump` locally — see [`../scripts/backup-postgres.sh`](../scripts/backup-postgres.sh). Run via cron only on a secured machine with secrets injected from your vault.
+Optional manual dump when you have `DATABASE_URL` and `pg_dump` locally — see [`../../scripts/backup-postgres.sh`](../../scripts/backup-postgres.sh). Run via cron only on a secured machine with secrets injected from your vault.
 
 ---
 
@@ -228,4 +230,4 @@ Optional manual dump when you have `DATABASE_URL` and `pg_dump` locally — see 
 
 ---
 
-*For API shapes and examples, see [../backend/docs/API_REFERENCE.md](../backend/docs/API_REFERENCE.md).*
+*For API shapes and examples, see [../backend/docs/api/api-reference.md](../backend/docs/api/api-reference.md).*

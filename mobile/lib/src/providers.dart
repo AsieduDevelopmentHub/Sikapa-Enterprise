@@ -232,6 +232,10 @@ class AuthController extends StateNotifier<AuthState> {
       if (mounted) state = state.copyWith(loading: false);
     }
   }
+
+  /// Skips token bootstrap — for widget/router tests only.
+  AuthController.forTest(this._ref, AuthState initialState)
+    : super(initialState);
 }
 
 final authProvider = StateNotifierProvider<AuthController, AuthState>(
@@ -567,6 +571,9 @@ class CartController extends StateNotifier<AsyncValue<Cart>> {
     await store.write(next);
     state = AsyncValue.data(await _guestCartAsCart());
   }
+
+  /// Fixed cart state — for widget tests only.
+  CartController.forTest(this._ref, Cart cart) : super(AsyncValue.data(cart));
 }
 
 final cartProvider = StateNotifierProvider<CartController, AsyncValue<Cart>>(

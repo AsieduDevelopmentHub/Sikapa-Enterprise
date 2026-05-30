@@ -9,14 +9,7 @@
 
 ### D-001 — No automated dependency updates or audits
 
-- [ ] **P0**
-
-**Missing:**
-
-- [ ] `.github/dependabot.yml`
-- [ ] `npm audit` in frontend CI
-- [ ] `pip-audit` in backend CI
-- [ ] CodeQL or Trivy
+- [x] **P0** — Dependabot + npm audit (advisory) + pip-audit (hard-fail) in CI
 
 **Fix — Dependabot example:**
 
@@ -66,7 +59,7 @@ Add CI steps after install:
 
 ### D-003 — Mobile excluded from `ci.yml`
 
-- [ ] **P1**
+- [x] **P1** — Mobile job in `ci.yml` (analyze + test)
 
 **Problem:** Backend + frontend PRs can merge without Flutter validation unless `mobile/**` changed on `mobile-build.yml` path filter.
 
@@ -76,7 +69,7 @@ Add CI steps after install:
 
 ### D-004 — No backend lint/type check
 
-- [ ] **P1**
+- [x] **P1** — Ruff in CI (`ruff check app tests`)
 
 **Problem:** CI only runs pytest — no Ruff, Black, mypy, or bandit.
 
@@ -94,7 +87,7 @@ Add `ruff.toml` or configure in `pyproject.toml`.
 
 ### D-005 — Frontend tests are smoke-only
 
-- [ ] **P0**
+- [x] **P0** — Real Vitest suites in CI (see [frontend.md](./frontend.md#f-005))
 
 See [frontend.md](./frontend.md#f-005).
 
@@ -102,7 +95,7 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-006 — Lighthouse non-gating
 
-- [ ] **P2**
+- [x] **P2** — `lighthouserc.json` accessibility min 0.9 set to `error`; workflow fails on breach
 
 **Problem:** `.github/workflows/lighthouse.yml` and step use `continue-on-error: true`; budgets in `lighthouserc.json` are warn-only.
 
@@ -122,11 +115,9 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-008 — Stale CI env vars
 
-- [ ] **P3**
+- [x] **P3** — Resolved
 
-**Problem:** `JWT_SECRET_KEY` / `JWT_REFRESH_SECRET_KEY` in CI — app uses `SECRET_KEY`.
-
-**Files:** `.github/workflows/ci.yml`, `scripts/ci-local.ps1`
+CI and `scripts/ci-local.ps1` set **`SECRET_KEY`** only (legacy `JWT_SECRET_*` removed).
 
 ---
 
@@ -134,7 +125,7 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-009 — No docker-compose for local stack
 
-- [ ] **P2**
+- [x] **P2** — Root `docker-compose.yml` (Postgres + Redis)
 
 **Fix:** Add `docker-compose.yml` at repo root: postgres + redis + backend (optional frontend via host).
 
@@ -142,7 +133,7 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-010 — Docker hardening
 
-- [ ] **P1**
+- [x] **P1** — Multi-stage, non-root, `requirements-prod.txt`
 
 **Problems:**
 
@@ -158,21 +149,17 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-011 — Render blueprint vs docs path
 
-- [ ] **P1**
+- [x] **P1** — Resolved
 
-**Problem:** `backend/docs/hosting/render.md` says `render.yaml` at repo root; file is `backend/render.yaml`.
-
-**Fix:** Update doc; confirm Render "Root Directory" is `backend`.
+`backend/docs/hosting/render.md` documents `backend/render.yaml` with Render Root Directory = `backend`.
 
 ---
 
 ### D-012 — Postgres backup script not wired
 
-- [ ] **P2**
+- [x] **P2** — Resolved (docs linked; cron remains operator-owned)
 
-**File:** `scripts/backup-postgres.sh` — manual only; not in cron or docs hub.
-
-**Fix:** Link from `docs/OPERATIONS.md`; document schedule for operators.
+**File:** `scripts/backup-postgres.sh` — linked from `docs/README.md`, `docs/operations/operations.md`, and production deployment guide.
 
 ---
 
@@ -180,14 +167,14 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-013 — No error tracking integrated
 
-- [ ] **P1**
+- [x] **P1** — Sentry env-gated on backend + frontend
 
 **Problem:** Docs mention Sentry/Datadog; not wired in code.
 
 **Fix:**
 
 1. Add `SENTRY_DSN` to backend (FastAPI integration) and frontend (`@sentry/nextjs`).
-2. Document in `docs/ENVIRONMENT.md`.
+2. Document in `docs/environment/environment.md`.
 
 ---
 
@@ -205,7 +192,7 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-015 — No pre-commit lint/test hooks
 
-- [ ] **P2**
+- [x] **P2** — `.pre-commit-config.yaml` (Ruff, ESLint, API path sync)
 
 **Current:** `.githooks/` only strips commit trailers (opt-in via `git config core.hooksPath .githooks`).
 
@@ -231,7 +218,7 @@ See [frontend.md](./frontend.md#f-005).
 | `MOBILE_API_BASE`, `MOBILE_GOOGLE_OAUTH_ENABLED` | `mobile-build.yml` |
 | Apple signing + App Store Connect | `mobile-ios-testflight.yml` |
 
-Document in `docs/OPERATIONS.md` which are required vs optional.
+Document in `docs/operations/operations.md` which are required vs optional.
 
 ---
 

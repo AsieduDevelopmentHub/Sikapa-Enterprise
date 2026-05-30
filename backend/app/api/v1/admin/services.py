@@ -318,7 +318,11 @@ async def get_all_products_admin(
 
 async def create_category_admin(session: Session, category_data: dict) -> Category:
     """Create a category."""
-    return await create_entity_with_slug(session, Category, category_data)
+    from app.core.cache import invalidate_storefront_catalog_cache
+
+    created = await create_entity_with_slug(session, Category, category_data)
+    invalidate_storefront_catalog_cache()
+    return created
 
 
 async def update_category_admin(
@@ -327,14 +331,21 @@ async def update_category_admin(
     category_data: dict,
 ) -> Category:
     """Update a category."""
-    return await update_entity_generic(
+    from app.core.cache import invalidate_storefront_catalog_cache
+
+    updated = await update_entity_generic(
         session, Category, category_id, category_data, has_slug=True
     )
+    invalidate_storefront_catalog_cache()
+    return updated
 
 
 async def delete_category_admin(session: Session, category_id: int) -> None:
     """Delete a category."""
+    from app.core.cache import invalidate_storefront_catalog_cache
+
     await delete_entity_safe(session, Category, category_id)
+    invalidate_storefront_catalog_cache()
 
 
 async def get_all_categories_admin(
@@ -434,7 +445,7 @@ async def get_all_orders_admin(
     limit: int = 50,
     status: Optional[str] = None,
 ) -> List[Order]:
-    """Get all orders for admin management."""
+    """Get all orders for admin management (offset pagination)."""
     filters = {}
     if status:
         filters["status"] = status
@@ -448,6 +459,50 @@ async def get_all_orders_admin(
         order_by_field="created_at",
         order_ascending=False,
     )
+
+
+async def get_orders_admin_page(
+    session: Session,
+    *,
+    limit: int = 50,
+    status: Optional[str] = None,
+    cursor: Optional[str] = None,
+) -> dict:
+    """Keyset pagination for admin orders — stable under concurrent inserts."""
+    from datetime import datetime
+
+    from sqlalchemy import and_, or_
+    from sqlmodel import select
+
+    from app.core.dsa.pagination import decode_cursor, encode_cursor
+
+    stmt = select(Order)
+    if status:
+        stmt = stmt.where(Order.status == status)
+
+    if cursor:
+        payload = decode_cursor(cursor)
+        if payload and payload.get("created_at") and payload.get("id") is not None:
+            cursor_dt = datetime.fromisoformat(str(payload["created_at"]))
+            cursor_id = int(payload["id"])
+            stmt = stmt.where(
+                or_(
+                    Order.created_at < cursor_dt,
+                    and_(Order.created_at == cursor_dt, Order.id < cursor_id),
+                )
+            )
+
+    stmt = stmt.order_by(Order.created_at.desc(), Order.id.desc()).limit(limit + 1)
+    rows = list(session.exec(stmt).all())
+    has_more = len(rows) > limit
+    items = rows[:limit]
+    next_cursor = None
+    if has_more and items:
+        last = items[-1]
+        next_cursor = encode_cursor(
+            {"created_at": last.created_at.isoformat(), "id": last.id}
+        )
+    return {"items": items, "next_cursor": next_cursor, "has_more": has_more}
 
 
 async def update_order_status(
@@ -477,8 +532,9 @@ async def update_order_status(
     session.refresh(order)
 
     try:
-        from app.core.cache import cache
-        cache.delete_pattern("admin:dashboard:*")
+        from app.core.cache import invalidate_admin_operational_cache
+
+        invalidate_admin_operational_cache()
     except Exception:
         pass
 
@@ -550,6 +606,9 @@ async def create_inventory_adjustment(
     session.add(log)
     session.commit()
     session.refresh(log)
+    from app.core.cache import invalidate_storefront_catalog_cache
+
+    invalidate_storefront_catalog_cache()
     return log
 
 

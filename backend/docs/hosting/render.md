@@ -11,7 +11,7 @@ This document describes how to deploy the backend to Render using the existing `
 
 ## Files used for Render
 
-- `render.yaml` (repo root)
+- `backend/render.yaml` (Render blueprint — set **Root Directory** to `backend`)
 - `backend/Dockerfile`
 - `backend/.dockerignore`
 
@@ -38,6 +38,21 @@ Add these variables in Render Dashboard:
 ### Optional
 - `HTTP_PORT=8000`
 - `HTTPS_PORT=8443`
+
+### Render env checklist (add in Dashboard — not all are in `render.yaml`)
+
+`backend/render.yaml` seeds core vars. Operators should also set integrations as needed:
+
+| Variable | Purpose |
+|----------|---------|
+| `PAYSTACK_SECRET_KEY` / `PAYSTACK_PUBLIC_KEY` | Checkout & webhooks |
+| `RESEND_API_KEY` / `EMAIL_FROM` / `EMAIL_ENABLED` | Transactional email |
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_REDIRECT_URI` | Google sign-in |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` | Storage uploads (and Postgres if `DATABASE_URL` is Supabase) |
+| `TOTP_ENCRYPTION_KEY` | 2FA secrets at rest (listed in blueprint; generate a strong value) |
+| `SENTRY_DSN` | Error monitoring (optional) |
+
+Full reference: [../../../docs/environment/environment.md](../../../docs/environment/environment.md).
 
 ## Local TLS vs Render TLS
 

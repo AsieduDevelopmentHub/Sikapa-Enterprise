@@ -20,6 +20,7 @@ import {
   type UserProfile,
 } from "@/lib/api/auth";
 import { clearAllAuthTokens, readTokens, writeTokens, type AuthBucket } from "@/lib/auth-storage";
+import { clearSessionCookie, syncSessionCookie } from "@/lib/session-cookie";
 
 /**
  * Heuristic: distinguish auth failures (token invalid / expired) from
@@ -75,12 +76,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (access: string, refresh: string | null | undefined, bucket: AuthBucket) => {
       writeTokens(access, refresh ?? null, bucket);
       setAccessToken(access);
+      void syncSessionCookie(access);
     },
     []
   );
 
   const clearTokens = useCallback(() => {
     clearAllAuthTokens();
+    void clearSessionCookie();
     setAccessToken(null);
     setUser(null);
   }, []);

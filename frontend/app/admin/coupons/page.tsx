@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   adminCreateCoupon,
   adminDeleteCoupon,
@@ -13,6 +13,7 @@ import { useDialog } from "@/context/DialogContext";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminCouponsTableSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 export default function AdminCouponsPage() {
   const { accessToken } = useAuth();
@@ -32,20 +33,18 @@ export default function AdminCouponsPage() {
     expires_at: "",
   });
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
     try {
       setRows(await adminFetchCoupons(accessToken));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load coupons");
     } finally {
-      setReady(true);
+      if (!opts?.silent) setReady(true);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken]);
 
   const visibleRows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -203,7 +202,7 @@ export default function AdminCouponsPage() {
                         starts_at: c.starts_at ?? undefined,
                         expires_at: c.expires_at ?? undefined,
                         is_active: !c.is_active,
-                      }).then(load).catch((e) => setErr(e instanceof Error ? e.message : "Update failed"));
+                      }).then(() => load()).catch((e) => setErr(e instanceof Error ? e.message : "Update failed"));
                     }}
                   >
                     {c.is_active ? "Disable" : "Enable"}
@@ -221,7 +220,7 @@ export default function AdminCouponsPage() {
                           variant: "danger",
                         });
                         if (!ok) return;
-                        void adminDeleteCoupon(accessToken, c.id).then(load).catch((e) => setErr(e instanceof Error ? e.message : "Delete failed"));
+                        void adminDeleteCoupon(accessToken, c.id).then(() => load()).catch((e) => setErr(e instanceof Error ? e.message : "Delete failed"));
                       })();
                     }}
                   >

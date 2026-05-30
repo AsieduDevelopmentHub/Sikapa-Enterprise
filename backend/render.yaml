@@ -16,6 +16,10 @@ services:
       - key: CORS_ALLOW_CREDENTIALS
       - key: FRONTEND_URL
       - key: REDIS_URL
+        sync: false
+      # Attach a Render Redis instance and set REDIS_URL for shared rate limits,
+      # Celery, and cross-instance cache (B-005). Without Redis the API falls
+      # back to in-memory limits per instance.
       - key: USE_CELERY
         value: false
       - key: HTTPS_ENABLED
@@ -24,3 +28,9 @@ services:
         value: false
       - key: UPLOAD_SERVE_LOCAL
         value: false
+      # Set in Render Dashboard (not synced from git):
+      # - PAYSTACK_SECRET_KEY, PAYSTACK_PUBLIC_KEY
+      # - RESEND_API_KEY, EMAIL_FROM, EMAIL_ENABLED
+      # - GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI
+      # - SUPABASE_URL, SUPABASE_SERVICE_KEY
+      # See backend/docs/hosting/render.md for the full checklist.

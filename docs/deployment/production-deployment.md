@@ -28,8 +28,9 @@ This guide covers everything needed to deploy Sikapa to production securely and 
 ### Database
 - [ ] PostgreSQL/Supabase production instance provisioned
 - [ ] Database backups configured (automated daily backups)
-- [ ] Alembic migrations tested against production schema
-- [ ] Connection pooling configured
+- [ ] Run `alembic upgrade head` on every deploy (do **not** rely on `DEV_AUTO_CREATE_TABLES` in production)
+- [ ] Postgres RLS applied via `backend/tools/rls/rls_setup.py` when using row-level security
+- [ ] Connection pooling configured (`DB_POOL_SIZE`, `DB_MAX_OVERFLOW` on Render)
 - [ ] Database user has minimal required permissions (not superuser)
 
 ### API & Services
@@ -41,7 +42,7 @@ This guide covers everything needed to deploy Sikapa to production securely and 
 - [ ] Audit logging enabled
 
 ### Frontend
-- [ ] `NEXT_PUBLIC_API_BASE_URL` points to production backend (with `/api` prefix)
+- [ ] `NEXT_PUBLIC_API_URL` points to production backend (e.g. `https://api.example.com/api/v1`)
 - [ ] Build optimized (`npm run build`)
 - [ ] ESLint passing with zero warnings
 - [ ] No sensitive data in NEXT_PUBLIC_* variables
@@ -146,13 +147,13 @@ postgresql://sikapa_app:password@host:5432/sikapa_prod
 
 ### Backups
 
+- Enable automated snapshots on your Postgres host (Render, Supabase, RDS, etc.).
+- Optional manual logical backup: [`scripts/backup-postgres.sh`](../../scripts/backup-postgres.sh) (requires `pg_dump` and `DATABASE_URL` on a secure runner).
+
 ```bash
-# Automated backup script (cron daily)
-#!/bin/bash
-BACKUP_FILE="/backups/sikapa_$(date +%Y%m%d).sql"
-pg_dump "$DATABASE_URL" > "$BACKUP_FILE"
-# Upload to cloud storage
-aws s3 cp "$BACKUP_FILE" s3://backups-bucket/
+export DATABASE_URL="postgresql://..."
+export BACKUP_OUT_DIR=/secure/backups
+bash scripts/backup-postgres.sh
 ```
 
 ### Migrations
@@ -161,9 +162,30 @@ aws s3 cp "$BACKUP_FILE" s3://backups-bucket/
 # Test migration against production DB first
 ALEMBIC_DATABASE_URL=postgresql://... alembic upgrade head
 
-# Then deploy API with migrations
-# (ensure migration is backward-compatible)
+# Verify schema
+alembic current
 ```
+
+**Demo catalog:** Migrations do **not** seed sample products. For dev/staging only:
+
+```bash
+cd backend
+python tools/seed_demo_catalog.py
+# Production requires SEED_DEMO_CONFIRM=true if you explicitly want demo data
+```
+
+### Postgres row-level security (RLS)
+
+When using Supabase/Postgres RLS policies, apply them **after** migrations:
+
+```bash
+cd backend
+python tools/rls/rls_setup.py
+```
+
+This is a **mandatory manual step** — not run on deploy automatically. Verify policies in Supabase SQL editor. See [security.md](../audit/security.md#s-004).
+
+Ensure each migration is backward-compatible before deploying the API.
 
 ---
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/admin";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { AdminReviewsListSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 export default function AdminReviewsPage() {
   const { accessToken } = useAuth();
@@ -24,7 +25,7 @@ export default function AdminReviewsPage() {
   const [query, setQuery] = useState("");
   const [ready, setReady] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
     try {
       const [reviews, userRows, productRows] = await Promise.all([
@@ -42,13 +43,11 @@ export default function AdminReviewsPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setReady(true);
+      if (!opts?.silent) setReady(true);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken]);
 
   const visibleRows = useMemo(() => {
     const q = query.trim().toLowerCase();

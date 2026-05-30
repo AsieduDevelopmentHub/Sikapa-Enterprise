@@ -201,3 +201,19 @@ html.dark body {
 html.dark {
   color-scheme: dark;
 }
+
+/* F-008: visible keyboard focus for interactive elements */
+:focus-visible {
+  outline: 2px solid var(--sikapa-gold);
+  outline-offset: 2px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--sikapa-gold);
+  outline-offset: 2px;
+}

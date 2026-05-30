@@ -31,6 +31,7 @@ from app.core.security import (
     decode_access_token,
 )
 from app.core.email_service import email_service
+from app.core.errors import InvalidCredentialsError
 from app.db import apply_postgres_session_user
 from app.core.pg_rls_auth import (
     email_exists,
@@ -145,10 +146,7 @@ def authenticate_user(session: Session, identifier: str, password: str) -> User:
     ident = identifier.strip().lower()
     user = fetch_user_for_login(session, ident)
     if not user or not verify_password(password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username/email or password"
-        )
+        raise InvalidCredentialsError()
 
     if not user.is_active:
         raise HTTPException(
@@ -162,7 +160,14 @@ def authenticate_user(session: Session, identifier: str, password: str) -> User:
 def create_user_tokens(user: User) -> dict:
     """Create access and refresh tokens for user."""
     subject = str(user.id)
-    access_token = create_access_token({"sub": subject})
+    claims = {
+        "sub": subject,
+        "is_admin": bool(user.is_admin),
+    }
+    role = (user.admin_role or "").strip()
+    if role:
+        claims["admin_role"] = role
+    access_token = create_access_token(claims)
     refresh_token = create_refresh_token({"sub": subject})
 
     return {
@@ -223,7 +228,14 @@ def refresh_access_token(session: Session, refresh_token: str) -> dict:
     _blacklist_token(session, user.id, refresh_token, payload)
 
     subject = str(user.id)
-    new_access_token = create_access_token({"sub": subject})
+    claims = {
+        "sub": subject,
+        "is_admin": bool(user.is_admin),
+    }
+    role = (user.admin_role or "").strip()
+    if role:
+        claims["admin_role"] = role
+    new_access_token = create_access_token(claims)
     new_refresh_token = create_refresh_token({"sub": subject})
 
     return {

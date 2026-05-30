@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="min-h-screen flex flex-col"
         >
-          <div className="flex-1">
+          <div id="main-content" className="flex-1" tabIndex={-1}>
             {children}
           </div>
           {!isAdmin && !isAccount && <StorefrontFooter />}

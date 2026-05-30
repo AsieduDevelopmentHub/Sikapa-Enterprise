@@ -7,8 +7,9 @@ from sqlalchemy import func
 from sqlmodel import Session, select, and_, or_
 
 from app.models import Product, Category
-from app.api.v1.products.schemas import ProductSearchResponse
 from app.core.cache import cache, TTL_CATEGORIES, TTL_PRODUCT, TTL_PRODUCT_LIST, TTL_SEARCH
+from app.core.dsa.pagination import page_metadata
+from app.core.search_index import get_product_trie
 
 
 async def get_products_with_filters(
@@ -74,8 +75,60 @@ async def get_products_with_filters(
         "skip": skip,
         "limit": limit,
         "items": [p.model_dump() for p in products],
+        **page_metadata(total=int(total or 0), skip=skip, limit=limit, items_count=len(products)),
     }
     cache.set(cache_key, result, ttl=TTL_PRODUCT_LIST)
+    return result
+
+
+async def suggest_products(
+    session: Session,
+    query: str,
+    limit: int = 8,
+) -> dict:
+    """Prefix autocomplete via in-memory trie index (O(prefix length + matches))."""
+    q = query.strip().lower()
+    if not q:
+        return {"query": query, "items": []}
+
+    cache_key = f"products:suggest:{q}:{limit}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    trie = get_product_trie(session)
+    product_ids = trie.search_prefix(q, limit=limit * 2)
+    if not product_ids:
+        empty = {"query": query, "items": []}
+        cache.set(cache_key, empty, ttl=TTL_SEARCH)
+        return empty
+
+    rows = session.exec(
+        select(Product).where(
+            Product.id.in_(product_ids[: limit * 2]),
+            Product.is_active == True,
+        )
+    ).all()
+    by_id = {p.id: p for p in rows}
+    items = []
+    for pid in product_ids:
+        product = by_id.get(pid)
+        if not product:
+            continue
+        items.append(
+            {
+                "id": product.id,
+                "name": product.name,
+                "slug": product.slug,
+                "price": product.price,
+                "image_url": product.image_url,
+            }
+        )
+        if len(items) >= limit:
+            break
+
+    result = {"query": query, "items": items}
+    cache.set(cache_key, result, ttl=TTL_SEARCH)
     return result
 
 

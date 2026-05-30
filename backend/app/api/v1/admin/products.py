@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.core.audit import AuditLogger
-from app.core.cache import cache
+from app.core.cache import invalidate_admin_operational_cache, invalidate_storefront_catalog_cache
 from app.db import get_session
 from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Product, ProductVariant
@@ -211,7 +211,8 @@ async def create_product(
         changes=_product_snapshot(created),
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_storefront_catalog_cache()
+    invalidate_admin_operational_cache()
     return created
 
 
@@ -382,7 +383,8 @@ async def update_product(
             changes=diffs,
             request=request,
         )
-        cache.delete_pattern("admin:dashboard:*")
+    invalidate_storefront_catalog_cache()
+    invalidate_admin_operational_cache()
     return updated
 
 
@@ -405,7 +407,8 @@ async def delete_product(
         changes={"snapshot": snap},
         request=request,
     )
-    cache.delete_pattern("admin:dashboard:*")
+    invalidate_storefront_catalog_cache()
+    invalidate_admin_operational_cache()
 
 
 @router.post(
@@ -586,6 +589,10 @@ async def bulk_import_products(
                         message="Would create",
                     )
                 )
+
+    if created > 0 or updated > 0:
+        invalidate_storefront_catalog_cache()
+        invalidate_admin_operational_cache()
 
     return BulkImportResult(
         mode=mode,

@@ -65,8 +65,6 @@ if ($runBackend) {
             Set-Location "$Root\backend"
             $env:DATABASE_URL = "sqlite:///:memory:"
             $env:SECRET_KEY = "ci-secret-key-for-testing-only"
-            $env:JWT_SECRET_KEY = "ci-jwt-secret-for-testing"
-            $env:JWT_REFRESH_SECRET_KEY = "ci-jwt-refresh-secret"
             $env:RESEND_API_KEY = "test-resend-api-key"
             $env:EMAIL_FROM = "test@example.com"
             $env:FRONTEND_URL = "http://localhost:3000"
@@ -78,6 +76,11 @@ if ($runBackend) {
             $env:PAYSTACK_SECRET_KEY = ""
             # Use project venv only — do not install into global Python.
             & $BackendPython -m pip install -r requirements.txt -q
+            & $BackendPython -m pip install ruff -q
+            & $BackendPython -m ruff check app tests
+            Set-Location $Root
+            & $BackendPython scripts/check_api_path_sync.py
+            Set-Location "$Root\backend"
             & $BackendPython -m pytest tests/ -v --tb=short --cov=app --cov-report=xml
         }
     } catch {

@@ -72,7 +72,6 @@ from app.core.rate_limit import (
     auth_limiter,
     login_limiter,
     password_reset_confirm_limiter,
-    password_reset_limiter,
     password_reset_request_limiter,
     register_limiter,
     token_refresh_limiter,

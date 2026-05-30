@@ -37,16 +37,20 @@ This folder is the actionable follow-up to the full system audit. Use it as a ch
 | [devops-ci.md](./devops-ci.md) | Pipelines, dependencies, Docker, ops |
 | [documentation-drift.md](./documentation-drift.md) | Wrong paths, env names, missing files |
 | [cross-platform-parity.md](./cross-platform-parity.md) | Web vs mobile feature matrix |
-| [remediation-roadmap.md](./remediation-roadmap.md) | Phased plan + master checklist |
+| [data-structures-algorithms.md](./data-structures-algorithms.md) | DSA implementation checklist |
+| [remediation-roadmap.md](./remediation-roadmap.md) | Phased plan + master checklist (includes Phase 5 DSA) |
 
 ---
 
 ## Related docs
 
-- [ENVIRONMENT.md](../ENVIRONMENT.md) — env var reference
-- [OPERATIONS.md](../OPERATIONS.md) — deploys, health, CORS
-- [PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md) — production checklist
-- [IMPROVEMENTS_SUMMARY.md](../IMPROVEMENTS_SUMMARY.md) — prior improvement notes
+- [environment/environment.md](../environment/environment.md) — env var reference
+- [operations/operations.md](../operations/operations.md) — deploys, health, CORS
+- [deployment/production-deployment.md](../deployment/production-deployment.md) — production checklist
+- [contributing/contributing.md](../contributing/contributing.md) — branch workflow & PR checklist
+- [security/security-policy.md](../security/security-policy.md) — vulnerability reporting
+- [guides/developer-quickref.md](../guides/developer-quickref.md) — day-to-day doc map
+- [architecture/data-structures-and-algorithms.md](../architecture/data-structures-and-algorithms.md) — DSA modules and usage
 
 ---
 

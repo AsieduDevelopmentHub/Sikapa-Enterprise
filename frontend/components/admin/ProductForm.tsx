@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   adminCreateProduct,
   adminUpdateProduct,
   type AdminCategory,
   type AdminProduct,
 } from "@/lib/api/admin";
+import { invalidateCatalogQueries } from "@/lib/catalog-cache";
 import {
   CategorySearchSelect,
   resolveCategoryIdFromProductField,
@@ -44,6 +46,7 @@ export function ProductForm({
   initialCategoryName,
 }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [price, setPrice] = useState(initial != null ? String(initial.price) : "");
@@ -94,6 +97,7 @@ export function ProductForm({
       } else if (productId != null) {
         await adminUpdateProduct(accessToken, productId, fd);
       }
+      await invalidateCatalogQueries(queryClient);
       router.push("/system/products");
       router.refresh();
     } catch (e2) {

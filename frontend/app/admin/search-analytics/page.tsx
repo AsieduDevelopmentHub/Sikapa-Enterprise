@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminFetchSearchSummary,
@@ -11,6 +11,7 @@ import {
   type ZeroResultRow,
 } from "@/lib/api/admin";
 import { AdminSearchAnalyticsSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
 
 const DAY_OPTIONS = [7, 30, 90] as const;
 
@@ -31,9 +32,9 @@ export default function AdminSearchAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const [s, t, z] = await Promise.all([
@@ -47,13 +48,11 @@ export default function AdminSearchAnalyticsPage() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load analytics");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accessToken, days]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useAdminLiveLoad(load, [accessToken, days]);
 
   return (
     <div className="w-full min-w-0 max-w-full">

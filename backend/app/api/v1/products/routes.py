@@ -10,6 +10,7 @@ from app.api.v1.auth.dependencies import get_current_active_user_optional
 from app.api.v1.products.schemas import (
     ProductRead,
     ProductSearchResponse,
+    ProductSuggestResponse,
     CategoryRead,
 )
 from app.api.v1.products.services import (
@@ -17,6 +18,7 @@ from app.api.v1.products.services import (
     get_product_by_id,
     get_product_by_slug,
     search_products,
+    suggest_products,
     get_all_categories,
     get_category_by_id,
 )
@@ -43,11 +45,21 @@ async def search_products_endpoint(
         log_search(
             session,
             query=q,
-            result_count=result.total,
+            result_count=result["total"],
             user_id=current_user.id if current_user else None,
             ip=client_ip,
         )
     return result
+
+
+@router.get("/suggest", response_model=ProductSuggestResponse)
+async def suggest_products_endpoint(
+    q: str = Query(..., min_length=1, max_length=100),
+    limit: int = Query(8, ge=1, le=20),
+    session: Session = Depends(get_session),
+):
+    """Fast prefix autocomplete for product names and SKUs (trie-backed)."""
+    return await suggest_products(session, q, limit)
 
 
 @router.get("/categories", response_model=List[CategoryRead])
