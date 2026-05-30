@@ -194,6 +194,9 @@ class Order(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     total_price: float = Field(ge=0)
     subtotal_amount: Optional[float] = Field(default=None, ge=0)
+    discount_amount: float = Field(default=0.0, ge=0)
+    coupon_id: Optional[int] = Field(default=None, foreign_key="coupon.id", index=True)
+    coupon_code: Optional[str] = Field(default=None, max_length=64)
     delivery_fee: float = Field(default=0.0, ge=0)
     shipping_method: Optional[str] = None
     shipping_region: Optional[str] = None

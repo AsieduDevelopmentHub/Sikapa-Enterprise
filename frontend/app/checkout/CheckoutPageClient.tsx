@@ -9,6 +9,7 @@ import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 import { useAuth } from "@/context/AuthContext";
 import { authUpdateProfile } from "@/lib/api/auth";
 import { useCart } from "@/context/CartContext";
+import { couponsValidate, type CouponValidateResult } from "@/lib/api/coupons";
 import { ordersCreate, ordersShippingOptions, type ShippingOptions } from "@/lib/api/orders";
 import { paystackInitialize } from "@/lib/api/payments";
 import { cleanImageUrl } from "@/lib/clean-image-url";
@@ -95,6 +96,11 @@ export function CheckoutPageClient() {
   const [shippingContactName, setShippingContactName] = useState("");
   const [shippingContactPhone, setShippingContactPhone] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
+  const [couponExpanded, setCouponExpanded] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponValidateResult | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,7 +211,17 @@ export function CheckoutPageClient() {
     courierRows,
   ]);
 
-  const total = subtotal + deliveryFee;
+  const discountAmount = appliedCoupon?.discount_amount ?? 0;
+  const merchandiseTotal = Math.max(0, subtotal - discountAmount);
+  const total = merchandiseTotal + deliveryFee;
+
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    if (Math.abs(appliedCoupon.subtotal - subtotal) > 0.009) {
+      setAppliedCoupon(null);
+      setCouponMsg("Coupon removed — cart total changed. Apply it again if needed.");
+    }
+  }, [subtotal, appliedCoupon]);
 
   const onRegionChange = useCallback((slug: string) => {
     setShippingRegion(slug);
@@ -271,6 +287,37 @@ export function CheckoutPageClient() {
       setStep("review");
       return;
     }
+  };
+
+  const onApplyCoupon = async () => {
+    if (!accessToken) {
+      setCouponMsg("Sign in to use a coupon.");
+      return;
+    }
+    const code = sanitizePlainText(couponInput, 64).trim();
+    if (!code) {
+      setCouponMsg("Enter a coupon code.");
+      return;
+    }
+    setCouponBusy(true);
+    setCouponMsg(null);
+    try {
+      const result = await couponsValidate(accessToken, code);
+      setAppliedCoupon(result);
+      setCouponInput(result.code);
+      setCouponExpanded(true);
+    } catch (e) {
+      setAppliedCoupon(null);
+      setCouponMsg(e instanceof Error ? e.message : "Could not apply coupon");
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+
+  const onRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponMsg(null);
   };
 
   const onCheckout = async () => {
@@ -348,6 +395,7 @@ export function CheckoutPageClient() {
         shipping_contact_phone: contactPhoneForOrder,
         shipping_address: addr,
         notes: notesTrim.length > 0 ? notesTrim : null,
+        coupon_code: appliedCoupon?.code ?? null,
       });
       notifyOrdersChanged();
       const callbackUrl = `${origin}/checkout/success?order=${order.id}`;
@@ -747,10 +795,63 @@ export function CheckoutPageClient() {
           )}
 
           <div className="mt-4 space-y-2 rounded-[10px] bg-white p-4 text-body shadow-sm ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10">
+            {!appliedCoupon ? (
+              <div className="pb-2">
+                <button
+                  type="button"
+                  onClick={() => setCouponExpanded((v) => !v)}
+                  className="text-[12px] font-semibold text-sikapa-gold hover:underline"
+                >
+                  {couponExpanded ? "Hide promo code" : "Have a promo code?"}
+                </button>
+                {couponExpanded && (
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter code"
+                      autoComplete="off"
+                      className="min-w-0 flex-1 rounded-[8px] border border-sikapa-gray-soft bg-white px-3 py-2 text-small uppercase tracking-wide text-sikapa-text-primary outline-none focus:border-sikapa-gold dark:border-white/15 dark:bg-zinc-950 dark:text-zinc-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void onApplyCoupon()}
+                      disabled={couponBusy || cartSyncing}
+                      className="shrink-0 rounded-[8px] border border-sikapa-gold bg-white px-3 py-2 text-[12px] font-semibold text-sikapa-gold disabled:opacity-50 dark:bg-zinc-900"
+                    >
+                      {couponBusy ? "…" : "Apply"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-2 pb-2 text-[12px]">
+                <span className="font-semibold text-sikapa-gold">
+                  {appliedCoupon.code} applied
+                </span>
+                <button
+                  type="button"
+                  onClick={onRemoveCoupon}
+                  className="font-semibold text-sikapa-text-muted hover:text-sikapa-crimson dark:text-zinc-500"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            {couponMsg && (
+              <p className="pb-2 text-[11px] font-medium text-sikapa-crimson">{couponMsg}</p>
+            )}
             <div className="flex justify-between text-sikapa-text-secondary dark:text-zinc-400">
               <span>Subtotal</span>
               <span className="text-sikapa-text-primary dark:text-zinc-100">{formatGhs(subtotal)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-sikapa-crimson">
+                <span>Discount ({appliedCoupon?.code})</span>
+                <span>−{formatGhs(discountAmount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sikapa-text-secondary dark:text-zinc-400">
               <span>Delivery</span>
               <span className="text-sikapa-text-primary dark:text-zinc-100">{formatGhs(deliveryFee)}</span>

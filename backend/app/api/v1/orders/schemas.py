@@ -64,6 +64,9 @@ class OrderSchema(BaseModel):
     user_id: int
     total_price: float = Field(ge=0)
     subtotal_amount: Optional[float] = Field(default=None, ge=0)
+    discount_amount: float = Field(default=0.0, ge=0)
+    coupon_id: Optional[int] = None
+    coupon_code: Optional[str] = None
     delivery_fee: float = Field(default=0.0, ge=0)
     shipping_method: Optional[str] = None
     shipping_region: Optional[str] = None
@@ -109,6 +112,17 @@ class OrderCreateSchema(BaseModel):
     shipping_provider: Optional[str] = None
     shipping_contact_name: Optional[str] = None
     shipping_contact_phone: Optional[str] = None
+    coupon_code: Optional[str] = None
+
+    @field_validator("coupon_code", mode="before")
+    @classmethod
+    def _sanitize_coupon_code(cls, v):
+        if v is None:
+            return None
+        from app.api.v1.coupons.service import normalize_coupon_code
+
+        normalized = normalize_coupon_code(str(v))
+        return normalized or None
 
     @field_validator("shipping_address", mode="before")
     @classmethod

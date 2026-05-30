@@ -333,7 +333,9 @@ def _apply_successful_payment(session: Session, order: Order, reference: str) ->
         session.add(inv)
     elif inv is None:
         # Invoice is generated only after payment succeeds.
-        subtotal = float(order.subtotal_amount) if order.subtotal_amount is not None else float(order.total_price)
+        gross = float(order.subtotal_amount) if order.subtotal_amount is not None else float(order.total_price)
+        discount = float(order.discount_amount or 0)
+        subtotal = round(max(0.0, gross - discount), 2)
         shipping = float(order.delivery_fee or 0)
         tax = 0.0
         total = round(subtotal + tax + shipping, 2)
@@ -352,6 +354,10 @@ def _apply_successful_payment(session: Session, order: Order, reference: str) ->
             paid_at=datetime.utcnow(),
         )
         session.add(inv)
+
+    from app.api.v1.coupons.service import record_coupon_redemption
+
+    record_coupon_redemption(session, order)
 
     session.commit()
     session.refresh(order)

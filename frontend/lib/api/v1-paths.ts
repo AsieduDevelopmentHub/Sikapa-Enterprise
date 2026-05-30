@@ -45,6 +45,9 @@ export const V1 = {
     detail: (id: number) => `/orders/${id}`,
     invoicePdf: (id: number) => `/orders/${id}/invoice/pdf`,
   },
+  coupons: {
+    validate: "/coupons/validate",
+  },
   reviews: {
     create: "/reviews",
     product: (productId: number) => `/reviews/product/${productId}`,

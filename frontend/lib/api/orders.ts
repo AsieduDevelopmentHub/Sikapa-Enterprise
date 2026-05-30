@@ -6,6 +6,9 @@ export type OrderRow = {
   user_id: number;
   total_price: number;
   subtotal_amount?: number | null;
+  discount_amount?: number;
+  coupon_id?: number | null;
+  coupon_code?: string | null;
   delivery_fee?: number;
   shipping_method?: string | null;
   shipping_region?: string | null;
@@ -73,6 +76,7 @@ export type OrderCreateBody = {
   shipping_provider?: string | null;
   shipping_contact_name?: string | null;
   shipping_contact_phone?: string | null;
+  coupon_code?: string | null;
 };
 
 export type ShippingCityOption = { name: string; fee: number };
