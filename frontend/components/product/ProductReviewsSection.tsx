@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StarRating } from "@/components/StarRating";
 import { ReviewMediaGallery } from "@/components/reviews/ReviewMediaGallery";
 import { ReviewMediaManager } from "@/components/reviews/ReviewMediaManager";
 import { useAuth } from "@/context/AuthContext";
+import { useCatalog } from "@/context/CatalogContext";
 import { useDialog } from "@/context/DialogContext";
 import {
   reviewsCreate,
@@ -24,10 +25,17 @@ import {
 
 type Props = { productId: number };
 
+function mergeVisibleReviews(publicRows: ReviewRow[], mine: ReviewRow | null): ReviewRow[] {
+  if (!mine) return publicRows;
+  if (publicRows.some((r) => r.id === mine.id)) return publicRows;
+  return [mine, ...publicRows];
+}
+
 export function ProductReviewsSection({ productId }: Props) {
   const { accessToken, user } = useAuth();
+  const { refreshProduct } = useCatalog();
   const { confirm: confirmDialog, alert: alertDialog } = useDialog();
-  const [list, setList] = useState<ReviewRow[]>([]);
+  const [publicRows, setPublicRows] = useState<ReviewRow[]>([]);
   const [myReview, setMyReview] = useState<ReviewRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -40,22 +48,46 @@ export function ProductReviewsSection({ productId }: Props) {
   const sectionRef = useRef<HTMLElement | null>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
 
+  const visibleRows = useMemo(
+    () => mergeVisibleReviews(publicRows, myReview),
+    [publicRows, myReview]
+  );
+
+  const syncProductRating = useCallback(async () => {
+    await refreshProduct(String(productId)).catch(() => null);
+  }, [productId, refreshProduct]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
     try {
       const [rows, mine] = await Promise.all([
         reviewsForProduct(productId, { limit: 50 }),
-        accessToken ? reviewsMine(accessToken).catch(() => [] as ReviewRow[]) : Promise.resolve([] as ReviewRow[]),
+        accessToken ? reviewsMine(accessToken) : Promise.resolve([] as ReviewRow[]),
       ]);
-      setList(rows);
-      setMyReview(mine.find((r) => r.product_id === productId) ?? null);
+      const own = mine.find((r) => r.product_id === productId) ?? null;
+      setPublicRows(rows);
+      setMyReview(own);
     } catch (e) {
+      setPublicRows([]);
+      setMyReview(null);
       setErr(e instanceof Error ? e.message : "Could not load reviews");
     } finally {
       setLoading(false);
     }
   }, [productId, accessToken]);
+
+  useEffect(() => {
+    setPublicRows([]);
+    setMyReview(null);
+    setCanReview(false);
+    setEligibilityLoaded(false);
+    setErr(null);
+    setTitle("");
+    setContent("");
+    setRating(5);
+    setLoading(true);
+  }, [productId]);
 
   useEffect(() => {
     if (shouldLoad) void load();
@@ -107,30 +139,18 @@ export function ProductReviewsSection({ productId }: Props) {
     setSubmitBusy(true);
     setErr(null);
     try {
-      const created = await reviewsCreate(accessToken, {
+      await reviewsCreate(accessToken, {
         product_id: productId,
         rating,
         title: tRaw,
         content: cRaw,
       });
-      const mine: ReviewRow = {
-        id: created.id,
-        product_id: created.product_id,
-        user_id: user?.id ?? 0,
-        rating: created.rating,
-        title: created.title,
-        content: created.content,
-        created_at: created.created_at,
-        reviewer_name: created.reviewer_name,
-        media: created.media ?? [],
-      };
       setTitle("");
       setContent("");
       setRating(5);
       setCanReview(false);
-      setMyReview(mine);
-      setList((prev) => [mine, ...prev.filter((r) => r.id !== mine.id)]);
       await load();
+      await syncProductRating();
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : "Could not submit review");
     } finally {
@@ -149,7 +169,10 @@ export function ProductReviewsSection({ productId }: Props) {
     if (!ok) return;
     try {
       await reviewsDelete(accessToken, myReview.id);
+      setMyReview(null);
+      setPublicRows((prev) => prev.filter((r) => r.id !== myReview.id));
       await load();
+      await syncProductRating();
     } catch (ex) {
       await alertDialog(ex instanceof Error ? ex.message : "Could not delete review", {
         variant: "error",
@@ -177,11 +200,11 @@ export function ProductReviewsSection({ productId }: Props) {
           <div className="h-20 animate-pulse rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800" />
           <div className="h-20 animate-pulse rounded-[10px] bg-sikapa-gray-soft dark:bg-zinc-800" />
         </div>
-      ) : list.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <p className="mt-3 text-small text-sikapa-text-secondary">No reviews yet.</p>
       ) : (
         <ul className="mt-4 space-y-4">
-          {list.map((r) => (
+          {visibleRows.map((r) => (
             <li key={r.id} className="rounded-[10px] bg-white p-4 ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -208,7 +231,7 @@ export function ProductReviewsSection({ productId }: Props) {
 
       {accessToken && myReview ? (
         <div className="mt-6 rounded-[10px] bg-sikapa-cream/70 p-4 ring-1 ring-sikapa-gold/30 dark:bg-zinc-800/60 dark:ring-sikapa-gold/40">
-          <p className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">Your review</p>
+          <p className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">Manage your review</p>
           <p className="mt-1 text-[11px] text-sikapa-text-muted dark:text-zinc-500">
             Add or remove photos, or delete your entire review.
           </p>

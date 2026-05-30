@@ -29,6 +29,7 @@ def delete_review_and_media(session: Session, review: Review) -> None:
     product_id = review.product_id
     _delete_review_media_rows(session, review.id)
     session.delete(review)
+    session.flush()
     recalculate_product_avg_rating(session, product_id)
     session.commit()
 
@@ -41,6 +42,7 @@ def delete_reviews_for_product(session: Session, product_id: int) -> int:
             _delete_review_media_rows(session, review.id)
         session.delete(review)
     if reviews:
+        session.flush()
         recalculate_product_avg_rating(session, product_id)
         session.commit()
     return len(reviews)

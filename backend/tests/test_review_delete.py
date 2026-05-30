@@ -47,6 +47,8 @@ async def test_delete_review_and_media(test_session: Session):
 
     delete_review_and_media(session, review)
     assert session.get(Review, review.id) is None
+    session.refresh(product)
+    assert product.avg_rating == 0.0
     assert (
         session.exec(select(ReviewMedia).where(ReviewMedia.review_id == review.id)).first()
         is None

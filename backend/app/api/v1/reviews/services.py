@@ -2,7 +2,7 @@
 Reviews business logic
 """
 from fastapi import HTTPException, status
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 
 from app.models import Review, Product, Order, OrderItem, ReviewMedia, User
 from app.core.pg_rls_auth import user_review_exists, users_public_profiles_for_ids
