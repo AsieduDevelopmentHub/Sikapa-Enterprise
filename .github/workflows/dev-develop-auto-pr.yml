@@ -13,6 +13,11 @@ on:
         description: "Minimum commits ahead of main before opening a new PR"
         required: false
         default: "10"
+      trigger_sync:
+        description: "After this job, run Sync main to dev/develop (use when main is already updated)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -78,3 +83,15 @@ jobs:
           else
             echo "No PR created or found — skipping auto-merge."
           fi
+
+      - name: Dispatch sync main to dev/develop
+        if: github.event_name == 'workflow_dispatch' && inputs.trigger_sync == true
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          echo "Dispatching Sync main to dev/develop..."
+          gh workflow run sync-main-to-dev-develop.yml \
+            --ref main \
+            -f confirm=YES
+          echo "Sync workflow queued. Check Actions → Sync main to dev/develop."

@@ -55,6 +55,10 @@ After a push to **`dev/develop`**, opens a PR **`dev/develop` → `main`** only 
 
 After every push to **`main`** (including squash promotes), resets **`dev/develop`** to match **`main`** exactly. That prevents the next auto-PR from replaying commits that are already on `main` under a squash commit (the usual cause of false merge conflicts). New staging work should land on **`dev/develop`** only after this sync finishes.
 
+**Manual run (Run workflow button):** Actions → **Sync main to dev/develop** → **Run workflow** → set **confirm** to `YES` → Run. The button only appears for workflows on the repo **default branch** (`main`). If you do not see it, merge the latest workflow file to `main` first.
+
+**From auto-PR manual run:** enable **trigger_sync** on **Dev develop auto PR to main** only after `main` already has the promoted commits (otherwise you would wipe unpromoted work on `dev/develop`).
+
 ### `mobile-build.yml` (Android job)
 
 Triggers: push to **`main`** or **`dev/develop`** (mobile paths), tags **`mobile-v*`**, or manual dispatch.

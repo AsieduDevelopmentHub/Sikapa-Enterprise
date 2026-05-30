@@ -11,6 +11,11 @@ on:
     types: [closed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type YES to reset dev/develop to main (force-with-lease)"
+        required: true
+        default: ""
 
 permissions:
   contents: read
@@ -32,6 +37,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Confirm manual reset
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "YES" ]; then
+            echo "Manual sync aborted: set confirm to YES in Run workflow."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
