@@ -38,7 +38,7 @@ function PermissionsCheckboxes({
       {catalog.map(({ key, label }) => (
         <li key={key}>
           <label
-            className={`flex cursor-pointer items-start gap-2 rounded-lg border border-sikapa-gray-soft px-2.5 py-2 text-[11px] dark:border-white/15 ${
+            className={`flex cursor-pointer items-start gap-2 rounded-lg border border-sikapa-gray-soft bg-white px-2.5 py-2 text-[11px] dark:border-white/15 dark:bg-zinc-800/90 ${
               disabled ? "opacity-50" : ""
             }`}
           >
@@ -169,11 +169,15 @@ export default function AdminStaffPage() {
         Create accounts for staff, assign roles, and fine-tune permission scopes.
       </p>
 
-      <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5">
-        <p className="text-small font-semibold text-sikapa-text-primary">Create staff / admin account</p>
-        <p className="mt-1 text-[11px] text-sikapa-text-muted">Share the initial password securely.</p>
+      <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5 dark:bg-zinc-900 dark:ring-white/10">
+        <p className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
+          Create staff / admin account
+        </p>
+        <p className="mt-1 text-[11px] text-sikapa-text-muted dark:text-zinc-400">
+          Share the initial password securely.
+        </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="block text-[11px] font-semibold text-sikapa-text-primary">
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
             Username
             <input
               value={createUsername}
@@ -183,7 +187,7 @@ export default function AdminStaffPage() {
               placeholder="jdoe"
             />
           </label>
-          <label className="block text-[11px] font-semibold text-sikapa-text-primary">
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
             Full name
             <input
               value={createName}
@@ -192,7 +196,7 @@ export default function AdminStaffPage() {
               placeholder="Jane Doe"
             />
           </label>
-          <label className="block text-[11px] font-semibold text-sikapa-text-primary">
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
             Email
             <input
               type="email"
@@ -203,7 +207,7 @@ export default function AdminStaffPage() {
               placeholder="jane@company.com"
             />
           </label>
-          <label className="block text-[11px] font-semibold text-sikapa-text-primary sm:col-span-2 lg:col-span-1">
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200 sm:col-span-2 lg:col-span-1">
             Initial password (min 8 characters)
             <input
               type="password"
@@ -213,7 +217,7 @@ export default function AdminStaffPage() {
               className="mt-1 w-full rounded-[10px] border border-sikapa-gray-soft bg-white px-3 py-2 text-small outline-none ring-1 ring-transparent focus:ring-sikapa-gold/40 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100"
             />
           </label>
-          <label className="block text-[11px] font-semibold text-sikapa-text-primary">
+          <label className="block text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
             Role
             <select
               value={createRole}
@@ -230,7 +234,9 @@ export default function AdminStaffPage() {
         </div>
         {createRole !== "super_admin" ? (
           <div className="mt-4">
-            <p className="text-[11px] font-semibold text-sikapa-text-primary">Permissions for this account</p>
+            <p className="text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
+              Permissions for this account
+            </p>
             <div className="mt-2">
               <PermissionsCheckboxes
                 catalog={catalog}
@@ -288,8 +294,10 @@ export default function AdminStaffPage() {
       </div>
 
       <div className="mt-6">
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5">
-          <p className="text-small font-semibold text-sikapa-text-primary">Promote existing customer account</p>
+        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/[0.06] sm:p-5 dark:bg-zinc-900 dark:ring-white/10">
+          <p className="text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
+            Promote existing customer account
+          </p>
           <div className="mt-3">
             <AdminSearchInput
               value={candidateQuery}
@@ -357,7 +365,7 @@ export default function AdminStaffPage() {
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary">
+        <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
           Current staff & admins
         </h2>
         <AdminSearchInput
@@ -375,7 +383,7 @@ export default function AdminStaffPage() {
       {!ready && !err ? (
         <AdminStaffListSkeleton />
       ) : (
-        <ul className="mt-3 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06]">
+        <ul className="mt-3 divide-y divide-sikapa-gray-soft rounded-xl bg-white shadow-sm ring-1 ring-black/[0.06] dark:divide-white/10 dark:bg-zinc-900 dark:ring-white/10">
           {visibleStaff.map((u) => {
             const role = (u.admin_role ?? "admin").toLowerCase() as "super_admin" | "admin" | "staff";
             const isSuperRow = role === "super_admin";
@@ -394,7 +402,7 @@ export default function AdminStaffPage() {
                     {u.id !== me?.id ? (
                       <>
                         {isSuperRow && !isSuperViewer ? (
-                          <span className="rounded-full bg-sikapa-gray-soft px-3 py-1.5 text-[11px] font-semibold text-sikapa-text-primary dark:bg-zinc-800">
+                          <span className="rounded-full bg-sikapa-gray-soft px-3 py-1.5 text-[11px] font-semibold text-sikapa-text-primary dark:bg-zinc-800 dark:text-zinc-100">
                             super_admin
                           </span>
                         ) : (
@@ -473,7 +481,9 @@ export default function AdminStaffPage() {
                     <p className="text-[11px] text-sikapa-text-muted">Full access (super admin).</p>
                   ) : (
                     <>
-                      <p className="text-[11px] font-semibold text-sikapa-text-primary">Permissions</p>
+                      <p className="text-[11px] font-semibold text-sikapa-text-primary dark:text-zinc-200">
+                        Permissions
+                      </p>
                       <div className="mt-2">
                         <PermissionsCheckboxes
                           catalog={catalog}
@@ -486,7 +496,7 @@ export default function AdminStaffPage() {
                         <button
                           type="button"
                           disabled={savingPermFor === u.id || !accessToken}
-                          className="mt-3 rounded-full border border-sikapa-gold/50 bg-sikapa-cream/60 px-4 py-1.5 text-[11px] font-semibold text-sikapa-text-primary disabled:opacity-60 dark:bg-zinc-800"
+                          className="mt-3 rounded-full border border-sikapa-gold/50 bg-sikapa-cream/60 px-4 py-1.5 text-[11px] font-semibold text-sikapa-text-primary disabled:opacity-60 dark:border-sikapa-gold/40 dark:bg-zinc-800 dark:text-zinc-100"
                           onClick={() => {
                             if (!accessToken) return;
                             void (async () => {
