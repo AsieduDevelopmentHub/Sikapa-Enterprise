@@ -17,11 +17,7 @@ from app.models import (
     Product,
     ProductVariant,
     Order,
-    OrderItem,
     Category,
-    CartItem,
-    WishlistItem,
-    Review,
     InventoryAdjustment,
     Coupon,
     BusinessSetting,
@@ -292,36 +288,6 @@ async def update_product_admin(
         session.add(log)
         session.commit()
     return updated
-
-
-def _count_for_product(session: Session, model_cls, product_id: int) -> int:
-    return int(
-        session.exec(
-            select(func.count())
-            .select_from(model_cls)
-            .where(model_cls.product_id == product_id)  # type: ignore[attr-defined]
-        ).one()
-    )
-
-
-async def delete_product_admin(session: Session, product_id: int) -> None:
-    """Delete a product when it is not referenced by orders or other protected data."""
-    await get_entity_or_404(session, Product, product_id)
-
-    blockers: list[tuple[int, str]] = [
-        (_count_for_product(session, OrderItem, product_id), "appears on customer orders"),
-        (_count_for_product(session, Review, product_id), "has customer reviews"),
-        (_count_for_product(session, CartItem, product_id), "is in customer carts"),
-        (_count_for_product(session, WishlistItem, product_id), "is on customer wishlists"),
-    ]
-    for count, reason in blockers:
-        if count > 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"This product {reason} and cannot be deleted. Deactivate it instead.",
-            )
-
-    await delete_entity_safe(session, Product, product_id)
 
 
 async def get_all_products_admin(

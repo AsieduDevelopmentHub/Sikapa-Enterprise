@@ -40,24 +40,36 @@ export function pingBackendHealth(): void {
 }
 
 let refreshPromise: Promise<string | null> | null = null;
+/** Bumped on logout/login so in-flight refresh cannot restore the previous account. */
+let authSessionEpoch = 0;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("sikapa-auth-tokens-cleared", () => {
+    authSessionEpoch += 1;
+    refreshPromise = null;
+  });
+}
 
 async function refreshAccessTokenOnce(): Promise<string | null> {
   if (typeof window === "undefined") return null;
   if (refreshPromise) return refreshPromise;
+  const epochAtStart = authSessionEpoch;
   refreshPromise = (async () => {
     try {
       const { refresh: rt } = readTokens();
-      if (!rt) return null;
+      if (!rt || epochAtStart !== authSessionEpoch) return null;
       const res = await fetch(`${getApiV1Base()}${V1.auth.refresh}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
+        cache: "no-store",
         body: JSON.stringify({ refresh_token: rt }),
       });
-      if (!res.ok) return null;
+      if (!res.ok || epochAtStart !== authSessionEpoch) return null;
       const tokens = (await res.json()) as {
         access_token: string;
         refresh_token?: string | null;
       };
+      if (epochAtStart !== authSessionEpoch) return null;
       const bucket = getActiveBucket();
       writeTokens(tokens.access_token, tokens.refresh_token ?? rt, bucket);
       void syncSessionCookie(tokens.access_token);

@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { authGoogleOAuthVerify2FA } from "@/lib/api/auth";
-import { writeTokens } from "@/lib/auth-storage";
-import { syncSessionCookie } from "@/lib/session-cookie";
+import { applyAuthTokens } from "@/lib/apply-auth-session";
 import { sanitizeDigits, validateOtpCode } from "@/lib/validation/input";
 
 export default function GoogleOAuth2FAPage() {
@@ -40,9 +39,7 @@ export default function GoogleOAuth2FAPage() {
     try {
       const tokens = await authGoogleOAuthVerify2FA(pendingToken, digits);
       try {
-        writeTokens(tokens.access_token, tokens.refresh_token ?? null, "local");
-        void syncSessionCookie(tokens.access_token);
-        window.dispatchEvent(new Event("sikapa-auth-storage-updated"));
+        await applyAuthTokens(tokens, true);
       } catch {
         /* ignore */
       }

@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select, and_, or_
 
 from app.models import Product, Category
+from app.api.v1.products.visibility import storefront_product_visible
 from app.core.cache import cache, TTL_CATEGORIES, TTL_PRODUCT, TTL_PRODUCT_LIST, TTL_SEARCH
 from app.core.dsa.pagination import page_metadata
 from app.core.search_index import get_product_trie
@@ -29,7 +30,7 @@ async def get_products_with_filters(
     if cached is not None:
         return cached
 
-    filters = [Product.is_active == True]
+    filters = [storefront_product_visible()]
     if category_id is not None:
         filters.append(Product.category == str(category_id))
     if min_price is not None:
@@ -106,7 +107,7 @@ async def suggest_products(
     rows = session.exec(
         select(Product).where(
             Product.id.in_(product_ids[: limit * 2]),
-            Product.is_active == True,
+            storefront_product_visible(),
         )
     ).all()
     by_id = {p.id: p for p in rows}
@@ -156,7 +157,7 @@ async def search_products(
     if search_words:
         word_filters = [Product.name.ilike(f"%{w}%") for w in search_words]
         match_any = or_(match_any, *word_filters)
-    where_clause = and_(Product.is_active == True, match_any)
+    where_clause = and_(storefront_product_visible(), match_any)
     total = session.exec(select(func.count(Product.id)).where(where_clause)).one()
 
     query = (
@@ -190,7 +191,7 @@ async def get_product_by_id(session: Session, product_id: int):
         select(Product).where(Product.id == product_id)
     ).first()
 
-    if not product:
+    if not product or product.deleted_at is not None or not product.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found",
@@ -212,7 +213,7 @@ async def get_product_by_slug(session: Session, slug: str):
         select(Product).where(Product.slug == slug)
     ).first()
 
-    if not product:
+    if not product or product.deleted_at is not None or not product.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found",
