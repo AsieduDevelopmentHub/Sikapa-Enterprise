@@ -125,6 +125,11 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
   );
 
   useEffect(() => {
+    setPanel(initialPanel ?? "home");
+    setBanner(null);
+  }, [user?.id, initialPanel]);
+
+  useEffect(() => {
     if (panel !== "address") return;
     setAddressFormOpen(!hasSavedAddress);
   }, [panel, hasSavedAddress]);

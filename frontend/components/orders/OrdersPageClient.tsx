@@ -11,6 +11,8 @@ import { OrderProductThumb } from "@/components/orders/OrderProductThumb";
 import { formatGhs } from "@/lib/mock-data";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
 import { OrderListSkeleton, SkeletonBlock } from "@/components/StorefrontSkeletons";
+import { useLiveLoad } from "@/lib/hooks/useLiveLoad";
+import { ORDERS_CHANGED } from "@/lib/session-reset";
 
 const STATUS_FILTERS = ["all", "pending", "processing", "packed", "shipped", "delivered", "cancelled"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -33,9 +35,9 @@ export function OrdersPageClient() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [payingOrderId, setPayingOrderId] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setLoadErr(null);
     try {
       const list = await ordersList(accessToken);
@@ -43,18 +45,28 @@ export function OrdersPageClient() {
     } catch (e) {
       setLoadErr(e instanceof Error ? e.message : "Could not load orders");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accessToken]);
 
+  useLiveLoad(load, [accessToken, user?.id], {
+    intervalMs: 30_000,
+    enabled: !authLoading && !!user && !!accessToken,
+  });
+
   useEffect(() => {
-    if (authLoading) return;
-    if (!user || !accessToken) {
+    if (!authLoading && (!user || !accessToken)) {
       setRows([]);
-      return;
     }
-    void load();
-  }, [authLoading, user, accessToken, load]);
+  }, [authLoading, user, accessToken]);
+
+  useEffect(() => {
+    const onOrdersChanged = () => {
+      void load({ silent: true });
+    };
+    window.addEventListener(ORDERS_CHANGED, onOrdersChanged);
+    return () => window.removeEventListener(ORDERS_CHANGED, onOrdersChanged);
+  }, [load]);
 
   const filtered = useMemo(() => {
     if (statusFilter === "all") return rows;

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { ordersList, type OrderRow } from "@/lib/api/orders";
 import { formatGhs } from "@/lib/mock-data";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
+import { useLiveLoad } from "@/lib/hooks/useLiveLoad";
+import { ORDERS_CHANGED } from "@/lib/session-reset";
 
 function formatWhen(iso: string): string {
   try {
@@ -38,6 +40,33 @@ export function AccountOrdersPanel() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [busy, setBusy] = useState(false);
 
+  const loadOrders = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!accessToken) {
+      setOrders([]);
+      setBusy(false);
+      return;
+    }
+    if (!opts?.silent) setBusy(true);
+    try {
+      const list = await ordersList(accessToken);
+      setOrders(list);
+    } catch {
+      setOrders([]);
+    } finally {
+      if (!opts?.silent) setBusy(false);
+    }
+  }, [accessToken]);
+
+  useLiveLoad(loadOrders, [accessToken, user?.id], { intervalMs: 30_000, enabled: !!accessToken });
+
+  useEffect(() => {
+    const onOrdersChanged = () => {
+      void loadOrders({ silent: true });
+    };
+    window.addEventListener(ORDERS_CHANGED, onOrdersChanged);
+    return () => window.removeEventListener(ORDERS_CHANGED, onOrdersChanged);
+  }, [loadOrders]);
+
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(() => new Set());
   const [showHidden, setShowHidden] = useState(false);
 
@@ -46,20 +75,6 @@ export function AccountOrdersPanel() {
       new Set(parseHiddenOrderIds(typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null)),
     );
   }, [storageKey]);
-
-  useEffect(() => {
-    if (!accessToken) {
-      setOrders([]);
-      setBusy(false);
-      return;
-    }
-
-    setBusy(true);
-    ordersList(accessToken)
-      .then(setOrders)
-      .catch(() => setOrders([]))
-      .finally(() => setBusy(false));
-  }, [accessToken]);
 
   const visibleOrders = useMemo(() => {
     return orders

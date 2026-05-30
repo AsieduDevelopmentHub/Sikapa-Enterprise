@@ -229,6 +229,7 @@ export async function apiFetchJsonAuthMethod<T>(
   const doFetch = (tok: string) =>
     fetch(url, {
       method,
+      cache: "no-store",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
