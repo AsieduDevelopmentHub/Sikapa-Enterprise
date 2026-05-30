@@ -47,8 +47,6 @@ This folder is the actionable follow-up to the full system audit. Use it as a ch
 - [environment/environment.md](../environment/environment.md) — env var reference
 - [operations/operations.md](../operations/operations.md) — deploys, health, CORS
 - [deployment/production-deployment.md](../deployment/production-deployment.md) — production checklist
-- [contributing/contributing.md](../contributing/contributing.md) — branch workflow & PR checklist
-- [security/security-policy.md](../security/security-policy.md) — vulnerability reporting
 - [guides/developer-quickref.md](../guides/developer-quickref.md) — day-to-day doc map
 - [architecture/data-structures-and-algorithms.md](../architecture/data-structures-and-algorithms.md) — DSA modules and usage
 

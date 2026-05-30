@@ -14,8 +14,6 @@ Short pointers for day-to-day work. Canonical detail lives in the linked docs â€
 | API examples | [../../backend/docs/api/api-reference.md](../../backend/docs/api/api-reference.md) |
 | DSA modules (LRU, trie, rate limits) | [../architecture/data-structures-and-algorithms.md](../architecture/data-structures-and-algorithms.md) |
 | System audit & gaps | [../audit/README.md](../audit/README.md) |
-| Contributing & PR rules | [../contributing/contributing.md](../contributing/contributing.md) |
-| Report a vulnerability | [../security/security-policy.md](../security/security-policy.md) |
 | Mobile setup | [../../mobile/README.md](../../mobile/README.md) |
 | CI workflows (local mirror) | [../../.github/workflows/README.md](../../.github/workflows/README.md) |
 
