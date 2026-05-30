@@ -5,6 +5,12 @@ name: Sync main to dev/develop
 on:
   push:
     branches: [main]
+  # Squash merges via github-actions[bot] do not always fire a follow-up push
+  # workflow; PR close is a reliable backup trigger.
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,6 +22,12 @@ concurrency:
 jobs:
   sync:
     name: Reset dev/develop to main
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'dev/develop')
     runs-on: ubuntu-latest
     permissions:
       contents: write
