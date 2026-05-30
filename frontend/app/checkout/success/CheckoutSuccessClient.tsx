@@ -10,6 +10,7 @@ import { ordersDetail, type OrderDetail } from "@/lib/api/orders";
 import { paystackVerify } from "@/lib/api/payments";
 import { formatGhs } from "@/lib/mock-data";
 import { isPaystackPaymentConfirmed } from "@/lib/paystack-status";
+import { notifyOrdersChanged } from "@/lib/session-reset";
 
 export function CheckoutSuccessClient() {
   const params = useSearchParams();
@@ -31,6 +32,7 @@ export function CheckoutSuccessClient() {
     try {
       const d = await ordersDetail(accessToken, orderId);
       setDetail(d);
+      notifyOrdersChanged();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not load order");
     }

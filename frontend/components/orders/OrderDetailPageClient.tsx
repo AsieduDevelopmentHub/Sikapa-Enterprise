@@ -19,6 +19,8 @@ import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline";
 import { formatGhs } from "@/lib/mock-data";
 import { orderStatusLabel, orderStatusPillClass } from "@/lib/order-status-ui";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
+import { useLiveLoad } from "@/lib/hooks/useLiveLoad";
+import { ORDERS_CHANGED } from "@/lib/session-reset";
 
 function regionLabel(slug: string | null | undefined): string | null {
   if (!slug?.trim()) return null;
@@ -58,9 +60,9 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [payBusy, setPayBusy] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken || !idValid) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setErr(null);
     try {
       const d = await ordersDetail(accessToken, orderId);
@@ -69,15 +71,22 @@ export function OrderDetailPageClient({ orderIdParam }: Props) {
       setDetail(null);
       setErr(e instanceof Error ? e.message : "Could not load order");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accessToken, orderId, idValid]);
 
+  useLiveLoad(load, [accessToken, user?.id, orderId, idValid], {
+    intervalMs: 20_000,
+    enabled: !authLoading && !!user && !!accessToken && idValid,
+  });
+
   useEffect(() => {
-    if (authLoading) return;
-    if (!user || !accessToken || !idValid) return;
-    void load();
-  }, [authLoading, user, accessToken, idValid, load]);
+    const onOrdersChanged = () => {
+      void load({ silent: true });
+    };
+    window.addEventListener(ORDERS_CHANGED, onOrdersChanged);
+    return () => window.removeEventListener(ORDERS_CHANGED, onOrdersChanged);
+  }, [load]);
 
   useEffect(() => {
     if (!paidRef || !accessToken || !idValid) return;

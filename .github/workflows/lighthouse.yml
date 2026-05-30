@@ -16,7 +16,10 @@ permissions:
 
 concurrency:
   group: lighthouse-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: 1
 
 jobs:
   lighthouse:
@@ -39,6 +42,14 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/**/*.ts', 'frontend/**/*.tsx', 'frontend/**/*.js', 'frontend/**/*.jsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
@@ -55,11 +66,8 @@ jobs:
         with:
           chrome-version: stable
 
-      - name: Install Lighthouse CI
-        run: npm install -g @lhci/cli@0.13.x
-
       - name: Run Lighthouse CI
         working-directory: frontend
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-        run: lhci autorun --config=./lighthouserc.json
+        run: npx lhci autorun --config=./lighthouserc.json
