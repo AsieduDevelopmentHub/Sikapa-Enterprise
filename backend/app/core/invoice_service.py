@@ -1,6 +1,6 @@
 """
 Invoice generation using ReportLab — Sikapa Enterprise branded PDFs with line items,
-product names, SKUs, and thumbnails when images can be resolved.
+product names, and thumbnails when images can be resolved.
 """
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.api.v1.orders.line_items import variant_subline_for_invoice
 from app.models import Invoice, Order, OrderItem, Product, ProductVariant, User
 
 logger = logging.getLogger(__name__)
@@ -137,14 +138,14 @@ class InvoiceService:
         currency_code: str | None = None,
     ) -> bytes:
         """
-        Build a branded PDF invoice with product names, SKUs, and images.
+        Build a branded PDF invoice with product names, variant options, and images.
 
         Args:
             invoice: Invoice row
             order: Order row
             user: Billing customer
             order_items: Line items
-            products_by_id: Map of product id -> Product (for names, SKU, images)
+            products_by_id: Map of product id -> Product (for names and images)
             variants_by_id: Map of variant id -> ProductVariant for variant lines
             company_name: Header brand (default Sikapa Enterprise)
             currency_code: ISO currency for amounts (default PAYSTACK_CURRENCY or GHS)
@@ -311,17 +312,16 @@ class InvoiceService:
         elements.append(Spacer(1, 0.2 * inch))
         elements.append(Paragraph("Line items", h_section))
 
-        # --- Line items (image + product + sku + qty + unit + line total) ---
+        # --- Line items (image + product + qty + unit + line total) ---
         hdr = [
             "",
             "Product",
-            "SKU",
             "Qty",
             f"Unit ({cur})",
             f"Line ({cur})",
         ]
         rows: list[list] = [hdr]
-        col_w = [0.62 * inch, 2.35 * inch, 0.82 * inch, 0.42 * inch, 0.92 * inch, 0.92 * inch]
+        col_w = [0.62 * inch, 3.35 * inch, 0.48 * inch, 1.0 * inch, 1.0 * inch]
 
         for item in items_sorted:
             prod = products_by_id.get(item.product_id)
@@ -330,49 +330,30 @@ class InvoiceService:
                 if item.variant_id
                 else None
             )
+            pname = (
+                (prod.name if prod else None)
+                or f"Product #{item.product_id}"
+            )
             if item.variant_id:
-                pname = (
-                    (item.variant_name or "").strip()
-                    or (var.name if var else None)
-                    or (prod.name if prod else None)
-                    or f"Product #{item.product_id}"
-                )
-                sku = (
-                    (var.sku if var and var.sku else None)
-                    or (prod.sku if prod and prod.sku else None)
-                    or "—"
-                )
                 snap_img = (item.variant_image_url or "").strip() or None
                 img_url = snap_img or (var.image_url if var else None)
-                detail_src = (item.variant_detail_snapshot or "").strip() or None
-                if not detail_src and var:
-                    if var.description and var.description.strip():
-                        detail_src = var.description.strip()
-                    elif var.attributes and var.attributes.strip():
-                        detail_src = var.attributes.strip()
+                variant_line = variant_subline_for_invoice(item, var)
             else:
-                pname = (
-                    (prod.name if prod else None)
-                    or f"Product #{item.product_id}"
-                )
-                sku = prod.sku if prod and prod.sku else "—"
                 img_url = prod.image_url if prod else None
-                detail_src = prod.description.strip() if prod and prod.description else None
+                variant_line = None
 
             thumb = _thumbnail_flowable(img_url)
             desc_bits = f"<b>{escape(pname)}</b>"
-            if detail_src:
-                desc_short = detail_src
-                if len(desc_short) > 120:
-                    desc_short = desc_short[:117] + "…"
-                desc_bits += f"<br/><font size='8' color='#7a6a62'>{escape(desc_short)}</font>"
+            if variant_line:
+                desc_bits += (
+                    f"<br/><font size='8' color='#7a6a62'>{escape(variant_line)}</font>"
+                )
             desc = Paragraph(desc_bits, product_title)
             line_total = float(item.quantity * item.price_at_purchase)
             rows.append(
                 [
                     thumb,
                     desc,
-                    Paragraph(f"<para alignment='center'>{escape(sku)}</para>", small),
                     Paragraph(f"<para alignment='center'>{item.quantity}</para>", body),
                     Paragraph(
                         f"<para alignment='right'>{_fmt_money(float(item.price_at_purchase), cur)}</para>",
