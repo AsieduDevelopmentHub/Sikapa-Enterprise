@@ -71,6 +71,34 @@ def _should_strip(core: str) -> bool:
     return False
 
 
+def strip_agent_attribution_only(text: str) -> str:
+    """Remove Co-authored-by / agent trailers only (safe for history rewrite).
+
+    Unlike strip_message(), does not strip generic ``type: subject`` commit
+    subject lines or other non-attribution ``Key: value`` lines in the body.
+    """
+    lines = text.splitlines(True)
+    if not lines:
+        return text
+    out: list[str] = []
+    for line in lines:
+        core = line.replace("\r", "").rstrip("\n")
+        if core == "":
+            out.append(line)
+            continue
+        if _CO_AUTHOR.match(core) or _ATTRIBUTION_TRAILER.match(core):
+            continue
+        if ":" in core and _AGENT_VALUE.search(core):
+            continue
+        if re.match(r"(?i)^\s*--trailer\b", core):
+            continue
+        out.append(line)
+    result = "".join(out)
+    while result.endswith("\n\n") or result.endswith("\r\n\r\n"):
+        result = result[:-1]
+    return result.rstrip() + ("\n" if text.endswith("\n") else "")
+
+
 def strip_message(text: str) -> str:
     lines = text.splitlines(True)
     if not lines:
