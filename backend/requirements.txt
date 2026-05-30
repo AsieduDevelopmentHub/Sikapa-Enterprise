@@ -48,7 +48,7 @@ resend==2.30.1                     # Email delivery service
 # -----------------------------
 # Caching & Task Queue
 # -----------------------------
-redis[hiredis]==5.0.8             # Redis client with fast C parser
+redis[hiredis]==8.0.0             # Redis client with fast C parser
 celery[redis]==5.4.0              # Distributed task queue backed by Redis
 
 # -----------------------------
