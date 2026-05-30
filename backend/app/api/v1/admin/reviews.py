@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, select
 
 from app.api.v1.auth.dependencies import require_admin_permission
+from app.api.v1.reviews.delete_helpers import delete_review_and_media
 from app.api.v1.reviews.schemas import ReviewSchema
 from app.db import get_session
 from app.models import Review, User
@@ -34,5 +35,4 @@ async def delete_review_admin(
     review = session.get(Review, review_id)
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
-    session.delete(review)
-    session.commit()
+    delete_review_and_media(session, review)

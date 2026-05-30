@@ -188,5 +188,6 @@ async def delete_review(session: Session, review_id: int, user_id: int) -> None:
             detail="Not authorized to delete this review"
         )
 
-    session.delete(review)
-    session.commit()
+    from app.api.v1.reviews.delete_helpers import delete_review_and_media
+
+    delete_review_and_media(session, review)

@@ -59,10 +59,56 @@ async def request_validation_exception_handler(
     return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": msg})
 
 
+def friendly_integrity_message(exc: IntegrityError) -> str:
+    """Map database constraint failures to actionable client messages."""
+    orig = getattr(exc, "orig", None)
+    text = str(orig or exc).lower()
+
+    if "reviewmedia" in text or ("review_id" in text and "review" in text):
+        return "This review still has attachments. Try again or remove media from the review first."
+
+    if "orderitem" in text or "order_item" in text:
+        return "This product appears on customer orders and cannot be deleted."
+
+    if "cartitem" in text:
+        return "This product is still in customer carts. Clear carts or wait until items are removed."
+
+    if "wishlistitem" in text or "wishlist" in text:
+        return "This product is on customer wishlists and cannot be deleted yet."
+
+    if "productvariant" in text or "product_variant" in text:
+        return "Remove or reassign product variants before deleting this product."
+
+    if "productimage" in text:
+        return "Remove product images before deleting this product."
+
+    if "inventoryadjustment" in text or "inventory_adjustment" in text:
+        return "This product has inventory history. Deactivate it instead of deleting, or contact support."
+
+    if "review" in text and "product_id" in text:
+        return "Delete customer reviews for this product before removing it."
+
+    if "coupon" in text and ("foreign key" in text or "violates" in text):
+        return "This coupon is still referenced elsewhere and cannot be deleted."
+
+    if "category" in text and ("foreign key" in text or "violates" in text):
+        return "This category is still in use and cannot be deleted."
+
+    if "unique" in text or "duplicate key" in text:
+        return "A record with this value already exists."
+
+    if "foreign key" in text or "violates foreign key" in text:
+        if "product" in text:
+            return "This item is still linked to one or more products. Remove those links first."
+        return "This action could not be completed because related records still exist."
+
+    return "This action could not be completed because related records still exist."
+
+
 async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content={"detail": "This action could not be completed. Check that products exist and try again."},
+        content={"detail": friendly_integrity_message(exc)},
     )
 
 
