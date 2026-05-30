@@ -20,8 +20,9 @@ import {
   type TokenResponse,
   type UserProfile,
 } from "@/lib/api/auth";
-import { clearAllAuthTokens, readTokens, writeTokens, type AuthBucket } from "@/lib/auth-storage";
-import { clearSessionCookie, syncSessionCookie } from "@/lib/session-cookie";
+import { applyAuthTokens } from "@/lib/apply-auth-session";
+import { clearAllAuthTokens, readTokens } from "@/lib/auth-storage";
+import { clearSessionCookie } from "@/lib/session-cookie";
 import { resetClientSessionCache } from "@/lib/session-reset";
 
 /**
@@ -75,15 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearAuthError = useCallback(() => setAuthError(null), []);
 
-  const persistTokens = useCallback(
-    async (access: string, refresh: string | null | undefined, bucket: AuthBucket) => {
-      writeTokens(access, refresh ?? null, bucket);
-      setAccessToken(access);
-      await syncSessionCookie(access);
-    },
-    []
-  );
-
   const clearTokens = useCallback(async () => {
     clearAllAuthTokens();
     await clearSessionCookie();
@@ -93,16 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const applySession = useCallback(async (tokens: TokenResponse, remember = true) => {
-    resetClientSessionCache(queryClient);
-    clearAllAuthTokens();
-    const bucket: AuthBucket = remember ? "local" : "session";
-    await persistTokens(tokens.access_token, tokens.refresh_token ?? undefined, bucket);
+    await applyAuthTokens(tokens, remember, queryClient);
+    setAccessToken(tokens.access_token);
     const profile = await authFetchProfile(tokens.access_token);
     setUser({
       ...profile,
       is_admin: Boolean(profile.is_admin),
     });
-  }, [persistTokens, queryClient]);
+  }, [queryClient]);
 
   const refreshProfile = useCallback(async () => {
     const token = readTokens().access;
