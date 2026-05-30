@@ -15,10 +15,10 @@ from app.db import get_session
 from app.api.v1.auth.dependencies import require_admin_permission
 from app.models import User, Product, ProductVariant
 from app.api.v1.admin.schemas import ProductManagementRead, StockAlertItem
+from app.api.v1.admin.product_delete import delete_product_admin
 from app.api.v1.admin.services import (
     create_product_admin,
     update_product_admin,
-    delete_product_admin,
     upload_product_image,
     get_all_products_admin,
     get_entity_or_404,
@@ -388,27 +388,33 @@ async def update_product(
     return updated
 
 
-@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+class ProductDeleteResponse(BaseModel):
+    mode: Literal["hard", "soft"]
+    detail: str
+
+
+@router.delete("/{product_id}", response_model=ProductDeleteResponse)
 async def delete_product(
     product_id: int,
     request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_admin_permission("manage_products")),
 ):
-    """Delete a product."""
+    """Permanently delete or soft-archive a product depending on order/inventory history."""
     snap = _product_snapshot(session.get(Product, product_id))
-    await delete_product_admin(session, product_id)
+    outcome = await delete_product_admin(session, product_id)
     AuditLogger.log(
         session,
         user_id=current_user.id,
-        action="delete",
+        action="delete" if outcome.mode == "hard" else "archive",
         resource_type="product",
         resource_id=product_id,
-        changes={"snapshot": snap},
+        changes={"snapshot": snap, "mode": outcome.mode, "detail": outcome.detail},
         request=request,
     )
     invalidate_storefront_catalog_cache()
     invalidate_admin_operational_cache()
+    return ProductDeleteResponse(mode=outcome.mode, detail=outcome.detail)
 
 
 @router.post(

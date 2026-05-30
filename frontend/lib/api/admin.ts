@@ -376,8 +376,20 @@ export async function adminUpdateProduct(
   );
 }
 
-export async function adminDeleteProduct(accessToken: string, productId: number): Promise<void> {
-  await apiFetchJsonAuthMethod<undefined>(accessToken, V1.admin.product(productId), "DELETE");
+export type AdminProductDeleteResult = {
+  mode: "hard" | "soft";
+  detail: string;
+};
+
+export async function adminDeleteProduct(
+  accessToken: string,
+  productId: number
+): Promise<AdminProductDeleteResult> {
+  return apiFetchJsonAuthMethod<AdminProductDeleteResult>(
+    accessToken,
+    V1.admin.product(productId),
+    "DELETE"
+  );
 }
 
 export async function adminFetchCategories(accessToken: string): Promise<AdminCategory[]> {

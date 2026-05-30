@@ -41,9 +41,15 @@ export default function AdminProductsPage() {
   const handleDelete = useCallback(
     async (productId: number) => {
       try {
-        await adminDeleteProduct(accessToken!, productId);
+        const result = await adminDeleteProduct(accessToken!, productId);
         await invalidateCatalogQueries(queryClient);
         await load();
+        await alertDialog(
+          result.mode === "soft"
+            ? `Archived: ${result.detail}`
+            : result.detail,
+          { variant: result.mode === "soft" ? "default" : "default" }
+        );
       } catch (e) {
         await alertDialog(e instanceof Error ? e.message : "Delete failed", {
           variant: "error",

@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 
 from app.core.cache import TTL_SEARCH, cache
 from app.core.dsa.trie import Trie
+from app.api.v1.products.visibility import storefront_product_visible
 from app.models import Product
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def _tokenize(text: str) -> list[str]:
 def build_product_trie(session: Session) -> Trie[int]:
     """Load active product names/SKUs into a trie keyed by product id."""
     trie: Trie[int] = Trie()
-    products = session.exec(select(Product).where(Product.is_active == True)).all()
+    products = session.exec(select(Product).where(storefront_product_visible())).all()
     for product in products:
         name = (product.name or "").strip()
         if name:

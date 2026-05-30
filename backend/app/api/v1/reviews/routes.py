@@ -221,5 +221,8 @@ async def delete_review_media(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
         )
+    from app.core.storage_cleanup import delete_stored_file_by_url
+
+    delete_stored_file_by_url(media.url)
     session.delete(media)
     session.commit()
