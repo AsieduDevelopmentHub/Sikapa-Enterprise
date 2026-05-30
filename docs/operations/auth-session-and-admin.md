@@ -30,7 +30,7 @@ Controlled in `backend/.env`:
 - `ACCESS_TOKEN_EXPIRE_MINUTES` — short-lived bearer for API calls (often ~15 minutes).
 - `REFRESH_TOKEN_EXPIRE_DAYS` — used with `/auth/refresh`; rotation returns new access + refresh tokens.
 
-See also [OPERATIONS.md](./OPERATIONS.md) (JWT section).
+See also [operations.md](./operations.md) (JWT section).
 
 ---
 
@@ -65,6 +65,6 @@ The **Admin → Staff** page in the frontend (`/admin/staff`) drives these flows
 
 | Topic | Location |
 |--------|-----------|
-| Env vars | [ENVIRONMENT.md](./ENVIRONMENT.md) |
-| CORS, health, troubleshooting | [OPERATIONS.md](./OPERATIONS.md) |
-| Auth endpoints & schemas (API detail) | [../backend/docs/AUTHENTICATION.md](../backend/docs/AUTHENTICATION.md) |
+| Env vars | [environment.md](../environment/environment.md) |
+| CORS, health, troubleshooting | [operations.md](./operations.md) |
+| Auth endpoints & schemas (API detail) | [../../backend/docs/api/authentication.md](../../backend/docs/api/authentication.md) |

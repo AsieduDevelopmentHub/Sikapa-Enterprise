@@ -123,7 +123,11 @@ backend/
 ├── alembic/          # Database migrations
 ├── certs/            # SSL certificates for HTTPS
 ├── db/               # Local SQLite database
-├── docs/             # Documentation
+├── docs/             # See backend/docs/README.md
+│   ├── api/          # authentication.md, api-reference.md
+│   ├── hosting/
+│   ├── migration/
+│   └── tls/
 └──  tools/            # Utility scripts
 ```
 
@@ -187,10 +191,11 @@ pytest tests/test_dsa.py tests/test_auth_e2e.py -v
 
 ## Documentation
 
-- [Authentication API Reference](docs/API_REFERENCE.md)
-- [Authentication System Guide](docs/AUTHENTICATION.md)
-- [TLS/HTTPS Setup](docs/tls/)
-- [Migration Guide](docs/migration/)
+- [Authentication API Reference](docs/api/api-reference.md)
+- [Authentication System Guide](docs/api/authentication.md)
+- [TLS/HTTPS Setup](docs/tls/https.md)
+- [Migration Guide](docs/migration/migration.md)
+- [Backend docs index](docs/README.md)
 
 ## Troubleshooting
 

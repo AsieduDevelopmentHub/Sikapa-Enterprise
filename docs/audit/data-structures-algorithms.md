@@ -2,7 +2,7 @@
 
 **Status:** Phase 5 **complete** (May 2026). Optional advanced items (DSA-018+) remain backlog.
 
-**Reference:** [DATA_STRUCTURES_AND_ALGORITHMS.md](../DATA_STRUCTURES_AND_ALGORITHMS.md)
+**Reference:** [architecture/data-structures-and-algorithms.md](../architecture/data-structures-and-algorithms.md)
 
 ---
 
@@ -55,7 +55,7 @@ When adding DSA-backed API endpoints, update:
 
 - [x] `frontend/lib/api/v1-paths.ts` — `products.suggest`
 - [x] `mobile/lib/src/core/api/v1_paths.dart` — `productsSuggest`
-- [x] [DATA_STRUCTURES_AND_ALGORITHMS.md](../DATA_STRUCTURES_AND_ALGORITHMS.md)
+- [x] [architecture/data-structures-and-algorithms.md](../architecture/data-structures-and-algorithms.md)
 
 Admin orders cursor (optional frontend wiring later):
 

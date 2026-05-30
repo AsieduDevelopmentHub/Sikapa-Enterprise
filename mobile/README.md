@@ -151,7 +151,7 @@ The mobile client uses the **same** `/api/v1/*` endpoints the Next.js web app do
   request replays once before bubbling up.
 - **Maintenance mode.** A `503` body of `{ "maintenance": true, "message": "..." }` triggers a
   full-screen [`MaintenanceScreen`](lib/src/screens/maintenance_screen.dart), matching the web
-  storefront's `/maintenance` route. See `docs/OPERATIONS.md → Maintenance mode`.
+  storefront's `/maintenance` route. See `docs/operations/operations.md → Maintenance mode`.
 - **Wishlist prefetch never errors out loud.** Same fix as `frontend/context/WishlistContext.tsx`:
   a transient failure leaves the wishlist empty rather than showing a banner the user didn't ask for.
 - **Paystack checkout.** The mobile flow creates an order, calls
@@ -216,7 +216,7 @@ Deferred:
 
 ## Cross-references
 
-- [`../docs/ENVIRONMENT.md`](../docs/ENVIRONMENT.md) — env var conventions across services.
-- [`../docs/OPERATIONS.md`](../docs/OPERATIONS.md) — health checks, CORS, maintenance flip order.
-- [`../backend/docs/AUTHENTICATION.md`](../backend/docs/AUTHENTICATION.md) — auth contract used by both web and mobile clients.
+- [`../docs/environment/environment.md`](../docs/environment/environment.md) — env var conventions across services.
+- [`../docs/operations/operations.md`](../docs/operations/operations.md) — health checks, CORS, maintenance flip order.
+- [`../backend/docs/api/authentication.md`](../backend/docs/api/authentication.md) — auth contract used by both web and mobile clients.
 - [`../frontend/lib/api/v1-paths.ts`](../frontend/lib/api/v1-paths.ts) — the canonical route table; keep `lib/src/core/api/v1_paths.dart` in sync when backend routes change.

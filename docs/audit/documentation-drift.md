@@ -12,7 +12,7 @@ Items where docs disagree with the repo. Fix these to reduce onboarding and depl
 
 **Problem:** These reference a root `android/` WebView wrapper that does not exist (only `mobile/android/`):
 
-- `docs/README.md` — layout diagram and link to `../android/README.md`
+- `docs/README.md` — hub layout diagram (lowercase subfolders: `audit/`, `environment/`, `operations/`, etc.)
 - Root `README.md` — repository structure lists `android/`
 
 **Fix:** Remove or replace with `mobile/`; link `mobile/README.md`.
@@ -27,7 +27,7 @@ Items where docs disagree with the repo. Fix these to reduce onboarding and depl
 |----------|--------|
 | Repo root | `backend/render.yaml` |
 
-**Files:** `backend/docs/hosting/render.md`, `docs/PRODUCTION_DEPLOYMENT.md`
+**Files:** `backend/docs/hosting/render.md`, `docs/deployment/production-deployment.md`
 
 **Fix:** State "Root Directory = `backend` on Render"; blueprint path is `backend/render.yaml`.
 
@@ -54,9 +54,9 @@ Items where docs disagree with the repo. Fix these to reduce onboarding and depl
 
 | Doc | Correct var |
 |-----|-------------|
-| `docs/PRODUCTION_DEPLOYMENT.md` uses `NEXT_PUBLIC_API_BASE_URL` | `NEXT_PUBLIC_API_URL` |
+| `docs/deployment/production-deployment.md` uses `NEXT_PUBLIC_API_BASE_URL` | `NEXT_PUBLIC_API_URL` |
 
-**Canonical:** `frontend/.env.example`, `docs/ENVIRONMENT.md`
+**Canonical:** `frontend/.env.example`, `docs/environment/environment.md`
 
 ---
 
@@ -163,7 +163,7 @@ If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
 
 - [ ] **P2**
 
-**File:** `scripts/backup-postgres.sh` — not linked from `docs/README.md` or `docs/OPERATIONS.md`.
+**File:** `scripts/backup-postgres.sh` — not linked from `docs/README.md` or `docs/operations/operations.md`.
 
 ---
 

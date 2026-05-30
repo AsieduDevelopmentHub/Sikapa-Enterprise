@@ -1,6 +1,6 @@
 # Sikapa Enterprise — Documentation
 
-Start here. Docs use **lowercase kebab-case** filenames under topic subfolders (same style as [`audit/`](./audit/)).
+Start here. Docs use **lowercase paths** and **kebab-case** filenames, grouped by topic (same style as [`audit/`](./audit/)).
 
 ## Quick links
 
@@ -9,11 +9,9 @@ Start here. Docs use **lowercase kebab-case** filenames under topic subfolders (
 | **Environment variables (backend + frontend)** | [environment/environment.md](./environment/environment.md) |
 | **Data structures & algorithms** | [architecture/data-structures-and-algorithms.md](./architecture/data-structures-and-algorithms.md) |
 | **System audit & gap checklist** | [audit/README.md](./audit/README.md) |
-| **Contributing & local CI** | [../CONTRIBUTING.md](../CONTRIBUTING.md) |
-| **Security reporting** | [../SECURITY.md](../SECURITY.md) |
 | **Running services, deploys, JWT, CORS, health** | [operations/operations.md](./operations/operations.md) |
+| **Auth endpoints, tokens, 2FA (API)** | [../backend/docs/api/authentication.md](../backend/docs/api/authentication.md) |
 | **Browser “Remember me”, JWT refresh, admin RBAC** | [operations/auth-session-and-admin.md](./operations/auth-session-and-admin.md) |
-| **Auth endpoints, tokens, 2FA** | [../backend/docs/api/authentication.md](../backend/docs/api/authentication.md) |
 | **API examples & integration** | [../backend/docs/api/api-reference.md](../backend/docs/api/api-reference.md) |
 | **Backend README (setup, tests, migrations)** | [../backend/README.md](../backend/README.md) |
 | **Backend → Render** | [../backend/docs/hosting/render.md](../backend/docs/hosting/render.md) |
@@ -31,27 +29,29 @@ Sikapa-Enterprise/
 ├── frontend/              Next.js storefront
 ├── backend/               FastAPI API (`/api/v1/...`)
 ├── mobile/                Flutter storefront + admin
-├── docs/                  Documentation hub (this folder)
+├── docs/                  Documentation hub
 │   ├── audit/             System audit & remediation
 │   ├── architecture/      DSA modules & usage
 │   ├── deployment/        Production rollout
-│   ├── environment/       Env vars (Render, Vercel, local)
+│   ├── environment/       Env vars & secrets
 │   ├── history/           Changelog-style notes
 │   └── operations/        Runbooks, auth sessions, CORS
 ├── backend/docs/          Backend API & hosting detail
-│   ├── api/               Authentication & API reference
-│   ├── hosting/           Render
-│   ├── migration/         Alembic
-│   └── tls/               Local HTTPS
-└── frontend/docs/         Frontend hosting (Vercel)
+│   ├── api/               Auth & API reference
+│   ├── hosting/
+│   ├── migration/
+│   └── tls/
+├── frontend/docs/         Frontend hosting
+│   └── hosting/
+└── README.md              Project overview & quick start
 ```
 
 ## If you only read three things
 
-1. **[environment/environment.md](./environment/environment.md)** — `.env` / Render / Vercel; **`SECRET_KEY` must stay stable** or users must sign in again.
+1. **[environment/environment.md](./environment/environment.md)** — `.env` / Render / Vercel; **`SECRET_KEY` must stay stable** or all sessions invalidate.
 2. **[operations/operations.md](./operations/operations.md)** — health (`/health`), CORS, token refresh, common failures.
 3. **Backend interactive docs** — with the API running: `https://<your-host>/docs` (Swagger).
 
 ---
 
-*Documentation hub — lowercase paths under topic subfolders.*
+*Documentation paths normalized to lowercase subfolders (see `docs/audit/` for the audit index).*

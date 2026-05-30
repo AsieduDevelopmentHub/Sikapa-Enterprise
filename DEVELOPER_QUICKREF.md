@@ -675,9 +675,9 @@ instead of relying only on exceptions.
 
 | Document | Purpose |
 |----------|---------|
-| `docs/PRODUCTION_DEPLOYMENT.md` | Deployment procedures |
-| `docs/IMPROVEMENTS_SUMMARY.md` | Full production changes |
-| `docs/ENVIRONMENT.md` | Environment configuration |
+| `docs/deployment/production-deployment.md` | Deployment procedures |
+| `docs/history/improvements-summary.md` | Full production changes |
+| `docs/environment/environment.md` | Environment configuration |
 | `mobile/README.md` | Flutter mobile setup |
 | `backend/.env.example` | Backend environment template |
 

@@ -165,4 +165,4 @@ Tracked in [audit/data-structures-algorithms.md](./audit/data-structures-algorit
 
 - [audit/data-structures-algorithms.md](./audit/data-structures-algorithms.md) — gap checklist
 - [audit/remediation-roadmap.md](./audit/remediation-roadmap.md) — Phase 5 DSA follow-ups
-- [ENVIRONMENT.md](./ENVIRONMENT.md) — rate limit env vars
+- [environment/environment.md](../environment/environment.md) — rate limit env vars

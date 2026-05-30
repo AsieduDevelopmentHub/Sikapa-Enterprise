@@ -1,16 +1,14 @@
 # Backend documentation
 
-Lowercase topic subfolders (aligned with [`docs/audit/`](../../docs/audit/)).
+Lowercase paths under `backend/docs/`, aligned with the repo [`docs/`](../../docs/README.md) hub.
 
 | Topic | Document |
 |--------|-----------|
-| **Authentication (endpoints, 2FA, tokens)** | [api/authentication.md](./api/authentication.md) |
-| **API reference (examples)** | [api/api-reference.md](./api/api-reference.md) |
-| **Render deployment** | [hosting/render.md](./hosting/render.md) |
+| **Authentication (endpoints, JWT, 2FA)** | [api/authentication.md](./api/authentication.md) |
+| **API examples & integration** | [api/api-reference.md](./api/api-reference.md) |
+| **Deploy on Render** | [hosting/render.md](./hosting/render.md) |
 | **Database migrations** | [migration/migration.md](./migration/migration.md) |
-| **TLS / local HTTPS** | [tls/https.md](./tls/https.md) |
-| **Sessions & admin RBAC (web/mobile)** | [../../docs/operations/auth-session-and-admin.md](../../docs/operations/auth-session-and-admin.md) |
+| **Local / production TLS** | [tls/https.md](./tls/https.md) |
+| **Session storage & admin RBAC (web)** | [../../docs/operations/auth-session-and-admin.md](../../docs/operations/auth-session-and-admin.md) |
 | **Environment variables** | [../../docs/environment/environment.md](../../docs/environment/environment.md) |
 | **Operations runbook** | [../../docs/operations/operations.md](../../docs/operations/operations.md) |
-
-Hub: [../../docs/README.md](../../docs/README.md)

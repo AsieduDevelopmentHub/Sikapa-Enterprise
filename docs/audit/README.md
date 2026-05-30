@@ -44,11 +44,11 @@ This folder is the actionable follow-up to the full system audit. Use it as a ch
 
 ## Related docs
 
-- [ENVIRONMENT.md](../ENVIRONMENT.md) — env var reference
-- [OPERATIONS.md](../OPERATIONS.md) — deploys, health, CORS
-- [PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md) — production checklist
-- [IMPROVEMENTS_SUMMARY.md](../IMPROVEMENTS_SUMMARY.md) — prior improvement notes
-- [DATA_STRUCTURES_AND_ALGORITHMS.md](../DATA_STRUCTURES_AND_ALGORITHMS.md) — DSA modules and usage
+- [environment/environment.md](../environment/environment.md) — env var reference
+- [operations/operations.md](../operations/operations.md) — deploys, health, CORS
+- [deployment/production-deployment.md](../deployment/production-deployment.md) — production checklist
+- [history/improvements-summary.md](../history/improvements-summary.md) — prior improvement notes
+- [architecture/data-structures-and-algorithms.md](../architecture/data-structures-and-algorithms.md) — DSA modules and usage
 
 ---
 

@@ -213,7 +213,7 @@ Existing `lib/api/client.ts` provides:
 
 ## 8. Documentation ✅
 
-### 8.1 Production Deployment Guide (`docs/PRODUCTION_DEPLOYMENT.md`)
+### 8.1 Production Deployment Guide (`docs/deployment/production-deployment.md`)
 Complete runbook for production deployment:
 - Pre-deployment checklist (security, database, API, frontend)
 - Security configuration (secrets, CORS, rate limiting)
@@ -246,7 +246,7 @@ Complete runbook for production deployment:
 - ✅ `frontend/.env.local.example` - NEW: Frontend env template
 
 ### Documentation
-- ✅ `docs/PRODUCTION_DEPLOYMENT.md` - NEW: Complete production guide
+- ✅ `docs/deployment/production-deployment.md` - NEW: Complete production guide
 
 ---
 

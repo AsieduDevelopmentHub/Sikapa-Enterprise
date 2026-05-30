@@ -65,7 +65,7 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 **Problem:** Unset `SECRET_KEY` → predictable dev key in `app/core/security.py`.
 
-**Fix:** Fail in CI; document in `docs/ENVIRONMENT.md`. Production checks already block weak keys.
+**Fix:** Fail in CI; document in `docs/environment/environment.md`. Production checks already block weak keys.
 
 ---
 

@@ -172,7 +172,7 @@ See [frontend.md](./frontend.md#f-005).
 
 **File:** `scripts/backup-postgres.sh` — manual only; not in cron or docs hub.
 
-**Fix:** Link from `docs/OPERATIONS.md`; document schedule for operators.
+**Fix:** Link from `docs/operations/operations.md`; document schedule for operators.
 
 ---
 
@@ -187,7 +187,7 @@ See [frontend.md](./frontend.md#f-005).
 **Fix:**
 
 1. Add `SENTRY_DSN` to backend (FastAPI integration) and frontend (`@sentry/nextjs`).
-2. Document in `docs/ENVIRONMENT.md`.
+2. Document in `docs/environment/environment.md`.
 
 ---
 
@@ -231,7 +231,7 @@ See [frontend.md](./frontend.md#f-005).
 | `MOBILE_API_BASE`, `MOBILE_GOOGLE_OAUTH_ENABLED` | `mobile-build.yml` |
 | Apple signing + App Store Connect | `mobile-ios-testflight.yml` |
 
-Document in `docs/OPERATIONS.md` which are required vs optional.
+Document in `docs/operations/operations.md` which are required vs optional.
 
 ---
 

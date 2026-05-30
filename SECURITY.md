@@ -58,7 +58,7 @@ Out of scope (unless combined with a chain):
 - Secrets belong in environment variables, never in git
 - Run `pip-audit` / `npm audit` via CI before releases
 - Production requires strong `SECRET_KEY`, `TOTP_ENCRYPTION_KEY`, and database credentials
-- See [docs/audit/security.md](./docs/audit/security.md) and [docs/PRODUCTION_DEPLOYMENT.md](./docs/PRODUCTION_DEPLOYMENT.md)
+- See [docs/audit/security.md](./docs/audit/security.md) and [docs/deployment/production-deployment.md](./docs/deployment/production-deployment.md)
 
 ## License
 

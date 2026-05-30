@@ -127,7 +127,7 @@ Goal: Maintainability and team scale.
 
 ## Phase 5 — Data structures & algorithms ✅ Complete
 
-**Reference:** [data-structures-algorithms.md](./data-structures-algorithms.md) · [DATA_STRUCTURES_AND_ALGORITHMS.md](../DATA_STRUCTURES_AND_ALGORITHMS.md)
+**Reference:** [data-structures-algorithms.md](./data-structures-algorithms.md) · [architecture/data-structures-and-algorithms.md](../architecture/data-structures-and-algorithms.md)
 
 ### Phase 5 master checklist
 
@@ -141,7 +141,7 @@ Goal: Maintainability and team scale.
 - [x] DSA-008 — Mobile DSA utilities
 - [x] DSA-009 — DSA unit tests (backend, frontend, mobile)
 - [x] DSA-010 — Path constants for suggest endpoint
-- [x] DSA-011 — `docs/DATA_STRUCTURES_AND_ALGORITHMS.md`
+- [x] DSA-011 — `docs/architecture/data-structures-and-algorithms.md`
 - [x] DSA-012 — Trie invalidation via `invalidate_storefront_catalog_cache()`
 - [x] DSA-013 — Mobile shop autocomplete (`/products/suggest`)
 - [x] DSA-014 — Frontend API suggest fallback in `SearchAutocomplete`

@@ -1,7 +1,7 @@
 """
 Reusable data structures and algorithms for Sikapa backend services.
 
-See docs/DATA_STRUCTURES_AND_ALGORITHMS.md for usage and complexity notes.
+See docs/architecture/data-structures-and-algorithms.md for usage and complexity notes.
 """
 from app.core.dsa.cart_index import cart_line_key, find_cart_line, index_cart_lines
 from app.core.dsa.lru_cache import LRUCache

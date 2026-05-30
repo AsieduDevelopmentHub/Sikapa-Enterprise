@@ -46,7 +46,7 @@
 3. Add migrate step to Render build or a pre-deploy hook.
 4. Document Postgres RLS setup: `backend/tools/rls/rls_setup.py` (separate manual step today).
 
-**Files:** `backend/app/main.py`, `backend/render.yaml`, `backend/docs/hosting/render.md`, `docs/PRODUCTION_DEPLOYMENT.md`
+**Files:** `backend/app/main.py`, `backend/render.yaml`, `backend/docs/hosting/render.md`, `docs/deployment/production-deployment.md`
 
 ---
 

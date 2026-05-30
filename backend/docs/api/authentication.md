@@ -153,7 +153,7 @@ Content-Type: application/json
 ## Frontend integration
 
 - API base: `NEXT_PUBLIC_API_URL` must be the **full v1 base** ending in `/api/v1` (see `frontend/lib/api/client.ts`); the client appends paths like `/auth/...`, not an extra `/v1`.
-- Session storage behavior (“Keep me signed in”) and admin overview: **[../../docs/AUTH_SESSION_AND_ADMIN.md](../../docs/AUTH_SESSION_AND_ADMIN.md)**.
+- Session storage behavior (“Keep me signed in”) and admin overview: **[../../docs/operations/auth-session-and-admin.md](../../docs/operations/auth-session-and-admin.md)**.
 
 ---
 

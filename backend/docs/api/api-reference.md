@@ -488,7 +488,7 @@ if (apiResponse.status === 401) {
 
 ## Support & Documentation
 
-- Full docs: `/backend/docs/AUTHENTICATION.md`
+- Full docs: `/backend/docs/api/authentication.md`
 - Source code: `/backend/app/api/v1/auth/`
 - Models: `/backend/app/models.py`
 - Database schema: Alembic migrations in `/backend/alembic/versions/`
