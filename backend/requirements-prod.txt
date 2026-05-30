@@ -4,9 +4,11 @@
 # -----------------------------
 # Core Framework
 # -----------------------------
-fastapi==0.110.0
-uvicorn[standard]==0.23.2
-python-multipart==0.0.18
+fastapi==0.136.3
+starlette==1.2.0
+jinja2>=3.1.5
+uvicorn[standard]==0.34.0
+python-multipart==0.0.27
 
 # -----------------------------
 # Data Validation & Settings
@@ -14,7 +16,7 @@ python-multipart==0.0.18
 pydantic[email]==2.10.6
 pydantic-settings==2.5.2
 email-validator==2.2.0
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 nh3==0.2.18
 
 # -----------------------------
@@ -28,8 +30,8 @@ sqlmodel==0.0.21
 # -----------------------------
 # Authentication & Security
 # -----------------------------
-authlib==1.3.2
-cryptography==43.0.1
+authlib==1.6.11
+cryptography==46.0.7
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 pyotp==2.9.0
@@ -39,7 +41,7 @@ slowapi==0.1.9
 # -----------------------------
 # Email Service
 # -----------------------------
-resend==0.7.2
+resend==2.30.1
 
 # -----------------------------
 # Caching & Task Queue
@@ -57,6 +59,7 @@ reportlab==4.0.9
 # -----------------------------
 httpx==0.27.2
 asyncpg==0.27.0
+requests>=2.33.0
 
 # -----------------------------
 # Observability (optional — init skipped when SENTRY_DSN unset)
