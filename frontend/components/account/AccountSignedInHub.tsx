@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AccountTwoFactorPanel } from "@/components/account/AccountTwoFactorPanel";
+import { AdminPortalLink } from "@/components/admin/AdminPortalLink";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import {
@@ -424,12 +425,12 @@ export function AccountSignedInHub({ initialPanel }: { initialPanel?: AccountPan
           </div>
 
           {accessToken && u.is_admin === true ? (
-            <Link
+            <AdminPortalLink
               href="/system"
               className="block rounded-[12px] bg-sikapa-text-primary px-5 py-4 text-center text-small font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
             >
               Admin dashboard
-            </Link>
+            </AdminPortalLink>
           ) : null}
 
           <button

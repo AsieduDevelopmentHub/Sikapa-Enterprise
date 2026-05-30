@@ -27,7 +27,7 @@ import {
   type AuthSessionAppliedDetail,
 } from "@/lib/apply-auth-session";
 import { clearAllAuthTokens, readTokens } from "@/lib/auth-storage";
-import { clearSessionCookie } from "@/lib/session-cookie";
+import { clearSessionCookie, syncSessionCookie } from "@/lib/session-cookie";
 import { resetClientSessionCache } from "@/lib/session-reset";
 
 /**
@@ -104,7 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setAccessToken(token);
     try {
-      setUser(normalizeAuthProfile(await authFetchProfile(token)));
+      const profile = normalizeAuthProfile(await authFetchProfile(token));
+      setUser(profile);
+      await syncSessionCookie(token);
     } catch (e) {
       if (looksLikeAuthFailure(e)) {
         await clearTokens();
@@ -157,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setAccessToken(token);
           setUser(profile);
+          await syncSessionCookie(token);
         }
       } catch (e) {
         if (!cancelled) {

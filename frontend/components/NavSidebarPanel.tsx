@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo } from "react";
+import { AdminPortalLink } from "@/components/admin/AdminPortalLink";
 import { useAuth } from "@/context/AuthContext";
 import { useNavDrawer } from "@/context/NavDrawerContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -136,22 +137,33 @@ export function NavSidebarPanel() {
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="Main navigation">
           <ul className="space-y-1">
-            {mainLinks.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={closeDrawer}
-                  className="sikapa-tap block rounded-[10px] px-3 py-2.5 ring-1 ring-transparent hover:bg-sikapa-cream hover:ring-black/[0.04] dark:hover:bg-zinc-900 dark:hover:ring-white/10"
-                >
+            {mainLinks.map((item) => {
+              const className =
+                "sikapa-tap block rounded-[10px] px-3 py-2.5 ring-1 ring-transparent hover:bg-sikapa-cream hover:ring-black/[0.04] dark:hover:bg-zinc-900 dark:hover:ring-white/10";
+              const inner = (
+                <>
                   <span className="block text-small font-semibold text-sikapa-text-primary dark:text-zinc-100">
                     {item.label}
                   </span>
                   <span className="mt-0.5 block text-[11px] leading-snug text-sikapa-text-secondary dark:text-zinc-400">
                     {item.description}
                   </span>
-                </Link>
-              </li>
-            ))}
+                </>
+              );
+              return (
+                <li key={item.href}>
+                  {item.href === "/system" ? (
+                    <AdminPortalLink href={item.href} onClick={closeDrawer} className={className}>
+                      {inner}
+                    </AdminPortalLink>
+                  ) : (
+                    <Link href={item.href} onClick={closeDrawer} className={className}>
+                      {inner}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
 
           <div className="mt-3 space-y-2">
