@@ -225,7 +225,14 @@ def initialize_paystack_for_order(
 
     reference = build_order_reference(order_id)
     amount_sub = paystack_client.money_to_subunit(order.total_price)
-    meta = {"order_id": order_id, "user_id": user_id}
+    meta = {
+        "order_id": order_id,
+        "user_id": user_id,
+        "tax_amount": float(order.tax_amount or 0),
+        "subtotal_amount": float(order.subtotal_amount or 0),
+        "discount_amount": float(order.discount_amount or 0),
+        "delivery_fee": float(order.delivery_fee or 0),
+    }
 
     resp = paystack_client.initialize_transaction(
         email=user_email,
@@ -337,7 +344,7 @@ def _apply_successful_payment(session: Session, order: Order, reference: str) ->
         discount = float(order.discount_amount or 0)
         subtotal = round(max(0.0, gross - discount), 2)
         shipping = float(order.delivery_fee or 0)
-        tax = 0.0
+        tax = float(order.tax_amount or 0)
         total = round(subtotal + tax + shipping, 2)
         invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{order.id}-{uuid.uuid4().hex[:8]}"
         inv = Invoice(

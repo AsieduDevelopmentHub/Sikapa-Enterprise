@@ -213,7 +213,13 @@ export function CheckoutPageClient() {
 
   const discountAmount = appliedCoupon?.discount_amount ?? 0;
   const merchandiseTotal = Math.max(0, subtotal - discountAmount);
-  const total = merchandiseTotal + deliveryFee;
+  const taxEnabled = Boolean(shippingOptions?.tax_enabled && (shippingOptions.tax_rate_percent ?? 0) > 0);
+  const taxRatePercent = taxEnabled ? Number(shippingOptions?.tax_rate_percent ?? 0) : 0;
+  const taxLabel = (shippingOptions?.tax_label?.trim() || "Tax") as string;
+  const taxAmount = taxEnabled
+    ? Math.round(merchandiseTotal * taxRatePercent * 100) / 10000
+    : 0;
+  const total = merchandiseTotal + deliveryFee + taxAmount;
 
   useEffect(() => {
     if (!appliedCoupon) return;
@@ -856,6 +862,15 @@ export function CheckoutPageClient() {
               <span>Delivery</span>
               <span className="text-sikapa-text-primary dark:text-zinc-100">{formatGhs(deliveryFee)}</span>
             </div>
+            {taxAmount > 0 && (
+              <div className="flex justify-between text-sikapa-text-secondary dark:text-zinc-400">
+                <span>
+                  {taxLabel}
+                  {taxRatePercent > 0 ? ` (${taxRatePercent}%)` : ""}
+                </span>
+                <span className="text-sikapa-text-primary dark:text-zinc-100">{formatGhs(taxAmount)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-sikapa-gray-soft pt-3 font-bold text-sikapa-text-primary dark:border-white/10 dark:text-zinc-100">
               <span>Total</span>
               <span>{formatGhs(total)}</span>

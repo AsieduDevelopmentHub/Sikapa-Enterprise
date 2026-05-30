@@ -7,6 +7,8 @@ export type OrderRow = {
   total_price: number;
   subtotal_amount?: number | null;
   discount_amount?: number;
+  tax_amount?: number;
+  tax_rate_percent?: number;
   coupon_id?: number | null;
   coupon_code?: string | null;
   delivery_fee?: number;
@@ -90,6 +92,9 @@ export type ShippingCourierOption = { name: string; fee_delta: number };
 export type ShippingOptions = {
   regions: ShippingRegionOption[];
   couriers: ShippingCourierOption[];
+  tax_enabled?: boolean;
+  tax_rate_percent?: number;
+  tax_label?: string;
 };
 
 export async function ordersList(accessToken: string): Promise<OrderRow[]> {

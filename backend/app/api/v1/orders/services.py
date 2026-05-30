@@ -8,6 +8,11 @@ from datetime import datetime
 from fastapi import HTTPException, status, BackgroundTasks
 from sqlmodel import Session, select
 
+from app.core.checkout_tax import (
+    compute_order_total,
+    compute_tax_amount,
+    resolve_checkout_tax,
+)
 from app.models import Order, OrderItem, CartItem, Product, ProductVariant, Invoice, User
 from app.api.v1.orders.schemas import OrderCreateSchema
 from app.api.v1.orders.line_items import variant_detail_snapshot_from_model
@@ -34,8 +39,21 @@ async def create_order_from_cart(
 ) -> Order:
     """Create order from cart items."""
     discount = round(max(0.0, float(discount_amount)), 2)
+    tax_cfg = resolve_checkout_tax(session)
     merch_net = round(max(0.0, float(subtotal) - discount), 2)
-    total_price = round(merch_net + float(delivery_fee), 2)
+    tax_amount = (
+        compute_tax_amount(merch_net, tax_cfg.rate_percent)
+        if tax_cfg.enabled
+        else 0.0
+    )
+    tax_rate_snapshot = tax_cfg.rate_percent if tax_cfg.enabled else 0.0
+    delivery = round(float(delivery_fee), 2)
+    total_price = compute_order_total(
+        subtotal=float(subtotal),
+        discount_amount=discount,
+        delivery_fee=delivery,
+        tax_amount=tax_amount,
+    )
     region_key = (
         (order_data.shipping_region or "").strip().lower().replace(" ", "-")
         if order_data.shipping_region
@@ -50,9 +68,11 @@ async def create_order_from_cart(
         total_price=total_price,
         subtotal_amount=round(float(subtotal), 2),
         discount_amount=discount,
+        tax_amount=tax_amount,
+        tax_rate_percent=tax_rate_snapshot,
         coupon_id=coupon_id,
         coupon_code=coupon_code,
-        delivery_fee=round(float(delivery_fee), 2),
+        delivery_fee=delivery,
         shipping_method=order_data.shipping_method,
         shipping_region=region_key,
         shipping_city=order_data.shipping_city,
@@ -198,7 +218,9 @@ async def create_invoice_for_order(
         discount = 0.0
         shipping_fee = float(shipping)
     subtotal = round(max(0.0, line_subtotal - discount), 2)
-    tax = round(subtotal * tax_rate, 2)
+    tax = float(order.tax_amount or 0)
+    if tax <= 0 and tax_rate > 0:
+        tax = round(subtotal * tax_rate, 2)
     total = round(subtotal + tax + shipping_fee, 2)
     invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{order.id}-{uuid.uuid4().hex[:8]}"
 

@@ -112,8 +112,11 @@ def delivery_fee_dynamic_ghs(
 
 
 def shipping_options_payload(session: Session) -> dict[str, Any]:
+    from app.core.checkout_tax import checkout_tax_payload
+
     matrix = _load_matrix(session)
     return {
         "regions": matrix.get("regions", []),
         "couriers": matrix.get("couriers", []),
+        **checkout_tax_payload(session),
     }
