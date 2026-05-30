@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 import { useAuth } from "@/context/AuthContext";
+import { authUpdateProfile } from "@/lib/api/auth";
 import { useCart } from "@/context/CartContext";
 import { ordersCreate, ordersShippingOptions, type ShippingOptions } from "@/lib/api/orders";
 import { paystackInitialize } from "@/lib/api/payments";
@@ -22,7 +23,7 @@ import {
   type ShippingMethodClient,
 } from "@/lib/ghana-shipping";
 import { formatGhs } from "@/lib/mock-data";
-import { sanitizeMultiline, validateShippingAddress } from "@/lib/validation/input";
+import { sanitizeMultiline, sanitizePlainText, validateShippingAddress } from "@/lib/validation/input";
 import { notifyOrdersChanged } from "@/lib/session-reset";
 
 type Step = "address" | "shipping" | "review";
@@ -74,7 +75,7 @@ function StepHeader({ current }: { current: Step }) {
 
 export function CheckoutPageClient() {
   const router = useRouter();
-  const { user, accessToken, loading: authLoading } = useAuth();
+  const { user, accessToken, loading: authLoading, refreshProfile } = useAuth();
   const { lines, subtotal, cartSyncing } = useCart();
 
   const [step, setStep] = useState<Step>("address");
@@ -91,7 +92,6 @@ export function CheckoutPageClient() {
   );
   const [cityOther, setCityOther] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
-  const [useDefaultContact, setUseDefaultContact] = useState(true);
   const [shippingContactName, setShippingContactName] = useState("");
   const [shippingContactPhone, setShippingContactPhone] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
@@ -134,9 +134,21 @@ export function CheckoutPageClient() {
   );
   const [useSavedShipping, setUseSavedShipping] = useState(false);
 
+  const hasSavedContact = useMemo(
+    () => !!(user?.shipping_contact_name?.trim() && user?.shipping_contact_phone?.trim()),
+    [user?.shipping_contact_name, user?.shipping_contact_phone],
+  );
+
+  const [useDefaultContact, setUseDefaultContact] = useState(false);
+  const [saveAsDefaultAddress, setSaveAsDefaultAddress] = useState(false);
+
   useEffect(() => {
     setUseSavedShipping(!!hasSavedShipping);
-  }, [hasSavedShipping]);
+    setUseDefaultContact(!!hasSavedContact);
+    setSaveAsDefaultAddress(!hasSavedShipping);
+  }, [hasSavedShipping, hasSavedContact]);
+
+  const enteringNewAddress = shippingMethod === "delivery" && (!hasSavedShipping || !useSavedShipping);
 
   useEffect(() => {
     if (!user) return;
@@ -156,8 +168,16 @@ export function CheckoutPageClient() {
     const landmark = user.shipping_landmark?.trim() || "";
     const merged = [line1, line2, landmark ? `Landmark: ${landmark}` : ""].filter(Boolean).join(", ");
     if (merged) setShippingAddress(merged);
-    if (user.shipping_contact_name) setShippingContactName(user.shipping_contact_name);
-    if (user.shipping_contact_phone) setShippingContactPhone(user.shipping_contact_phone);
+    if (user.shipping_contact_name?.trim()) {
+      setShippingContactName(user.shipping_contact_name.trim());
+    } else if (user.name?.trim()) {
+      setShippingContactName(user.name.trim());
+    }
+    if (user.shipping_contact_phone?.trim()) {
+      setShippingContactPhone(user.shipping_contact_phone.trim());
+    } else if (user.phone?.trim()) {
+      setShippingContactPhone(user.phone.trim());
+    }
   }, [user, regionRows, defaultRegion]);
 
   const deliveryFee = useMemo(() => {
@@ -231,12 +251,14 @@ export function CheckoutPageClient() {
           setCheckoutMsg("Choose a courier.");
           return;
         }
-        const name = useDefaultContact
-          ? (user?.shipping_contact_name || user?.name || "").trim()
-          : shippingContactName.trim();
-        const phone = useDefaultContact
-          ? (user?.shipping_contact_phone || user?.phone || "").trim()
-          : shippingContactPhone.trim();
+        const name =
+          useDefaultContact && hasSavedContact
+            ? (user?.shipping_contact_name || "").trim()
+            : shippingContactName.trim();
+        const phone =
+          useDefaultContact && hasSavedContact
+            ? (user?.shipping_contact_phone || "").trim()
+            : shippingContactPhone.trim();
         if (!name) {
           setCheckoutMsg("Enter a delivery contact name.");
           return;
@@ -283,31 +305,47 @@ export function CheckoutPageClient() {
       addr = t.length > 0 ? t : null;
     }
 
+    const contactNameForOrder =
+      shippingMethod === "delivery"
+        ? (useDefaultContact && hasSavedContact
+            ? (user.shipping_contact_name || "").trim()
+            : shippingContactName.trim()) || null
+        : null;
+    const contactPhoneForOrder =
+      shippingMethod === "delivery"
+        ? (useDefaultContact && hasSavedContact
+            ? (user.shipping_contact_phone || "").trim()
+            : shippingContactPhone.trim()) || null
+        : null;
+
     setCheckoutBusy(true);
     setCheckoutMsg(null);
     try {
+      if (saveAsDefaultAddress && enteringNewAddress) {
+        const cityEff = sanitizePlainText(
+          (cityPick === GHANA_CITY_OTHER ? cityOther : cityPick).trim(),
+          120,
+        );
+        await authUpdateProfile(accessToken, {
+          shipping_region: sanitizePlainText(effRegion, 80) || null,
+          shipping_city: cityEff || null,
+          shipping_address_line1: sanitizePlainText(addr ?? "", 255) || null,
+          shipping_address_line2: null,
+          shipping_landmark: null,
+          shipping_contact_name: sanitizePlainText(contactNameForOrder ?? "", 120) || null,
+          shipping_contact_phone: sanitizePlainText(contactPhoneForOrder ?? "", 32) || null,
+        });
+        await refreshProfile();
+      }
+
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const order = await ordersCreate(accessToken, {
         shipping_method: shippingMethod,
         shipping_region: shippingMethod === "delivery" ? effRegion : null,
         shipping_city: shippingMethod === "delivery" ? effCity : null,
         shipping_provider: shippingMethod === "delivery" ? shippingProvider.trim() : null,
-        shipping_contact_name:
-          shippingMethod === "delivery"
-            ? (
-                useDefaultContact
-                  ? (user.shipping_contact_name || user.name || "").trim()
-                  : shippingContactName.trim()
-              ) || null
-            : null,
-        shipping_contact_phone:
-          shippingMethod === "delivery"
-            ? (
-                useDefaultContact
-                  ? (user.shipping_contact_phone || user.phone || "").trim()
-                  : shippingContactPhone.trim()
-              ) || null
-            : null,
+        shipping_contact_name: contactNameForOrder,
+        shipping_contact_phone: contactPhoneForOrder,
         shipping_address: addr,
         notes: notesTrim.length > 0 ? notesTrim : null,
       });
@@ -496,6 +534,25 @@ export function CheckoutPageClient() {
                       />
                     </label>
                   </div>
+                  {enteringNewAddress && (
+                    <label className="flex cursor-pointer items-start gap-2 rounded-[10px] bg-sikapa-cream/80 px-3 py-2.5 text-body text-sikapa-text-secondary ring-1 ring-black/[0.04] dark:bg-zinc-800/80 dark:text-zinc-300 dark:ring-white/10">
+                      <input
+                        type="checkbox"
+                        checked={saveAsDefaultAddress}
+                        onChange={(e) => setSaveAsDefaultAddress(e.target.checked)}
+                        className="mt-1 accent-sikapa-gold"
+                      />
+                      <span>
+                        <span className="font-semibold text-sikapa-text-primary dark:text-zinc-100">
+                          Save as my default delivery address
+                        </span>
+                        <span className="mt-1 block text-small text-sikapa-text-muted dark:text-zinc-500">
+                          We&apos;ll use this region, address, and contact on your next order (you can change it
+                          anytime in Account → Address).
+                        </span>
+                      </span>
+                    </label>
+                  )}
                 </>
               )}
             </section>
@@ -530,37 +587,68 @@ export function CheckoutPageClient() {
                     <p className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
                       Delivery contact
                     </p>
-                    <label className="mt-2 flex cursor-pointer items-center gap-2 text-small text-sikapa-text-secondary dark:text-zinc-400">
-                      <input
-                        type="checkbox"
-                        checked={useDefaultContact}
-                        onChange={(e) => setUseDefaultContact(e.target.checked)}
-                        className="accent-sikapa-gold"
-                      />
-                      Use account contact ({(user.shipping_contact_name || user.name || "No name set").trim()} ·{" "}
-                      {(user.shipping_contact_phone || user.phone || "No phone set").trim()})
-                    </label>
+                    {hasSavedContact ? (
+                      <>
+                        <label className="mt-2 flex cursor-pointer items-center gap-2 text-small text-sikapa-text-secondary dark:text-zinc-400">
+                          <input
+                            type="checkbox"
+                            checked={useDefaultContact}
+                            onChange={(e) => setUseDefaultContact(e.target.checked)}
+                            className="accent-sikapa-gold"
+                          />
+                          Use saved contact ({user.shipping_contact_name?.trim()} ·{" "}
+                          {user.shipping_contact_phone?.trim()})
+                        </label>
+                        {!useDefaultContact && (
+                          <div className="mt-3 grid grid-cols-1 gap-3">
+                            <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                              Contact name
+                              <input
+                                value={shippingContactName}
+                                onChange={(e) => setShippingContactName(e.target.value)}
+                                className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                              />
+                            </label>
+                            <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                              Contact phone
+                              <input
+                                value={shippingContactPhone}
+                                onChange={(e) => setShippingContactPhone(e.target.value)}
+                                className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="mt-2 grid grid-cols-1 gap-3">
+                        <p className="text-small text-sikapa-text-muted dark:text-zinc-500">
+                          Enter who we should call for this delivery. Save it as your default using the checkbox on
+                          the address step.
+                        </p>
+                        <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                          Contact name
+                          <input
+                            required
+                            value={shippingContactName}
+                            onChange={(e) => setShippingContactName(e.target.value)}
+                            placeholder={user.name?.trim() || "Full name"}
+                            className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                          />
+                        </label>
+                        <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
+                          Contact phone
+                          <input
+                            required
+                            value={shippingContactPhone}
+                            onChange={(e) => setShippingContactPhone(e.target.value)}
+                            placeholder={user.phone?.trim() || "Mobile number"}
+                            className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+                          />
+                        </label>
+                      </div>
+                    )}
                   </div>
-                  {!useDefaultContact && (
-                    <div className="grid grid-cols-1 gap-3">
-                      <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                        Contact name
-                        <input
-                          value={shippingContactName}
-                          onChange={(e) => setShippingContactName(e.target.value)}
-                          className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-                        />
-                      </label>
-                      <label className="text-small font-medium text-sikapa-text-primary dark:text-zinc-200">
-                        Contact phone
-                        <input
-                          value={shippingContactPhone}
-                          onChange={(e) => setShippingContactPhone(e.target.value)}
-                          className="mt-1 w-full rounded-[10px] border-0 bg-sikapa-cream py-2.5 px-3 text-body ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
-                        />
-                      </label>
-                    </div>
-                  )}
                 </>
               ) : (
                 <p className="text-small text-sikapa-text-secondary dark:text-zinc-400">
@@ -640,8 +728,8 @@ export function CheckoutPageClient() {
                 {shippingMethod === "delivery" && (
                   <p className="mt-1 text-[11px] text-sikapa-text-muted dark:text-zinc-500">
                     via {shippingProvider} ·{" "}
-                    {useDefaultContact
-                      ? `${user.shipping_contact_name || user.name || ""} · ${user.shipping_contact_phone || user.phone || ""}`
+                    {useDefaultContact && hasSavedContact
+                      ? `${user.shipping_contact_name || ""} · ${user.shipping_contact_phone || ""}`
                       : `${shippingContactName} · ${shippingContactPhone}`}
                   </p>
                 )}
