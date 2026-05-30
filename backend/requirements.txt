@@ -73,5 +73,5 @@ sentry-sdk[fastapi]==2.19.2
 # -----------------------------
 pytest==9.0.3
 pytest-asyncio==1.4.0
-pytest-cov==6.0.0
+pytest-cov==7.1.0
 aiosqlite==0.20.0                # Async SQLite driver for tests
