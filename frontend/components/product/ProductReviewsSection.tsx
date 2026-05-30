@@ -107,16 +107,29 @@ export function ProductReviewsSection({ productId }: Props) {
     setSubmitBusy(true);
     setErr(null);
     try {
-      await reviewsCreate(accessToken, {
+      const created = await reviewsCreate(accessToken, {
         product_id: productId,
         rating,
         title: tRaw,
         content: cRaw,
       });
+      const mine: ReviewRow = {
+        id: created.id,
+        product_id: created.product_id,
+        user_id: user?.id ?? 0,
+        rating: created.rating,
+        title: created.title,
+        content: created.content,
+        created_at: created.created_at,
+        reviewer_name: created.reviewer_name,
+        media: created.media ?? [],
+      };
       setTitle("");
       setContent("");
       setRating(5);
       setCanReview(false);
+      setMyReview(mine);
+      setList((prev) => [mine, ...prev.filter((r) => r.id !== mine.id)]);
       await load();
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : "Could not submit review");
