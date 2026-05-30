@@ -5,8 +5,10 @@ import { clearAllAuthTokens, writeTokens, type AuthBucket } from "@/lib/auth-sto
 import { resetClientSessionCache } from "@/lib/session-reset";
 import { syncSessionCookie } from "@/lib/session-cookie";
 
+export type AuthTokens = Pick<TokenResponse, "access_token" | "refresh_token">;
+
 export async function applyAuthTokens(
-  tokens: TokenResponse,
+  tokens: AuthTokens,
   remember: boolean,
   queryClient?: QueryClient
 ): Promise<void> {
