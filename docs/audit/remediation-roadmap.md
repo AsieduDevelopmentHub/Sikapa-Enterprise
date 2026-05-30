@@ -99,8 +99,8 @@ Goal: Maintainability and team scale.
 
 | ID | Task | Effort | Doc |
 |----|------|--------|-----|
-| DOC-011 | CONTRIBUTING.md | S | [documentation-drift.md](./documentation-drift.md#doc-011) |
-| DOC-012 | SECURITY.md | S | [documentation-drift.md](./documentation-drift.md#doc-012) |
+| DOC-011 | `docs/contributing/contributing.md` | S | [documentation-drift.md](./documentation-drift.md#doc-011) |
+| DOC-012 | `docs/security/security-policy.md` | S | [documentation-drift.md](./documentation-drift.md#doc-012) |
 | D-009 | docker-compose for local dev | M | [devops-ci.md](./devops-ci.md#d-009) |
 | B-004 | Centralized pydantic-settings | M | [backend.md](./backend.md#b-004) |
 | B-012 | Single Python dependency manifest | M | [backend.md](./backend.md#b-012) |
@@ -112,8 +112,8 @@ Goal: Maintainability and team scale.
 
 ### Phase 4 master checklist
 
-- [x] DOC-011 — CONTRIBUTING.md
-- [x] DOC-012 — SECURITY.md
+- [x] DOC-011 — `docs/contributing/contributing.md`
+- [x] DOC-012 — `docs/security/security-policy.md`
 - [x] D-009 — docker-compose.yml
 - [x] B-004 — Settings module (`app/core/settings.py`)
 - [x] B-012 — Deps manifest unified (requirements.txt canonical)

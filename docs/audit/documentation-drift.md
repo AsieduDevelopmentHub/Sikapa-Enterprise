@@ -135,19 +135,19 @@ If any doc mentions `JWT_SECRET_KEY` — backend uses **`SECRET_KEY`** only.
 
 ## Missing standard docs
 
-### DOC-011 — CONTRIBUTING.md
+### DOC-011 — Contributing guide
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-**Fix:** Add branch workflow, PR checklist (API paths → update web + mobile), `scripts/ci-local.ps1` usage.
+**Location:** [docs/contributing/contributing.md](../contributing/contributing.md). GitHub discovery: [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md) (pointer only).
 
 ---
 
-### DOC-012 — SECURITY.md
+### DOC-012 — Security policy
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-**Fix:** Vulnerability reporting contact, supported versions, disclosure timeline.
+**Location:** [docs/security/security-policy.md](../security/security-policy.md). GitHub discovery: [.github/SECURITY.md](../../.github/SECURITY.md) (pointer only).
 
 ---
 

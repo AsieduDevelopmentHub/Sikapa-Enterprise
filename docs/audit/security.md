@@ -141,11 +141,11 @@ Cross-cutting security findings. Backend-specific items also appear in [backend.
 
 ---
 
-### S-013 — No SECURITY.md vulnerability reporting
+### S-013 — Security policy & vulnerability reporting
 
-- [ ] **P2**
+- [x] **P2** — Resolved
 
-**Fix:** Add `SECURITY.md` at repo root with contact and disclosure process.
+**Location:** [docs/security/security-policy.md](../security/security-policy.md). GitHub: [.github/SECURITY.md](../../.github/SECURITY.md) redirects to canonical doc.
 
 ---
 

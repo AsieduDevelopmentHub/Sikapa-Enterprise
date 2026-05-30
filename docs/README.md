@@ -19,7 +19,9 @@ Start here. Docs use **lowercase paths** and **kebab-case** filenames, grouped b
 | **TLS / local HTTPS** | [../backend/docs/tls/https.md](../backend/docs/tls/https.md) |
 | **Database migrations** | [../backend/docs/migration/migration.md](../backend/docs/migration/migration.md) |
 | **Production deployment checklist** | [deployment/production-deployment.md](./deployment/production-deployment.md) |
-| **Prior improvement notes** | [history/improvements-summary.md](./history/improvements-summary.md) |
+| **Contributing & PR workflow** | [contributing/contributing.md](./contributing/contributing.md) |
+| **Security / vulnerability reporting** | [security/security-policy.md](./security/security-policy.md) |
+| **Developer quick reference** | [guides/developer-quickref.md](./guides/developer-quickref.md) |
 | **Mobile app** | [../mobile/README.md](../mobile/README.md) |
 
 ## Repository layout
@@ -33,8 +35,10 @@ Sikapa-Enterprise/
 │   ├── audit/             System audit & remediation
 │   ├── architecture/      DSA modules & usage
 │   ├── deployment/        Production rollout
+│   ├── contributing/      Branch workflow & PR checklist
 │   ├── environment/       Env vars & secrets
-│   ├── history/           Changelog-style notes
+│   ├── guides/            Day-to-day pointers (quickref)
+│   ├── security/          Vulnerability reporting
 │   └── operations/        Runbooks, auth sessions, CORS
 ├── backend/docs/          Backend API & hosting detail
 │   ├── api/               Auth & API reference

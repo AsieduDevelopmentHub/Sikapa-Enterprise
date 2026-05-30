@@ -7,15 +7,15 @@ Thank you for helping improve Sikapa. This guide covers branch workflow, local v
 | Branch | Purpose |
 |--------|---------|
 | `main` | Production-ready releases |
-| `dev/develop` | Integration branch for features |
+| `dev/develop` | Integration / staging |
 
 1. Branch from `dev/develop` (or `main` for hotfixes): `git checkout -b feat/short-description`
-2. Keep commits focused; write clear messages (imperative mood, e.g. "Add cart merge test").
+2. Keep commits focused; use clear messages (imperative mood, e.g. "Add cart merge test").
 3. Open a PR into `dev/develop` (or `main` when agreed with maintainers).
 
 ## Local setup
 
-See [README.md](./README.md) for monorepo layout (`backend/`, `frontend/`, `mobile/`).
+See [../../README.md](../../README.md) for monorepo layout (`backend/`, `frontend/`, `mobile/`).
 
 **Backend**
 
@@ -45,7 +45,7 @@ flutter pub get
 flutter run --dart-define=SIKAPA_API_BASE=http://localhost:8000/api/v1
 ```
 
-Optional local Postgres + Redis: `docker compose up -d` (see [docker-compose.yml](./docker-compose.yml)).
+Optional local Postgres + Redis: `docker compose up -d` (see [../../docker-compose.yml](../../docker-compose.yml)).
 
 ## Before you push — local CI
 
@@ -88,7 +88,7 @@ pip install pre-commit
 pre-commit install
 ```
 
-See [.pre-commit-config.yaml](./.pre-commit-config.yaml).
+See [../../.pre-commit-config.yaml](../../.pre-commit-config.yaml).
 
 ## Code style
 
@@ -100,8 +100,8 @@ Match existing patterns in each area; prefer minimal, focused diffs.
 
 ## Security
 
-Do not commit secrets (`.env`, API keys, certificates). Report vulnerabilities per [SECURITY.md](./SECURITY.md).
+Do not commit secrets (`.env`, API keys, certificates). Report vulnerabilities per [../security/security-policy.md](../security/security-policy.md).
 
 ## Questions
 
-Open a GitHub issue or discuss in your PR. For audit/remediation context see [docs/audit/remediation-roadmap.md](./docs/audit/remediation-roadmap.md).
+Open a GitHub issue or discuss in your PR. For audit/remediation context see [../audit/remediation-roadmap.md](../audit/remediation-roadmap.md).

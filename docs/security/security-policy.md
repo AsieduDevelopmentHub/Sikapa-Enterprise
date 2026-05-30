@@ -1,4 +1,4 @@
-# Security Policy
+# Security policy
 
 ## Supported versions
 
@@ -15,7 +15,7 @@
 
 Send a private report to the repository maintainers:
 
-- **Email:** [security@sikapa.com](mailto:security@sikapa.com) *(replace with your team inbox if different)*
+- **Email:** [security@sikapa.com](mailto:asiedudev.hub@gmail.com)
 - **Subject:** `[Sikapa Security]` brief summary
 
 Include:
@@ -58,8 +58,8 @@ Out of scope (unless combined with a chain):
 - Secrets belong in environment variables, never in git
 - Run `pip-audit` / `npm audit` via CI before releases
 - Production requires strong `SECRET_KEY`, `TOTP_ENCRYPTION_KEY`, and database credentials
-- See [docs/audit/security.md](./docs/audit/security.md) and [docs/deployment/production-deployment.md](./docs/deployment/production-deployment.md)
+- See [../audit/security.md](../audit/security.md) (audit checklist) and [../deployment/production-deployment.md](../deployment/production-deployment.md)
 
 ## License
 
-This is proprietary software. Unauthorized access, copying, or distribution is prohibited. See [LICENSE](./LICENSE).
+This is proprietary software. Unauthorized access, copying, or distribution is prohibited. See [../../LICENSE](../../LICENSE).
