@@ -195,5 +195,7 @@ class ShippingOptionsSchema(BaseModel):
     couriers: list[ShippingCourierOption] = []
     tax_enabled: bool = False
     tax_rate_percent: float = Field(default=0.0, ge=0, le=100)
-    tax_label: str = "Tax"
+    tax_label: str = "Payment processing fee"
+    paystack_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    processing_fee_cap_percent: float = Field(default=0.0, ge=0, le=100)
 

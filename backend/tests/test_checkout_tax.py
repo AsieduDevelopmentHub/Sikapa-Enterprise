@@ -1,4 +1,4 @@
-"""Checkout tax on orders and shipping-options payload."""
+"""Paystack processing fee at checkout (capped pass-through)."""
 from __future__ import annotations
 
 import pytest
@@ -8,23 +8,23 @@ from sqlmodel import Session
 from app.core.security import create_access_token, get_password_hash
 from app.models import BusinessSetting, CartItem, Product, User
 
-CHECKOUT_TAX_KEY = "checkout_tax_v1"
+FEE_SETTING_KEY = "checkout_processing_fee_v1"
 
 
 def _seed_cart(session: Session, *, price: float = 100.0) -> str:
     user = User(
-        username="tax-shopper",
-        name="Tax Shopper",
-        email="tax-shopper@example.com",
+        username="fee-shopper",
+        name="Fee Shopper",
+        email="fee-shopper@example.com",
         hashed_password=get_password_hash("Pw123456!"),
         is_active=True,
         email_verified=True,
     )
     product = Product(
-        name="Tax Hoodie",
-        slug="tax-hoodie",
+        name="Fee Tee",
+        slug="fee-tee",
         price=price,
-        sku="TH-001",
+        sku="FT-001",
         in_stock=10,
         is_active=True,
     )
@@ -39,29 +39,32 @@ def _seed_cart(session: Session, *, price: float = 100.0) -> str:
 
 
 @pytest.mark.asyncio
-async def test_shipping_options_includes_tax_config(
+async def test_shipping_options_processing_fee_capped(
     client: AsyncClient, test_session: Session, monkeypatch
 ):
+    monkeypatch.setenv("PAYSTACK_FEE_PERCENT", "1.95")
+    monkeypatch.setenv("PROCESSING_FEE_MARKUP_CAP_PERCENT", "0.15")
+    monkeypatch.setenv("ORDER_PROCESSING_FEE_PERCENT", "10")
     monkeypatch.delenv("ORDER_TAX_RATE_PERCENT", raising=False)
-    test_session.add(
-        BusinessSetting(
-            key=CHECKOUT_TAX_KEY,
-            value='{"enabled": true, "rate_percent": 10, "label": "VAT"}',
-        )
-    )
-    test_session.commit()
 
     res = await client.get("/api/v1/orders/shipping-options")
     assert res.status_code == 200, res.text
     data = res.json()
     assert data["tax_enabled"] is True
-    assert data["tax_rate_percent"] == 10.0
-    assert data["tax_label"] == "VAT"
+    assert data["tax_rate_percent"] == 2.1
+    assert data["paystack_fee_percent"] == 1.95
+    assert data["processing_fee_cap_percent"] == 2.1
+    assert "processing" in data["tax_label"].lower() or "payment" in data["tax_label"].lower()
 
 
 @pytest.mark.asyncio
-async def test_order_total_includes_tax(client: AsyncClient, test_session: Session, monkeypatch):
-    monkeypatch.setenv("ORDER_TAX_RATE_PERCENT", "21")
+async def test_order_uses_default_paystack_pass_through(
+    client: AsyncClient, test_session: Session, monkeypatch
+):
+    monkeypatch.setenv("PAYSTACK_FEE_PERCENT", "1.95")
+    monkeypatch.setenv("PROCESSING_FEE_MARKUP_CAP_PERCENT", "0.15")
+    monkeypatch.delenv("ORDER_PROCESSING_FEE_PERCENT", raising=False)
+    monkeypatch.delenv("ORDER_TAX_RATE_PERCENT", raising=False)
     token = _seed_cart(test_session, price=100.0)
 
     res = await client.post(
@@ -71,7 +74,27 @@ async def test_order_total_includes_tax(client: AsyncClient, test_session: Sessi
     )
     assert res.status_code == 201, res.text
     order = res.json()
-    assert order["subtotal_amount"] == 100.0
-    assert order["tax_amount"] == 21.0
-    assert order["tax_rate_percent"] == 21.0
-    assert order["total_price"] == 121.0
+    assert order["tax_amount"] == 1.95
+    assert order["tax_rate_percent"] == 1.95
+    assert order["total_price"] == 101.95
+
+
+@pytest.mark.asyncio
+async def test_admin_setting_respects_cap(client: AsyncClient, test_session: Session, monkeypatch):
+    monkeypatch.delenv("ORDER_PROCESSING_FEE_PERCENT", raising=False)
+    monkeypatch.delenv("ORDER_TAX_RATE_PERCENT", raising=False)
+    monkeypatch.setenv("PAYSTACK_FEE_PERCENT", "2")
+    monkeypatch.setenv("PROCESSING_FEE_MARKUP_CAP_PERCENT", "0.15")
+    test_session.add(
+        BusinessSetting(
+            key=FEE_SETTING_KEY,
+            value='{"enabled": true, "pass_through_percent": 5, "label": "Paystack fee"}',
+        )
+    )
+    test_session.commit()
+
+    res = await client.get("/api/v1/orders/shipping-options")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["tax_rate_percent"] == 2.15
+    assert data["processing_fee_cap_percent"] == 2.15

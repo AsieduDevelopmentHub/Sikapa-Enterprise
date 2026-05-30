@@ -95,6 +95,8 @@ export type ShippingOptions = {
   tax_enabled?: boolean;
   tax_rate_percent?: number;
   tax_label?: string;
+  paystack_fee_percent?: number;
+  processing_fee_cap_percent?: number;
 };
 
 export async function ordersList(accessToken: string): Promise<OrderRow[]> {

@@ -88,8 +88,11 @@ async def test_order_create_applies_coupon_discount(client: AsyncClient, test_se
     order = res.json()
     assert order["subtotal_amount"] == 100.0
     assert order["discount_amount"] == 15.0
-    assert order["total_price"] == 85.0
     assert order["coupon_code"] == "FLAT15"
+    merch_net = 85.0
+    fee = round(merch_net * float(order.get("tax_rate_percent") or 0) / 100.0, 2)
+    assert order["tax_amount"] == fee
+    assert order["total_price"] == round(merch_net + fee, 2)
 
 
 @pytest.mark.asyncio
