@@ -9,7 +9,7 @@
 
 ### F-001 — Token storage is client-only
 
-- [ ] **P2** — Document security model
+- [x] **P2** — Documented in [frontend-auth.md](../security/frontend-auth.md)
 
 **Problem:** Access/refresh tokens in `localStorage` or `sessionStorage` (`lib/auth-storage.ts`).
 
@@ -125,7 +125,7 @@
 
 ### F-010 — ESLint / Next version skew
 
-- [ ] **P2** — Align versions
+- [ ] **P2** — `next@16.2.6` patched; `eslint-config-next@16` requires ESLint 9 flat config migration (deferred)
 
 **Problem:** `next@16.2.3` with `eslint-config-next@15.5.13`.
 

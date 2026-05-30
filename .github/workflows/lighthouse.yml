@@ -1,9 +1,7 @@
 name: Lighthouse
 
 # Runs Lighthouse against the production build on every PR touching the frontend.
-# Uses Lighthouse CI in `assert: off` mode so scores are reported but never fail the job.
-# Promote individual categories to `error` in `frontend/lighthouserc.json` once budgets are
-# comfortable.
+# Accessibility score >= 0.9 is enforced via lighthouserc.json (error level).
 
 on:
   pull_request:
@@ -65,4 +63,3 @@ jobs:
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
         run: lhci autorun --config=./lighthouserc.json
-        continue-on-error: true

@@ -57,16 +57,18 @@
 
 ### M-004 — Web-only admin features
 
-- [ ] **P2** — Port or document permanently web-only
+- [x] **P2** — Documented as **intentionally web-only** (product decision May 2026)
 
-**Still on Next.js `/system` only:**
+**Permanently on Next.js `/system` only** (mobile read-only or list where noted):
 
-- Coupon CRUD (mobile has list view)
-- Bulk product import
-- Staff role editor
-- Category image upload
+| Feature | Mobile | Rationale |
+|---------|--------|-----------|
+| Coupon CRUD | List only | Complex validation; low mobile ops frequency |
+| Bulk product import | — | CSV upload + error report UX |
+| Staff role editor | List only | RBAC matrix editing on small screens |
+| Category image upload | — | File picker + crop workflow |
 
-**Fix:** Either port to mobile or keep documented as intentional; update `cross-platform-parity.md` when decided.
+See [cross-platform-parity.md](./cross-platform-parity.md) for the full matrix.
 
 ---
 

@@ -162,9 +162,30 @@ bash scripts/backup-postgres.sh
 # Test migration against production DB first
 ALEMBIC_DATABASE_URL=postgresql://... alembic upgrade head
 
-# Then deploy API with migrations
-# (ensure migration is backward-compatible)
+# Verify schema
+alembic current
 ```
+
+**Demo catalog:** Migrations do **not** seed sample products. For dev/staging only:
+
+```bash
+cd backend
+python tools/seed_demo_catalog.py
+# Production requires SEED_DEMO_CONFIRM=true if you explicitly want demo data
+```
+
+### Postgres row-level security (RLS)
+
+When using Supabase/Postgres RLS policies, apply them **after** migrations:
+
+```bash
+cd backend
+python tools/rls/rls_setup.py
+```
+
+This is a **mandatory manual step** — not run on deploy automatically. Verify policies in Supabase SQL editor. See [security.md](../audit/security.md#s-004).
+
+Ensure each migration is backward-compatible before deploying the API.
 
 ---
 

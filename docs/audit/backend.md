@@ -52,7 +52,7 @@
 
 ### B-003 — Demo seed in Alembic migration
 
-- [ ] **P2** — Avoid seeding demo catalog on production first deploy
+- [x] **P2** — Seed moved to `tools/seed_demo_catalog.py`; migration only creates tables
 
 **Problem:** Migration `alembic/versions/h3i4j5k6l7m8_wishlist_paystack_tx_demo_seed.py` seeds categories/products when tables are empty.
 
@@ -77,7 +77,7 @@
 ### B-005 — SlowAPI only on auth; in-memory without Redis
 
 - [x] **P1** — Global prefix rate limits wired (`API_RATE_LIMIT_*` middleware)
-- [ ] **P1** — Redis-backed prefix limits on multi-instance deploy (SlowAPI auth limits use Redis; prefix limiter in-memory)
+- [x] **P1** — Redis-backed prefix limits when `REDIS_URL` set (`RedisSlidingWindowRateLimiter`)
 
 **Problem:** Without `REDIS_URL`, SlowAPI uses in-memory storage — ineffective on multi-instance Render.
 
@@ -149,7 +149,7 @@
 
 - [ ] Admin API breadth (products, orders CRUD beyond RBAC, inventory, coupons, analytics)
 - [x] Cart → order create → Paystack init (verify in `test_orders_paystack_flow.py`)
-- [ ] Paystack webhook **HTTP route** integration test
+- [x] Paystack webhook **HTTP route** integration test (`test_paystack_routes.py`)
 - [ ] Public catalog/search
 - [ ] Returns and reviews (including media upload)
 - [ ] Google OAuth flow

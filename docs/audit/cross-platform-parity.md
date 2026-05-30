@@ -86,7 +86,7 @@ When backend routes change, update **both**:
 
 ## Parity action items
 
-- [ ] **P1** — Decide web-only admin features: port vs permanent web-only ([mobile.md](./mobile.md#m-004))
+- [x] **P1** — Web-only admin features documented as intentional ([mobile.md](./mobile.md#m-004))
 - [x] **P1** — API path sync check in CI ([mobile.md](./mobile.md#m-005))
 - [ ] **P2** — FCM admin push ([mobile.md](./mobile.md#m-003))
 - [ ] **P2** — Coupon CRUD on mobile (if required by product)

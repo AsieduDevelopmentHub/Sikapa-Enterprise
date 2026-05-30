@@ -11,6 +11,8 @@ import os
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from typing import Protocol
+
 from app.core.dsa.sliding_window import SlidingWindowRateLimiter
 
 
@@ -53,17 +55,42 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
-_api_rate_limiter: SlidingWindowRateLimiter | None = None
+_api_rate_limiter: _RateLimitBackend | None = None
 
 
-def get_api_path_rate_limiter() -> SlidingWindowRateLimiter | None:
+class _RateLimitBackend(Protocol):
+    def is_allowed(self, key: str) -> bool: ...
+
+    def reset_all(self) -> None: ...
+
+
+def _build_api_path_rate_limiter(max_requests: int, window_seconds: float) -> _RateLimitBackend:
+    redis_url = os.getenv("REDIS_URL", "").strip()
+    if redis_url:
+        try:
+            from app.core.dsa.redis_sliding_window import RedisSlidingWindowRateLimiter
+
+            return RedisSlidingWindowRateLimiter(
+                redis_url,
+                max_requests=max_requests,
+                window_seconds=window_seconds,
+            )
+        except Exception:
+            pass
+    return SlidingWindowRateLimiter(
+        max_requests=max_requests,
+        window_seconds=window_seconds,
+    )
+
+
+def get_api_path_rate_limiter() -> _RateLimitBackend | None:
     """Lazy singleton sliding-window limiter when API_RATE_LIMIT_ENABLED=true."""
     global _api_rate_limiter
     if not _env_bool("API_RATE_LIMIT_ENABLED", default=True):
         return None
     if _api_rate_limiter is None:
         rps = max(1.0, _env_float("API_RATE_LIMIT_RPS", 20.0))
-        _api_rate_limiter = SlidingWindowRateLimiter(
+        _api_rate_limiter = _build_api_path_rate_limiter(
             max_requests=int(rps),
             window_seconds=1.0,
         )

@@ -19,6 +19,7 @@ os.environ["TESTING"] = "true"
 # Match CI: in-memory rate limits (avoid Redis from backend/.env during tests).
 os.environ["REDIS_URL"] = ""
 os.environ["PAYSTACK_SECRET_KEY"] = ""
+os.environ["PAYSTACK_WEBHOOK_IP_ALLOWLIST"] = ""
 os.environ["API_RATE_LIMIT_ENABLED"] = "false"
 
 import pytest

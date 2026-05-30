@@ -9,8 +9,7 @@
 
 ### D-001 — No automated dependency updates or audits
 
-- [x] **P0** — Dependabot + npm audit + pip-audit in CI
-- [ ] **P2** — Hard-fail on audit findings (currently `continue-on-error: true`); CodeQL/Trivy optional
+- [x] **P0** — Dependabot + npm audit (advisory) + pip-audit (hard-fail) in CI
 
 **Fix — Dependabot example:**
 
@@ -96,8 +95,7 @@ See [frontend.md](./frontend.md#f-005).
 
 ### D-006 — Lighthouse non-gating
 
-- [x] **P2** — `lighthouserc.json` accessibility min 0.9 set to `error`
-- [ ] **P3** — Workflow step still `continue-on-error: true` (does not block PR merge)
+- [x] **P2** — `lighthouserc.json` accessibility min 0.9 set to `error`; workflow fails on breach
 
 **Problem:** `.github/workflows/lighthouse.yml` and step use `continue-on-error: true`; budgets in `lighthouserc.json` are warn-only.
 

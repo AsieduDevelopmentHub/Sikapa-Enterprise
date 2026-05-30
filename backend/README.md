@@ -55,6 +55,12 @@ cd backend
 alembic upgrade head
 ```
 
+Optional demo catalog for empty dev DBs (not run by migrations):
+
+```bash
+python tools/seed_demo_catalog.py
+```
+
 Optional dev-only shortcut (not for shared/production DBs):
 
 ```bash
