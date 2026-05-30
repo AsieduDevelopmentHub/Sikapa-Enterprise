@@ -56,4 +56,7 @@ export function clearAllAuthTokens(): void {
   } catch {
     /* ignore */
   }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("sikapa-auth-tokens-cleared"));
+  }
 }

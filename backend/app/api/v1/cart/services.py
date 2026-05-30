@@ -40,7 +40,7 @@ async def add_to_cart(
     product = session.exec(
         select(Product).where(Product.id == item.product_id)
     ).first()
-    if not product or not product.is_active:
+    if not product or not product.is_active or product.deleted_at is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="This product is not available.",
