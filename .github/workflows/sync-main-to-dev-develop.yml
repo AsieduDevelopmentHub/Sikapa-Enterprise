@@ -1,0 +1,47 @@
+# After a squash promote lands on main, realign dev/develop so the next auto-PR
+# does not replay commits that are already on main (avoids recurring merge conflicts).
+name: Sync main to dev/develop
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-main-to-dev-develop
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Reset dev/develop to main
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+
+      - name: Align dev/develop with main
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin main dev/develop
+
+          MAIN_SHA="$(git rev-parse origin/main)"
+          DEV_SHA="$(git rev-parse origin/dev/develop)"
+
+          if [ "${MAIN_SHA}" = "${DEV_SHA}" ]; then
+            echo "dev/develop already matches main (${MAIN_SHA})."
+            exit 0
+          fi
+
+          echo "Resetting dev/develop (${DEV_SHA}) to main (${MAIN_SHA})."
+          git checkout -B dev/develop origin/main
+          git push origin dev/develop --force-with-lease
