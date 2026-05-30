@@ -107,7 +107,7 @@ export function ProductReviewsSection({ productId }: Props) {
     setSubmitBusy(true);
     setErr(null);
     try {
-      const created = await reviewsCreate(accessToken, {
+      await reviewsCreate(accessToken, {
         product_id: productId,
         rating,
         title: tRaw,
