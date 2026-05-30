@@ -143,10 +143,9 @@ The platform currently powers:
 │   ├── audit/                 # System audit & remediation
 │   ├── architecture/          # DSA reference
 │   ├── deployment/            # Production rollout
-│   ├── contributing/          # PR workflow
 │   ├── environment/           # Env vars
 │   ├── guides/                # Developer quickref
-│   ├── security/              # Security policy
+│   ├── security/              # Frontend auth security notes
 │   └── operations/            # Runbooks & auth sessions
 ├── .github/workflows/         # CI/CD workflows
 │
@@ -424,8 +423,8 @@ Current automation includes:
 | Area | Location |
 |------|----------|
 | Documentation hub | `docs/README.md` |
-| Contributing | `docs/contributing/contributing.md` |
-| Security policy | `docs/security/security-policy.md` |
+| Contributing | `.github/CONTRIBUTING.md` |
+| Security policy | `.github/SECURITY.md` |
 | Developer quick reference | `docs/guides/developer-quickref.md` |
 | System audit | `docs/audit/README.md` |
 | Environment Configuration | `docs/environment/environment.md` |

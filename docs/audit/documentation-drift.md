@@ -100,7 +100,7 @@ CI, `scripts/ci-local.ps1`, and `backend/tests/conftest.py` use **`SECRET_KEY`**
 
 - [x] **P2** — Resolved
 
-**Location:** [docs/contributing/contributing.md](../contributing/contributing.md). GitHub: [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md).
+**Location:** [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md).
 
 ---
 
@@ -108,7 +108,7 @@ CI, `scripts/ci-local.ps1`, and `backend/tests/conftest.py` use **`SECRET_KEY`**
 
 - [x] **P2** — Resolved
 
-**Location:** [docs/security/security-policy.md](../security/security-policy.md). GitHub: [.github/SECURITY.md](../../.github/SECURITY.md).
+**Location:** [.github/SECURITY.md](../../.github/SECURITY.md).
 
 ---
 

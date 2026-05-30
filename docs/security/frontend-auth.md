@@ -29,4 +29,4 @@ Shopper routes (checkout, orders) still rely on client-side auth context; API en
 3. Do not disable CSP or inject untrusted third-party scripts on auth/checkout pages.
 4. Rotate `SECRET_KEY` on backend if a token leak is suspected; users must re-login.
 
-See also [security-policy.md](../security/security-policy.md) and backend [startup_checks.py](../../backend/app/core/startup_checks.py).
+See also backend [startup_checks.py](../../backend/app/core/startup_checks.py).
