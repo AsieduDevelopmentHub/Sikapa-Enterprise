@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   authFetchProfile,
   authLogin,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/api/auth";
 import { clearAllAuthTokens, readTokens, writeTokens, type AuthBucket } from "@/lib/auth-storage";
 import { clearSessionCookie, syncSessionCookie } from "@/lib/session-cookie";
+import { resetClientSessionCache } from "@/lib/session-reset";
 
 /**
  * Heuristic: distinguish auth failures (token invalid / expired) from
@@ -65,6 +67,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,31 +76,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearAuthError = useCallback(() => setAuthError(null), []);
 
   const persistTokens = useCallback(
-    (access: string, refresh: string | null | undefined, bucket: AuthBucket) => {
+    async (access: string, refresh: string | null | undefined, bucket: AuthBucket) => {
       writeTokens(access, refresh ?? null, bucket);
       setAccessToken(access);
-      void syncSessionCookie(access);
+      await syncSessionCookie(access);
     },
     []
   );
 
-  const clearTokens = useCallback(() => {
+  const clearTokens = useCallback(async () => {
     clearAllAuthTokens();
-    void clearSessionCookie();
+    await clearSessionCookie();
+    resetClientSessionCache(queryClient);
     setAccessToken(null);
     setUser(null);
-  }, []);
+  }, [queryClient]);
 
   const applySession = useCallback(async (tokens: TokenResponse, remember = true) => {
+    resetClientSessionCache(queryClient);
     clearAllAuthTokens();
     const bucket: AuthBucket = remember ? "local" : "session";
-    persistTokens(tokens.access_token, tokens.refresh_token ?? undefined, bucket);
+    await persistTokens(tokens.access_token, tokens.refresh_token ?? undefined, bucket);
     const profile = await authFetchProfile(tokens.access_token);
     setUser({
       ...profile,
       is_admin: Boolean(profile.is_admin),
     });
-  }, [persistTokens]);
+  }, [persistTokens, queryClient]);
 
   const refreshProfile = useCallback(async () => {
     const token = readTokens().access;
@@ -115,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     } catch (e) {
       if (looksLikeAuthFailure(e)) {
-        clearTokens();
+        await clearTokens();
       }
     }
   }, [clearTokens]);
@@ -157,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (!cancelled) {
           if (looksLikeAuthFailure(e)) {
-            clearTokens();
+            await clearTokens();
           } else {
             // Network glitch: keep tokens so the user stays "logged in" optimistically.
             // Pages that need data will retry their own fetches.
@@ -237,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         /* still clear locally */
       }
     }
-    clearTokens();
+    await clearTokens();
   }, [clearTokens]);
 
   const value = useMemo<AuthContextValue>(

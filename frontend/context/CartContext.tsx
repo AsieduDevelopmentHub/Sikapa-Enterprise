@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/cartApi";
 import { formatGhs, type MockProduct } from "@/lib/mock-data";
 import { useCartStore, type CartLine, type AddToCartOptions } from "@/lib/store/useCartStore";
+import { AUTH_SESSION_CHANGED } from "@/lib/session-reset";
 
 type PendingAdd = {
   productId: string;
@@ -254,6 +255,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
     prevHadUserRef.current = !!user;
   }, [user, authLoading, setLines]);
+
+  useEffect(() => {
+    const onSessionChange = () => {
+      setLines([]);
+      pendingAddRef.current = null;
+      syncedUserIdRef.current = null;
+      setCartAuthOpen(false);
+    };
+    window.addEventListener(AUTH_SESSION_CHANGED, onSessionChange);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED, onSessionChange);
+  }, [setLines]);
 
   const dismissCartAuth = useCallback(() => {
     pendingAddRef.current = null;

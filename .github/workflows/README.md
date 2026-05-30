@@ -73,6 +73,16 @@ Tag pushes publish a GitHub Release in the same workflow as the build (`publish_
 
 Runs on PRs targeting **`main`** or **`dev/develop`** when `frontend/**` changes.
 
+Uses npm cache (`setup-node`), Next.js incremental cache (`.next/cache`), and `@lhci/cli` from `devDependencies` (no global install). Chrome is cached by `browser-actions/setup-chrome`.
+
+### `ci.yml` caching
+
+| Job | Caches |
+|-----|--------|
+| Backend | pip via `setup-python` (`requirements.txt` hash) |
+| Frontend | npm + Next.js `.next/cache` (shared key with Lighthouse) |
+| Mobile | Flutter SDK (`subosito/flutter-action`) |
+
 ### `render-keepalive.yml`
 
 Cron runs from the repo **default branch** only (usually `main`). Also runs on push when this workflow file changes on **`main`** or **`dev/develop`**.

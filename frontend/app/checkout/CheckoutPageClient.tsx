@@ -23,6 +23,7 @@ import {
 } from "@/lib/ghana-shipping";
 import { formatGhs } from "@/lib/mock-data";
 import { sanitizeMultiline, validateShippingAddress } from "@/lib/validation/input";
+import { notifyOrdersChanged } from "@/lib/session-reset";
 
 type Step = "address" | "shipping" | "review";
 
@@ -310,6 +311,7 @@ export function CheckoutPageClient() {
         shipping_address: addr,
         notes: notesTrim.length > 0 ? notesTrim : null,
       });
+      notifyOrdersChanged();
       const callbackUrl = `${origin}/checkout/success?order=${order.id}`;
       const pay = await paystackInitialize(accessToken, order.id, callbackUrl);
       if (typeof window !== "undefined" && pay.authorization_url) {

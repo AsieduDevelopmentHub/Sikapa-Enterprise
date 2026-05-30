@@ -16,6 +16,8 @@ import {
 import { getBackendOrigin } from "@/lib/api/client";
 import { formatGhs } from "@/lib/mock-data";
 import { AdminOrderDetailSkeleton } from "@/components/admin/Skeleton";
+import { useAdminLiveLoad } from "@/lib/hooks/useAdminLiveLoad";
+import { notifyOrdersChanged } from "@/lib/session-reset";
 
 /** Quick status changes (shipped / cancelled use dedicated forms below). */
 const QUICK_STATUSES = ["pending", "processing", "packed", "delivered"] as const;
@@ -34,9 +36,9 @@ export default function AdminOrderDetailPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [customerLabel, setCustomerLabel] = useState<string>("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accessToken || !Number.isFinite(id)) return;
-    setErr(null);
+    if (!opts?.silent) setErr(null);
     try {
       const [o, users] = await Promise.all([
         adminFetchOrderDetail(accessToken, id),
@@ -54,13 +56,13 @@ export default function AdminOrderDetailPage() {
     }
   }, [accessToken, id]);
 
+  useAdminLiveLoad(load, [accessToken, id], { intervalMs: 10_000 });
+
   useEffect(() => {
     if (!Number.isFinite(id)) {
       setErr("Invalid order ID.");
-      return;
     }
-    void load();
-  }, [load, id]);
+  }, [id]);
 
   const origin = typeof window !== "undefined" ? getBackendOrigin() : "";
 
@@ -70,6 +72,7 @@ export default function AdminOrderDetailPage() {
     try {
       await adminUpdateOrderStatus(accessToken, id, status);
       await load();
+      notifyOrdersChanged();
     } catch (e) {
       void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
     } finally {
@@ -88,6 +91,7 @@ export default function AdminOrderDetailPage() {
         estimated_delivery: eta ? new Date(eta).toISOString() : undefined,
       });
       await load();
+      notifyOrdersChanged();
     } catch (e) {
       void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
     } finally {
@@ -104,6 +108,7 @@ export default function AdminOrderDetailPage() {
         cancel_reason: cancelReason.trim() || "Cancelled by admin",
       });
       await load();
+      notifyOrdersChanged();
     } catch (e) {
       void alertDialog(e instanceof Error ? e.message : "Update failed", { variant: "error" });
     } finally {
