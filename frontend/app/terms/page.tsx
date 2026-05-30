@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { pageMetadata } from "@/lib/seo";
-import { SIKAPA_LOCATION_LINE } from "@/lib/site";
+import { SIKAPA_LOCATION_LINE, SIKAPA_STORE_MAP_HREF, SIKAPA_SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata = pageMetadata("Terms of Service", {
   description:
@@ -9,7 +9,7 @@ export const metadata = pageMetadata("Terms of Service", {
   path: "/terms",
 });
 
-const UPDATED = "April 2026";
+const UPDATED = "May 2026";
 
 export default function TermsPage() {
   return (
@@ -25,94 +25,117 @@ export default function TermsPage() {
           </h1>
           <p className="mt-2 text-sikapa-text-muted dark:text-zinc-500">Last updated: {UPDATED}</p>
           <p className="mt-4 text-body text-sikapa-text-primary dark:text-zinc-300">
-            These terms govern your use of our website, mobile experience, and related services. By accessing or using
-            Sikapa Enterprise, you agree to these terms. If you do not agree, please do not use our services.
+            These terms apply when you shop on Sikapa’s website, use the Sikapa mobile app, or otherwise interact with
+            Sikapa Enterprise. By placing an order or creating an account, you agree to these terms. If you do not agree,
+            do not use our services.
           </p>
         </header>
 
         <div className="space-y-10">
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              1. Who we are
+              1. About Sikapa
             </h2>
             <p className="mt-3">
-              “Sikapa,” “we,” “us,” and “our” refer to Sikapa Enterprise, operating retail and e-commerce services for
-              beauty and personal-care products. Our public-facing location line is {SIKAPA_LOCATION_LINE}. For questions
-              about these terms, use the contact options described in your order communications or the help section of
-              the app.
+              Sikapa Enterprise (“Sikapa,” “we,” “us”) sells beauty, cosmetics, and personal-care products online and
+              supports in-person pickup at {SIKAPA_LOCATION_LINE}. Directions and hours are on our{" "}
+              <Link href={SIKAPA_STORE_MAP_HREF} className="font-semibold text-sikapa-gold underline-offset-2 hover:underline">
+                store map
+              </Link>
+              . For help with these terms, email{" "}
+              <a
+                href={`mailto:${SIKAPA_SUPPORT_EMAIL}`}
+                className="font-semibold text-sikapa-gold underline-offset-2 hover:underline"
+              >
+                {SIKAPA_SUPPORT_EMAIL}
+              </a>{" "}
+              or visit{" "}
+              <Link href="/help/contact" className="font-semibold text-sikapa-gold underline-offset-2 hover:underline">
+                Help → Contact
+              </Link>
+              .
             </p>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              2. Eligibility and your account
+              2. Your account
             </h2>
             <ul className="mt-3 list-inside list-disc space-y-2">
-              <li>You must be able to enter a binding agreement under the laws that apply to you.</li>
+              <li>You must be at least 18 years old and able to enter a binding contract under Ghanaian law.</li>
               <li>
-                You are responsible for keeping your login credentials confidential and for all activity under your
-                account.
+                Keep your password and 2FA codes private. Activity under your account is your responsibility until you
+                tell us it has been compromised.
               </li>
               <li>
-                You agree to provide accurate information when you register, place an order, or contact us. We may
-                suspend or close accounts that misuse the service, commit fraud, or violate these terms.
+                Provide accurate name, contact, and delivery details. We may suspend accounts used for fraud, abuse, or
+                repeated policy violations.
               </li>
             </ul>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              3. Products, descriptions, and availability
+              3. Products and pricing
             </h2>
             <p className="mt-3">
-              We aim to describe products, images, and prices accurately. Minor variations in colour or appearance may
-              occur (for example due to screen settings). If an item is unavailable after you order, we will notify you
-              and offer a reasonable alternative, reschedule, or cancellation and refund of amounts paid for the
-              unavailable item, consistent with our processes at the time.
+              Product photos and descriptions reflect the items we intend to supply. Colours may vary slightly by screen
+              or batch. Prices on Sikapa are shown in Ghana cedis (GHS) unless stated otherwise. Delivery fees and
+              shipping regions are calculated at checkout based on your selected region and city within Ghana. If an item
+              becomes unavailable after you order, we will contact you to cancel that line, substitute with your
+              approval, or refund the affected amount.
             </p>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              4. Orders, pricing, and payment
+              4. Orders and payment
             </h2>
             <ul className="mt-3 list-inside list-disc space-y-2">
               <li>
-                Displaying a product does not guarantee it is in stock. An order is an offer to purchase; we may accept
-                or decline it (for example for fraud prevention, stock, or legal reasons).
+                Submitting checkout is an offer to buy. Sikapa accepts when we confirm the order and/or successfully
+                process payment.
               </li>
               <li>
-                Prices are shown in the currency indicated at checkout (for example GHS) unless stated otherwise. Taxes,
-                duties, or delivery fees may apply and will be shown before you confirm payment where possible.
+                Payment is handled by Paystack (card, bank, or other methods Paystack supports in Ghana). You authorise
+                Sikapa and Paystack to charge the total shown at checkout, including applicable delivery fees.
               </li>
               <li>
-                Payment is processed through our chosen payment partners. You authorise us and those partners to charge
-                your selected payment method for the total amount shown at checkout.
+                Unpaid orders may be cancelled after a reasonable period. Paid orders are subject to our fulfilment and
+                anti-fraud checks.
               </li>
             </ul>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              5. Delivery, pickup, and risk
+              5. Delivery and pickup
             </h2>
             <p className="mt-3">
-              Delivery or pickup options, timelines, and fees are communicated at checkout or in your order confirmation.
-              Risk of loss for physical goods passes to you when the carrier records delivery or when you collect the
-              order, according to the method you selected. If a shipment is delayed or lost, contact us promptly so we can
-              help trace it with the carrier.
+              You may choose nationwide delivery or local pickup at New Edubiase. Estimated timelines and fees are shown
+              at checkout. Risk passes to you when the courier records delivery or when you collect a ready pickup order
+              from our store. If a parcel is delayed or missing, contact us promptly with your order number so we can
+              trace it with the carrier. See{" "}
+              <Link href="/help/shipping" className="font-semibold text-sikapa-gold underline-offset-2 hover:underline">
+                Help → Shipping
+              </Link>{" "}
+              for current guidance.
             </p>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              6. Returns, refunds, and hygiene
+              6. Returns and refunds
             </h2>
             <p className="mt-3">
-              Where the law or our published return policy allows, you may return eligible items within the stated
-              period. For hygiene and safety, opened cosmetics, personal applicators, or items marked non-returnable may
-              not be eligible unless they are faulty or not as described. Refunds are processed using the same path as
-              the original payment where practicable.
+              Returns follow Sikapa’s published return policy. For hygiene reasons, opened cosmetics, used applicators,
+              and sealed personal-care items may not be returnable unless faulty or not as described. Eligible returns
+              are processed to the original Paystack payment path where possible. Start a return from your order page or
+              see{" "}
+              <Link href="/help/returns" className="font-semibold text-sikapa-gold underline-offset-2 hover:underline">
+                Help → Returns
+              </Link>
+              .
             </p>
           </section>
 
@@ -122,10 +145,10 @@ export default function TermsPage() {
             </h2>
             <p className="mt-3">You agree not to:</p>
             <ul className="mt-2 list-inside list-disc space-y-2">
-              <li>Use the service for unlawful purposes or to harm others;</li>
-              <li>Attempt to gain unauthorised access to our systems, accounts, or data;</li>
-              <li>Scrape, overload, or interfere with the normal operation of the site or app;</li>
-              <li>Mislead us or payment providers about identity, payment, or order details.</li>
+              <li>Use Sikapa for unlawful purposes or to harm other customers or staff;</li>
+              <li>Attempt unauthorised access to accounts, admin tools, or our infrastructure;</li>
+              <li>Scrape, overload, or reverse-engineer the site or app beyond normal shopping use;</li>
+              <li>Submit false payment, identity, or delivery information.</li>
             </ul>
           </section>
 
@@ -134,66 +157,72 @@ export default function TermsPage() {
               8. Intellectual property
             </h2>
             <p className="mt-3">
-              Content on the service (including branding, text, graphics, and layout) is owned by Sikapa or our
-              licensors. You may not copy, modify, or exploit it for commercial use without our written permission,
-              except as allowed by law or for personal, non-commercial browsing and ordering.
+              Sikapa branding, product photography, site design, and written content are owned by Sikapa Enterprise or
+              our licensors. You may browse and purchase for personal use. Commercial copying, resale of our media, or
+              misuse of the Sikapa name without written permission is not allowed.
             </p>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              9. Disclaimer and limit of liability
+              9. Service availability
             </h2>
             <p className="mt-3">
-              To the fullest extent permitted by law, the service is provided “as is.” We do not warrant uninterrupted or
-              error-free operation. We are not liable for indirect or consequential losses, or for loss of profit, data,
-              or goodwill, except where the law does not allow that exclusion. Our total liability arising from these
-              terms or your use of the service is limited to the amount you paid us for the specific order giving rise to
-              the claim (or, if none, a reasonable cap consistent with applicable law).
+              We aim to keep the storefront and app available, but maintenance, network issues, or third-party outages
+              (including Paystack or carriers) may cause interruptions. We are not responsible for delays outside our
+              reasonable control once an order has been handed to a carrier.
             </p>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              10. Changes
+              10. Limitation of liability
             </h2>
             <p className="mt-3">
-              We may update these terms from time to time. The “Last updated” date will change when we do. Continued use
-              after changes means you accept the revised terms. If you do not agree, you should stop using the service.
+              To the extent permitted by Ghanaian law, Sikapa is not liable for indirect or consequential loss, lost
+              profits, or loss of data arising from use of our services. Our total liability for a claim relating to a
+              specific order is limited to the amount you paid Sikapa for that order. Nothing in these terms limits
+              rights you have under mandatory consumer protection law in Ghana.
             </p>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              11. Governing law and disputes
+              11. Changes to these terms
             </h2>
             <p className="mt-3">
-              These terms are governed by the laws of the Republic of Ghana, without regard to conflict-of-law rules that
-              would apply another jurisdiction. Courts in Ghana have non-exclusive jurisdiction over disputes, subject to
-              any mandatory consumer protections where you live.
+              We may update these terms when Sikapa’s services or legal requirements change. The “Last updated” date will
+              reflect the revision. Continued use after an update means you accept the new terms. If you disagree, stop
+              using Sikapa and close your account.
             </p>
           </section>
 
           <section>
             <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
-              12. Privacy
+              12. Governing law
             </h2>
             <p className="mt-3">
-              Our collection and use of personal data is described in our{" "}
+              These terms are governed by the laws of the Republic of Ghana. Disputes will be handled by the courts of
+              Ghana, subject to any non-waivable consumer rights where you live.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-serif text-section-title font-semibold text-sikapa-text-primary dark:text-zinc-100">
+              13. Privacy
+            </h2>
+            <p className="mt-3">
+              Our{" "}
               <Link href="/privacy" className="font-semibold text-sikapa-gold underline-offset-2 hover:underline">
                 Privacy Policy
-              </Link>
-              .
+              </Link>{" "}
+              explains how Sikapa collects and uses personal data, including Paystack payment metadata, delivery
+              addresses, and account information.
             </p>
           </section>
         </div>
 
-        <p className="mt-12 border-t border-sikapa-gray-soft pt-8 text-[11px] text-sikapa-text-muted dark:border-white/10 dark:text-zinc-500">
-          This document is provided for general business use. Have it reviewed by qualified legal counsel for your
-          specific situation, regulatory requirements, and jurisdictions.
-        </p>
-
-        <p className="mt-6">
+        <p className="mt-12 border-t border-sikapa-gray-soft pt-8 dark:border-white/10">
           <Link href="/" className="font-semibold text-sikapa-gold underline-offset-2 hover:underline">
             Back to home
           </Link>

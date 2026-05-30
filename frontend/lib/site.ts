@@ -1,6 +1,12 @@
 /** Physical location (home + footer). District omitted for a shorter public line. */
 export const SIKAPA_LOCATION_LINE = "New Edubiase, Ashanti Region, Ghana";
 
+/** In-app help page with embedded store map (`#store-map` scroll target). */
+export const SIKAPA_STORE_MAP_HREF = "/help/contact#store-map";
+
+/** Customer support email shown on help and legal pages. */
+export const SIKAPA_SUPPORT_EMAIL = "support@sikapa.com";
+
 /**
  * Public site URL for legal links in emails (optional). Defaults to in-app routes.
  * Example: `https://sikapa.auralenx.com`
