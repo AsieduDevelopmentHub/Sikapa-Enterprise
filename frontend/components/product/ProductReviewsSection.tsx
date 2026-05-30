@@ -14,7 +14,7 @@ import {
   reviewsWriteEligibility,
   type ReviewRow,
 } from "@/lib/api/reviews";
-import { getBackendOrigin } from "@/lib/api/client";
+import { resolveMediaUrl } from "@/lib/media-url";
 import {
   sanitizeMultiline,
   sanitizePlainText,
@@ -144,9 +144,7 @@ export function ProductReviewsSection({ productId }: Props) {
     }
   }
 
-  const backendOrigin = typeof window !== "undefined" ? getBackendOrigin() : "";
-  const resolveMediaUrl = (url: string): string =>
-    url.startsWith("http") ? url : `${backendOrigin}${url}`;
+  const resolveReviewMediaUrl = (url: string) => resolveMediaUrl(url);
 
   return (
     <section ref={sectionRef} className="mt-10 border-t border-sikapa-gray-soft/80 pt-8 dark:border-white/10">
@@ -188,7 +186,7 @@ export function ProductReviewsSection({ productId }: Props) {
                 <p className="mt-2 text-small leading-relaxed text-sikapa-text-secondary dark:text-zinc-300">{r.content}</p>
               ) : null}
               {r.media && r.media.length > 0 ? (
-                <ReviewMediaGallery media={r.media} resolveUrl={resolveMediaUrl} />
+                <ReviewMediaGallery media={r.media} resolveUrl={resolveReviewMediaUrl} />
               ) : null}
             </li>
           ))}
@@ -206,7 +204,7 @@ export function ProductReviewsSection({ productId }: Props) {
               reviewId={myReview.id}
               media={myReview.media ?? []}
               accessToken={accessToken}
-              resolveUrl={resolveMediaUrl}
+              resolveUrl={resolveReviewMediaUrl}
               onChanged={load}
             />
           </div>

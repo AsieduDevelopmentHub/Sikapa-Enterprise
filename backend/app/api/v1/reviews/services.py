@@ -6,7 +6,16 @@ from sqlmodel import Session, select, func
 
 from app.models import Review, Product, Order, OrderItem, ReviewMedia, User
 from app.core.pg_rls_auth import users_public_profiles_for_ids
+from app.core.supabase import normalize_public_url
 from app.api.v1.reviews.schemas import ReviewCreateSchema, ReviewMediaRead, ReviewPublic, ReviewWithMediaSchema
+
+
+def _media_read(row: ReviewMedia) -> ReviewMediaRead:
+    item = ReviewMediaRead.model_validate(row)
+    cleaned = normalize_public_url(item.url)
+    if cleaned:
+        item.url = cleaned
+    return item
 
 
 def _media_for_reviews(session: Session, review_ids: list[int]) -> dict[int, list[ReviewMediaRead]]:
@@ -19,7 +28,7 @@ def _media_for_reviews(session: Session, review_ids: list[int]) -> dict[int, lis
     ).all()
     grouped: dict[int, list[ReviewMediaRead]] = {}
     for m in rows:
-        grouped.setdefault(m.review_id, []).append(ReviewMediaRead.model_validate(m))
+        grouped.setdefault(m.review_id, []).append(_media_read(m))
     return grouped
 
 

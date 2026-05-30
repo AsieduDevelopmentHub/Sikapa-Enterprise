@@ -30,6 +30,7 @@ from app.api.v1.reviews.services import (
     delete_review,
     get_user_reviews,
     list_product_reviews_public,
+    _media_read,
     _reviewer_first_name,
 )
 
@@ -183,7 +184,7 @@ async def upload_review_media(
     folder = "review-media"
     storage_path = f"{folder}/{file_id}{ext}"
 
-    public_url = upload_file(storage_path, data)
+    public_url = upload_file(storage_path, data, content_type=ct)
     if not public_url:
         upload_dir = os.path.join("uploads", folder)
         os.makedirs(upload_dir, exist_ok=True)
@@ -202,7 +203,7 @@ async def upload_review_media(
     session.add(media)
     session.commit()
     session.refresh(media)
-    return ReviewMediaRead.model_validate(media)
+    return _media_read(media)
 
 
 @router.delete("/{review_id}/media/{media_id}", status_code=status.HTTP_204_NO_CONTENT)

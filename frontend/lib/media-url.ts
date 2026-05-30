@@ -41,8 +41,10 @@ function absoluteUrlLooksInvalid(trimmed: string): boolean {
  * Treats API placeholders and junk values like the catalog mapper does.
  */
 export function resolveMediaUrl(pathOrUrl: string | null | undefined): string {
-  const t = pathOrUrl?.trim();
+  let t = pathOrUrl?.trim();
   if (!t) return ORDER_IMAGE_PLACEHOLDER;
+  // storage3 public URLs may end with a bare "?" which Supabase rejects with 400
+  if (t.endsWith("?")) t = t.slice(0, -1);
   if (t.startsWith("http://") || t.startsWith("https://")) {
     if (absoluteUrlLooksInvalid(t)) return ORDER_IMAGE_PLACEHOLDER;
     return t;
