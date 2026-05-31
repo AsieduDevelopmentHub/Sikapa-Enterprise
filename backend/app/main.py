@@ -146,15 +146,27 @@ async def add_security_headers(request: Request, call_next):
     )
     # Applied unconditionally — clickjacking is protocol-agnostic
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: https:; "
-        "font-src 'self'; "
-        "frame-ancestors 'none'; "
-        "object-src 'none'"
-    )
+    # Swagger/ReDoc load JS/CSS from jsDelivr; strict script-src 'self' yields a blank /docs page.
+    if path in ("/docs", "/redoc") or path == "/openapi.json":
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' https://cdn.jsdelivr.net; "
+            "frame-ancestors 'none'; "
+            "object-src 'none'"
+        )
+    else:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "frame-ancestors 'none'; "
+            "object-src 'none'"
+        )
     if _https_enabled:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response

@@ -527,7 +527,7 @@ export function ProductDetailScreen({ product: p }: Props) {
         </div>
 
         {hasNumericId && (
-          <ProductReviewsSection productId={numericId} />
+          <ProductReviewsSection key={numericId} productId={numericId} />
         )}
 
         {recentlyViewed.length > 0 && (

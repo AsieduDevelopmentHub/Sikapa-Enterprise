@@ -300,6 +300,25 @@ def emailsubscription_by_verify_token(session: Session, token: str) -> EmailSubs
     return EmailSubscription.model_validate(dict(row)) if row else None
 
 
+def user_review_exists(session: Session, user_id: int, product_id: int) -> bool:
+    """True if this user already reviewed the product (bypasses RLS on Postgres)."""
+    if not pg_rls_enabled():
+        from app.models import Review
+
+        row = session.exec(
+            select(Review.id).where(
+                Review.user_id == user_id,
+                Review.product_id == product_id,
+            ),
+        ).first()
+        return row is not None
+    r = session.connection().execute(
+        text("SELECT app.user_review_exists(:uid, :pid) AS v"),
+        {"uid": int(user_id), "pid": int(product_id)},
+    ).scalar()
+    return bool(r)
+
+
 def delete_review_media_for_moderation(session: Session, review_id: int) -> None:
     """Delete all reviewmedia rows for a review (bypasses RLS for admin moderation)."""
     if not pg_rls_enabled():

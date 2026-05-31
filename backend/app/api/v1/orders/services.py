@@ -8,6 +8,11 @@ from datetime import datetime
 from fastapi import HTTPException, status, BackgroundTasks
 from sqlmodel import Session, select
 
+from app.core.checkout_tax import (
+    compute_order_total,
+    compute_tax_amount,
+    resolve_checkout_tax,
+)
 from app.models import Order, OrderItem, CartItem, Product, ProductVariant, Invoice, User
 from app.api.v1.orders.schemas import OrderCreateSchema
 from app.api.v1.orders.line_items import variant_detail_snapshot_from_model
@@ -26,10 +31,29 @@ async def create_order_from_cart(
     delivery_fee: float,
     order_data: OrderCreateSchema,
     cart_items: list[CartItem],
-    idempotency_key: str | None = None
+    idempotency_key: str | None = None,
+    *,
+    discount_amount: float = 0.0,
+    coupon_id: int | None = None,
+    coupon_code: str | None = None,
 ) -> Order:
     """Create order from cart items."""
-    total_price = round(float(subtotal) + float(delivery_fee), 2)
+    discount = round(max(0.0, float(discount_amount)), 2)
+    tax_cfg = resolve_checkout_tax(session)
+    merch_net = round(max(0.0, float(subtotal) - discount), 2)
+    tax_amount = (
+        compute_tax_amount(merch_net, tax_cfg.rate_percent)
+        if tax_cfg.enabled
+        else 0.0
+    )
+    tax_rate_snapshot = tax_cfg.rate_percent if tax_cfg.enabled else 0.0
+    delivery = round(float(delivery_fee), 2)
+    total_price = compute_order_total(
+        subtotal=float(subtotal),
+        discount_amount=discount,
+        delivery_fee=delivery,
+        tax_amount=tax_amount,
+    )
     region_key = (
         (order_data.shipping_region or "").strip().lower().replace(" ", "-")
         if order_data.shipping_region
@@ -43,7 +67,12 @@ async def create_order_from_cart(
         user_id=user_id,
         total_price=total_price,
         subtotal_amount=round(float(subtotal), 2),
-        delivery_fee=round(float(delivery_fee), 2),
+        discount_amount=discount,
+        tax_amount=tax_amount,
+        tax_rate_percent=tax_rate_snapshot,
+        coupon_id=coupon_id,
+        coupon_code=coupon_code,
+        delivery_fee=delivery,
         shipping_method=order_data.shipping_method,
         shipping_region=region_key,
         shipping_city=order_data.shipping_city,
@@ -182,12 +211,16 @@ async def create_invoice_for_order(
     """Create an invoice record for an order."""
     if order.subtotal_amount is not None:
         line_subtotal = float(order.subtotal_amount)
+        discount = float(order.discount_amount or 0)
         shipping_fee = float(order.delivery_fee or 0)
     else:
         line_subtotal = float(order.total_price)
+        discount = 0.0
         shipping_fee = float(shipping)
-    subtotal = line_subtotal
-    tax = round(subtotal * tax_rate, 2)
+    subtotal = round(max(0.0, line_subtotal - discount), 2)
+    tax = float(order.tax_amount or 0)
+    if tax <= 0 and tax_rate > 0:
+        tax = round(subtotal * tax_rate, 2)
     total = round(subtotal + tax + shipping_fee, 2)
     invoice_number = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{order.id}-{uuid.uuid4().hex[:8]}"
 

@@ -2,12 +2,13 @@
 Reviews business logic
 """
 from fastapi import HTTPException, status
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 
 from app.models import Review, Product, Order, OrderItem, ReviewMedia, User
-from app.core.pg_rls_auth import users_public_profiles_for_ids
+from app.core.pg_rls_auth import user_review_exists, users_public_profiles_for_ids
 from app.core.supabase import normalize_public_url
 from app.api.v1.reviews.schemas import ReviewCreateSchema, ReviewMediaRead, ReviewPublic, ReviewWithMediaSchema
+from app.api.v1.reviews.ratings import recalculate_product_avg_rating
 
 
 def _media_read(row: ReviewMedia) -> ReviewMediaRead:
@@ -56,10 +57,7 @@ def user_has_paid_purchase_for_product(session: Session, user_id: int, product_i
 async def can_user_write_review(session: Session, user_id: int, product_id: int) -> bool:
     if not user_has_paid_purchase_for_product(session, user_id, product_id):
         return False
-    existing = session.exec(
-        select(Review.id).where(Review.user_id == user_id, Review.product_id == product_id)
-    ).first()
-    return existing is None
+    return not user_review_exists(session, user_id, product_id)
 
 
 async def create_review(
@@ -85,15 +83,7 @@ async def create_review(
             detail="You can only review products you have purchased.",
         )
 
-    # Check if user already reviewed this product
-    existing_review = session.exec(
-        select(Review).where(
-            Review.user_id == user_id,
-            Review.product_id == review_data.product_id
-        )
-    ).first()
-
-    if existing_review:
+    if user_review_exists(session, user_id, review_data.product_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You have already reviewed this product"
@@ -111,12 +101,7 @@ async def create_review(
     session.commit()
     session.refresh(review)
 
-    raw = session.exec(
-        select(func.avg(Review.rating)).where(Review.product_id == product.id)
-    ).first()
-    avg_val = float(raw) if raw is not None else 0.0
-    product.avg_rating = round(avg_val, 2)
-    session.add(product)
+    recalculate_product_avg_rating(session, product.id)
     session.commit()
 
     return review

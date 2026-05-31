@@ -22,7 +22,7 @@ Render should use the following service configuration:
 - Type: `Web Service`
 - Environment: `Docker`
 - Dockerfile Path: `backend/Dockerfile`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Start command: `./docker-entrypoint.sh` (runs `alembic upgrade head`, `tools/rls/rls_setup.py`, then uvicorn)
 - Auto deploy from branch: `main` (or your deploy branch)
 
 ## Environment variables
@@ -64,4 +64,4 @@ Full reference: [../../../docs/environment/environment.md](../../../docs/environ
 
 - Keep `backend/.env.production` out of git
 - Use Render Dashboard or secret store for production credentials
-- For database migration, run Alembic locally or through a separate Render job if needed
+- For database migration, Alembic runs automatically on each deploy via `docker-entrypoint.sh` (see `backend/Dockerfile`)

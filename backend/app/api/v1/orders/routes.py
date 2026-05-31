@@ -184,8 +184,32 @@ async def create_order(
             detail="Choose a valid Ghana region for delivery.",
         )
 
+    discount_amount = 0.0
+    coupon_id: int | None = None
+    coupon_code: str | None = None
+    if order_data.coupon_code:
+        from app.api.v1.coupons import service as coupon_service
+
+        coupon, discount_amount = coupon_service.resolve_coupon_for_checkout(
+            session,
+            user_id=current_user.id,
+            code=order_data.coupon_code,
+            subtotal=subtotal,
+        )
+        coupon_id = coupon.id
+        coupon_code = coupon.code
+
     order = await create_order_from_cart(
-        session, current_user.id, subtotal, fee, order_data, cart_items, idempotency_key
+        session,
+        current_user.id,
+        subtotal,
+        fee,
+        order_data,
+        cart_items,
+        idempotency_key,
+        discount_amount=discount_amount,
+        coupon_id=coupon_id,
+        coupon_code=coupon_code,
     )
 
     AuditLogger.log(
@@ -196,6 +220,8 @@ async def create_order(
         resource_id=order.id,
         changes={
             "total_price": order.total_price,
+            "discount_amount": order.discount_amount,
+            "coupon_code": order.coupon_code,
             "payment_status": order.payment_status,
             "status": order.status,
             "shipping_method": order_data.shipping_method,

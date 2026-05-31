@@ -49,11 +49,24 @@ Triggers: push/PR to **`main`** or **`dev/develop`**.
 
 ### `dev-develop-auto-pr.yml`
 
-After a push to **`dev/develop`**, opens a PR **`dev/develop` → `main`** only when staging is **at least 10 commits ahead** of `main` (configurable via workflow_dispatch). If a PR is already open, subsequent pushes still refresh auto-merge. Merges use **squash** to keep `main` history compact and limit Render redeploy noise. Requires `GH_ACTIONS_PR_TOKEN` for auto-merge.
+After a push to **`dev/develop`**, opens a PR **`dev/develop` → `main`** only when staging is **at least 10 commits ahead** of `main` (configurable via workflow_dispatch). If a PR is already open, subsequent pushes still refresh auto-merge. Merges use **squash** to keep `main` history compact and limit Render redeploy noise.
+
+**Secrets & repo settings (if auto-merge or sync dispatch fails):**
+
+| Issue | Fix |
+|-------|-----|
+| `Auto merge is not allowed` / `enablePullRequestAutoMerge` | Repo **Settings → General** → enable **Allow auto-merge**. Then **Settings → Pull requests** → allow squash merge. |
+| `GH_ACTIONS_PR_TOKEN` | Fine-grained PAT on the repo: **Contents** (write), **Pull requests** (write), **Actions** (write). Add as repo secret `GH_ACTIONS_PR_TOKEN`. |
+| `HTTP 403` on `gh workflow run` | Default `GITHUB_TOKEN` cannot always trigger other workflows. Use `GH_ACTIONS_PR_TOKEN` with **Actions: write**, and ensure **Settings → Actions → General → Workflow permissions** allows GitHub Actions to run workflows (not “Read repository contents” only). |
+| **trigger_sync** still 403 | Run **Sync main to dev/develop** manually (confirm `YES`) instead of chaining from auto-PR. |
 
 ### `sync-main-to-dev-develop.yml`
 
 After every push to **`main`** (including squash promotes), resets **`dev/develop`** to match **`main`** exactly. That prevents the next auto-PR from replaying commits that are already on `main` under a squash commit (the usual cause of false merge conflicts). New staging work should land on **`dev/develop`** only after this sync finishes.
+
+**Manual run (Run workflow button):** Actions → **Sync main to dev/develop** → **Run workflow** → set **confirm** to `YES` → Run. The button only appears for workflows on the repo **default branch** (`main`). If you do not see it, merge the latest workflow file to `main` first.
+
+**From auto-PR manual run:** enable **trigger_sync** on **Dev develop auto PR to main** only after `main` already has the promoted commits (otherwise you would wipe unpromoted work on `dev/develop`).
 
 ### `mobile-build.yml` (Android job)
 

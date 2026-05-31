@@ -10,6 +10,7 @@ from app.api.v1.subscriptions.routes import router as subscriptions_router
 from app.api.v1.payments.routes import router as payments_router
 from app.api.v1.wishlist.routes import router as wishlist_router
 from app.api.v1.returns.routes import router as returns_router
+from app.api.v1.coupons.routes import router as coupons_router
 
 router = APIRouter()
 
@@ -17,6 +18,7 @@ router.include_router(auth_router, prefix="/auth", tags=["auth"])
 router.include_router(products_router, prefix="/products", tags=["products"])
 router.include_router(cart_router, prefix="/cart", tags=["cart"])
 router.include_router(orders_router, prefix="/orders", tags=["orders"])
+router.include_router(coupons_router, prefix="/coupons", tags=["coupons"])
 router.include_router(reviews_router, prefix="/reviews", tags=["reviews"])
 router.include_router(admin_router, tags=["Admin"])
 router.include_router(subscriptions_router, prefix="/subscriptions", tags=["subscriptions"])

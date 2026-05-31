@@ -142,6 +142,15 @@ def setup_rls_policies() -> None:
         $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
         """,
         """
+        CREATE OR REPLACE FUNCTION app.user_review_exists(p_user_id integer, p_product_id integer)
+        RETURNS boolean AS $$
+          SELECT EXISTS (
+            SELECT 1 FROM review r
+            WHERE r.user_id = p_user_id AND r.product_id = p_product_id
+          );
+        $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+        """,
+        """
         CREATE OR REPLACE FUNCTION app.get_order_user_for_paystack(p_ref text)
         RETURNS integer AS $$
           SELECT user_id FROM "order" WHERE paystack_reference = p_ref LIMIT 1;
@@ -353,12 +362,16 @@ def setup_rls_policies() -> None:
            USING (app.is_admin()) WITH CHECK (app.is_admin());""",
         """CREATE POLICY p_productimage_del ON productimage FOR DELETE
            USING (app.is_admin());""",
-        # Reviews
+        # Reviews — authors always see their own; admins see all; public sees active catalog products
         """CREATE POLICY p_review_select ON review FOR SELECT
            USING (
-             EXISTS (
+             app.is_admin()
+             OR user_id = app.current_uid()
+             OR EXISTS (
                SELECT 1 FROM product p
-               WHERE p.id = review.product_id AND (p.is_active OR app.is_admin())
+               WHERE p.id = review.product_id
+                 AND p.is_active
+                 AND p.deleted_at IS NULL
              )
            );""",
         """CREATE POLICY p_review_ins ON review FOR INSERT
@@ -372,9 +385,17 @@ def setup_rls_policies() -> None:
            USING (
              EXISTS (
                SELECT 1 FROM review r
-               JOIN product p ON p.id = r.product_id
                WHERE r.id = reviewmedia.review_id
-               AND (p.is_active OR app.is_admin())
+               AND (
+                 app.is_admin()
+                 OR r.user_id = app.current_uid()
+                 OR EXISTS (
+                   SELECT 1 FROM product p
+                   WHERE p.id = r.product_id
+                     AND p.is_active
+                     AND p.deleted_at IS NULL
+                 )
+               )
              )
            );""",
         """CREATE POLICY p_reviewmedia_ins ON reviewmedia FOR INSERT

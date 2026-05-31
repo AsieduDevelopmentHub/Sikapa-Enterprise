@@ -28,8 +28,8 @@ This guide covers everything needed to deploy Sikapa to production securely and 
 ### Database
 - [ ] PostgreSQL/Supabase production instance provisioned
 - [ ] Database backups configured (automated daily backups)
-- [ ] Run `alembic upgrade head` on every deploy (do **not** rely on `DEV_AUTO_CREATE_TABLES` in production)
-- [ ] Postgres RLS applied via `backend/tools/rls/rls_setup.py` when using row-level security
+- [ ] Migrations run on deploy: Render Docker uses `backend/docker-entrypoint.sh` (`alembic upgrade head` then RLS). For non-Docker deploys, run `alembic upgrade head` manually.
+- [ ] Postgres RLS applied (automatic on Render via entrypoint; otherwise `python tools/rls/rls_setup.py`)
 - [ ] Connection pooling configured (`DB_POOL_SIZE`, `DB_MAX_OVERFLOW` on Render)
 - [ ] Database user has minimal required permissions (not superuser)
 
@@ -206,12 +206,12 @@ Ensure each migration is backward-compatible before deploying the API.
    - New → Web Service
    - Connect GitHub repo
 
-2. **Configuration**
-   ```
-   Build Command: pip install -r requirements.txt && alembic upgrade head
-   Start Command: uvicorn app.main:app --host 0.0.0.0 --port 8000
-   Environment: Python 3.11
-   ```
+2. **Configuration (Docker — recommended)**
+   - Root directory: `backend`
+   - Environment: Docker
+   - Dockerfile: `backend/Dockerfile`
+   - Start command: `./docker-entrypoint.sh` (migrations + RLS + uvicorn; see `backend/render.yaml`)
+   - Set `REDIS_URL` in the dashboard when using Render Redis (shared rate limits)
 
 3. **Environment Variables**
    - Add all `.env` variables in Render dashboard
