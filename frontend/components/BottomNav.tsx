@@ -58,6 +58,7 @@ export function BottomNav() {
                 />
                 <Link
                   href={tab.href}
+                  aria-current={active ? "page" : undefined}
                   className="sikapa-tap relative z-[1] -mt-3 flex flex-col items-center gap-0.5"
                 >
                   <span className="relative flex h-[2.85rem] w-[2.85rem] items-center justify-center rounded-full bg-gradient-to-b from-amber-200 to-sikapa-gold text-sikapa-crimson shadow-[0_6px_18px_rgba(200,169,106,0.55)] ring-[3px] ring-white dark:from-amber-300 dark:to-amber-500 dark:text-red-950 dark:ring-zinc-900">
@@ -84,6 +85,7 @@ export function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
+              aria-current={active ? "page" : undefined}
               className={`sikapa-tap flex min-w-[52px] flex-1 flex-col items-center gap-1 rounded-xl px-1 py-0.5 ${
                 active ? "text-sikapa-gold" : "text-sikapa-text-muted"
               }`}

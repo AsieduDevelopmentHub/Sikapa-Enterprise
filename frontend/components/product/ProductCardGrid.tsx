@@ -44,7 +44,7 @@ export function ProductCardGrid({
           <Image
             key={imageSrc}
             src={imageSrc}
-            alt=""
+            alt={p.name}
             fill
             className="object-cover"
             sizes={sizesHint}

@@ -17,7 +17,7 @@ export function NewsletterFooterForm() {
       <p className="mt-1 text-[11px] leading-relaxed text-sikapa-text-secondary dark:text-zinc-400">
         Occasional drops, restocks, product launches, and price-drop alerts. Unsubscribe anytime.
       </p>
-      <p className="mt-1 text-[11px] text-sikapa-text-muted dark:text-zinc-500">
+      <p className="mt-1 text-[11px] text-sikapa-text-secondary dark:text-zinc-400">
         Already subscribed?{" "}
         <Link href="/newsletter/unsubscribe" className="font-semibold text-sikapa-gold hover:underline">
           Unsubscribe here
@@ -65,7 +65,7 @@ export function NewsletterFooterForm() {
           <button
             type="submit"
             disabled={busy}
-            className="shrink-0 rounded-[10px] bg-sikapa-gold px-4 py-2.5 text-small font-semibold text-white disabled:opacity-50 hover:bg-sikapa-gold-hover transition-colors"
+            className="shrink-0 rounded-[10px] bg-sikapa-crimson px-4 py-2.5 text-small font-semibold text-white disabled:opacity-50 transition-colors hover:opacity-90"
           >
             {busy ? "…" : "Subscribe"}
           </button>
