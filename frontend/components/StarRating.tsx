@@ -18,6 +18,7 @@ export function StarRating({
       {[1, 2, 3, 4, 5].map((i) => (
         <span
           key={i}
+          aria-hidden
           className={
             i <= rounded ? "text-sikapa-gold" : "text-sikapa-gray-soft dark:text-zinc-600"
           }

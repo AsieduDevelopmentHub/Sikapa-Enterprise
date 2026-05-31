@@ -181,9 +181,9 @@ export function ShopScreen() {
     <div className="bg-sikapa-cream pb-12 dark:bg-zinc-950">
       <div className="bg-sikapa-gold/5 py-8 mb-4 border-b border-sikapa-gray-soft/50 dark:bg-white/[0.02] dark:border-white/5">
         <div className="sikapa-storefront-max mx-auto px-4">
-          <h1 className="font-serif text-[1.6rem] font-semibold text-sikapa-text-primary dark:text-zinc-100">
+          <h2 className="font-serif text-[1.6rem] font-semibold text-sikapa-text-primary dark:text-zinc-100">
             {tab === "all" ? "Discover Products" : tabKeys.find(t => t.key === tab)?.label}
-          </h1>
+          </h2>
           <p className="mt-1 text-small text-sikapa-text-secondary dark:text-zinc-400">
              Premium selection curated for you
           </p>
@@ -211,7 +211,10 @@ export function ShopScreen() {
         <ViewToggle value={effectiveView} onChange={setView} />
         <button
           type="button"
+          id="shop-filter-toggle"
           className="sikapa-tap shrink-0 rounded-[10px] bg-white px-4 py-3 text-small font-semibold text-sikapa-text-primary ring-1 ring-sikapa-gray-soft dark:bg-zinc-800 dark:text-zinc-100 dark:ring-white/10"
+          aria-expanded={filterOpen}
+          aria-controls="shop-filters-panel"
           onClick={() => setFilterOpen((v) => !v)}
         >
           Filter
@@ -270,10 +273,11 @@ export function ShopScreen() {
             <button
               key={t.key}
               type="button"
+              aria-current={active ? "true" : undefined}
               className={`sikapa-tap shrink-0 rounded-full px-5 py-2.5 text-small font-semibold transition-colors ${
                 active
                   ? "bg-sikapa-gold text-white shadow-sm ring-1 ring-sikapa-gold-hover"
-                  : "bg-sikapa-gray-soft text-sikapa-text-secondary dark:bg-zinc-800 dark:text-zinc-300"
+                  : "bg-sikapa-gray-soft text-sikapa-text-primary dark:bg-zinc-800 dark:text-zinc-200"
               }`}
               onClick={() => setTab(t.key)}
             >
@@ -298,7 +302,7 @@ export function ShopScreen() {
                   <Image
                     key={cleanImageUrl(p.image)}
                     src={cleanImageUrl(p.image)}
-                    alt=""
+                    alt={p.name}
                     fill
                     className="object-cover"
                     sizes="(max-width:430px) 40vw, 180px"
