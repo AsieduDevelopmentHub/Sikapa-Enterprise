@@ -1,0 +1,80 @@
+# Auto PR: dev/develop → dev/staging (integration → hosted staging).
+# Opens or updates a PR and enables squash auto-merge when checks pass.
+name: Auto PR dev/develop to staging
+
+on:
+  push:
+    branches: [dev/develop]
+  workflow_dispatch:
+    inputs:
+      min_commits:
+        description: "Minimum commits ahead of dev/staging before opening a new PR"
+        required: false
+        default: "1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-develop-auto-pr-staging-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  auto-pr-staging:
+    name: Auto PR + auto-merge (dev/develop → dev/staging)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create or update PR and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+          MIN_COMMITS: ${{ github.event.inputs.min_commits || '1' }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin dev/staging --depth=1 >/dev/null 2>&1 || true
+          AHEAD=$(git rev-list --count origin/dev/staging..HEAD 2>/dev/null || echo 0)
+          echo "dev/develop is ${AHEAD} commit(s) ahead of dev/staging (minimum for new PR: ${MIN_COMMITS})."
+
+          if [ "${AHEAD}" = "0" ]; then
+            echo "dev/develop is not ahead of dev/staging — skipping auto-PR."
+            exit 0
+          fi
+
+          PR_NUM=$(gh pr list --head dev/develop --base dev/staging --state open \
+            --json number --jq '.[0].number // empty' || true)
+
+          if [ -z "${PR_NUM}" ] && [ "${AHEAD}" -lt "${MIN_COMMITS}" ]; then
+            echo "Need at least ${MIN_COMMITS} commit(s) ahead of dev/staging to open a new PR — skipping."
+            exit 0
+          fi
+
+          if [ -z "${PR_NUM}" ]; then
+            PR_URL=$(gh pr create --base dev/staging --head dev/develop \
+              --title "chore: promote dev/develop to dev/staging" \
+              --body "Auto-generated PR: \`dev/develop\` is ${AHEAD} commit(s) ahead of \`dev/staging\`.
+
+After merge, \`sync-staging-to-dev-develop.yml\` realigns \`dev/develop\` with \`dev/staging\` so branches stay on the same level." \
+              2>/dev/null || true)
+            PR_NUM="${PR_URL##*/}"
+            if ! [[ "${PR_NUM}" =~ ^[0-9]+$ ]]; then
+              PR_NUM=$(gh pr list --head dev/develop --base dev/staging --state open \
+                --json number --jq '.[0].number // empty' || true)
+            fi
+          fi
+
+          if [ -n "${PR_NUM}" ]; then
+            echo "Enabling auto-merge (squash) for PR #${PR_NUM}"
+            gh pr merge "${PR_NUM}" --auto --squash \
+              || echo "Auto-merge unavailable — enable in repo Settings or set GH_ACTIONS_PR_TOKEN."
+          else
+            echo "No PR created or found — skipping auto-merge."
+          fi

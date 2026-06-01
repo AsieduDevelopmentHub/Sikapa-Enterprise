@@ -157,11 +157,15 @@ Startup validation: `validate_staging_config_or_raise()` in `app/core/startup_ch
 
 ## Day-to-day workflow
 
-1. Merge tested work into `dev/develop`.
-2. When ready for QA: `git checkout dev/staging && git merge dev/develop && git push`
-3. Render + Vercel auto-deploy staging.
-4. Run [nine-type testing](../testing/pre-go-live-testing.md) against staging URLs.
-5. Promote to production: PR `dev/develop` → `main` (existing auto-PR flow) **after** staging sign-off.
+1. Merge tested work into `dev/develop` and push.
+2. **Auto PR** (`dev-develop-auto-pr-to-staging.yml`): opens **`dev/develop` → `dev/staging`**, squash auto-merge when CI is green.
+3. **`sync-staging-to-dev-develop.yml`** resets `dev/develop` to match `dev/staging` (same commit level — avoids PR conflicts).
+4. Render + Vercel Preview deploy from `dev/staging`.
+5. Run [nine-type testing](../testing/pre-go-live-testing.md) against staging URLs.
+6. **Production (manual):** Actions → **Promote staging to main (manual)** → review and merge **`dev/staging` → `main`** in GitHub (no auto-merge).
+7. **`sync-main-to-integration.yml`** resets `dev/develop` and `dev/staging` to `main` after production lands.
+
+Do **not** open **`dev/develop` → `main`** PRs; that path causes merge conflicts when `main` and staging diverge. Close any stale develop→main PRs and use staging→main only.
 
 ---
 
