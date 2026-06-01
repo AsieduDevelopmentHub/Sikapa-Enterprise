@@ -1,0 +1,77 @@
+# After production lands on main, reset BOTH integration branches to main
+# so dev/develop, dev/staging, and main share the same commit level.
+name: Sync main to integration branches
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type YES to reset dev/develop and dev/staging to main"
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-main-to-integration
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Reset dev/develop and dev/staging to main
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'dev/staging')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Confirm manual reset
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "YES" ]; then
+            echo "Manual sync aborted: set confirm to YES."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+
+      - name: Align integration branches with main
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin main dev/develop dev/staging
+
+          MAIN_SHA="$(git rev-parse origin/main)"
+          DEV_SHA="$(git rev-parse origin/dev/develop)"
+          STAGING_SHA="$(git rev-parse origin/dev/staging)"
+
+          reset_branch() {
+            local branch="$1"
+            local current="$2"
+            if [ "${current}" = "${MAIN_SHA}" ]; then
+              echo "${branch} already matches main."
+              return 0
+            fi
+            echo "Resetting ${branch} (${current}) to main (${MAIN_SHA})."
+            git checkout -B "${branch}" origin/main
+            git push origin "${branch}" --force-with-lease
+          }
+
+          reset_branch dev/develop "${DEV_SHA}"
+          reset_branch dev/staging "${STAGING_SHA}"

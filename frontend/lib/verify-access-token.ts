@@ -4,7 +4,7 @@ import { jwtVerify } from "jose";
 import { decodeJwtPayload, type JwtPayload } from "@/lib/jwt-payload";
 
 function secretKey(value: string) {
-  return createSecretKey(Buffer.from(value, "utf8"));
+  return createSecretKey(new TextEncoder().encode(value));
 }
 
 /** Verify HS256 access JWT using the shared backend SECRET_KEY (server-only). */

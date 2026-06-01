@@ -8,7 +8,7 @@ Mirror CI on your machine so pushes do not surprise you on GitHub.
 |--------|------|
 | **`dev/develop`** | Daily integration — commit and push feature work here |
 | **`dev/staging`** | Hosted **staging** (Render + Vercel) — QA and [nine-type testing](../../docs/testing/pre-go-live-testing.md) |
-| **`main`** | Production — merge from `dev/develop` via PR when ready |
+| **`main`** | Production — manual PR from `dev/staging` when QA passes |
 
 Setup: [docs/deployment/staging-environment.md](../../docs/deployment/staging-environment.md) · `.\scripts\setup-staging.ps1`
 
@@ -50,26 +50,36 @@ Triggers: push/PR to **`main`**, **`dev/develop`**, or **`dev/staging`**.
 | Backend CI | `backend/venv`: `pytest` with coverage ≥ 50% (`pyproject.toml`) |
 | Frontend CI | `frontend`: `npm ci`, `lint`, `build`, `test` |
 
-### `dev-develop-auto-pr.yml`
+### `dev-develop-auto-pr-to-staging.yml`
 
-After a push to **`dev/develop`**, opens a PR **`dev/develop` → `main`** only when staging is **at least 10 commits ahead** of `main` (configurable via workflow_dispatch). If a PR is already open, subsequent pushes still refresh auto-merge. Merges use **squash** to keep `main` history compact and limit Render redeploy noise.
+After a push to **`dev/develop`**, opens (or updates) a PR **`dev/develop` → `dev/staging`** and enables **squash auto-merge** when CI passes. Default minimum: **1** commit ahead of `dev/staging` (configurable via workflow_dispatch).
 
-**Secrets & repo settings (if auto-merge or sync dispatch fails):**
+Hosted staging (Render + Vercel Preview) deploys from **`dev/staging`**.
+
+### `dev-staging-promote-to-main.yml`
+
+**Manual only** (`workflow_dispatch`). Opens a PR **`dev/staging` → `main`** with **no auto-merge**. Review and merge in GitHub after staging QA.
+
+### `sync-staging-to-dev-develop.yml`
+
+After **`dev/staging`** updates (squash merge from develop→staging, or manual push), resets **`dev/develop`** to match **`dev/staging`**. Keeps integration and staging on the same commit level so the next auto-PR does not conflict.
+
+**Manual run:** Actions → **Sync staging to dev/develop** → **confirm** = `YES`.
+
+### `sync-main-to-integration.yml`
+
+After every push to **`main`** (including squash promote from staging), resets **`dev/develop`** and **`dev/staging`** to **`main`**. Prevents stale open PRs and merge conflicts on files that diverged across branches.
+
+**Manual run:** Actions → **Sync main to integration branches** → **confirm** = `YES`.
+
+**Secrets & repo settings (if auto-merge or branch reset fails):**
 
 | Issue | Fix |
 |-------|-----|
-| `Auto merge is not allowed` / `enablePullRequestAutoMerge` | Repo **Settings → General** → enable **Allow auto-merge**. Then **Settings → Pull requests** → allow squash merge. |
-| `GH_ACTIONS_PR_TOKEN` | Fine-grained PAT on the repo: **Contents** (write), **Pull requests** (write), **Actions** (write). Add as repo secret `GH_ACTIONS_PR_TOKEN`. |
-| `HTTP 403` on `gh workflow run` | Default `GITHUB_TOKEN` cannot always trigger other workflows. Use `GH_ACTIONS_PR_TOKEN` with **Actions: write**, and ensure **Settings → Actions → General → Workflow permissions** allows GitHub Actions to run workflows (not “Read repository contents” only). |
-| **trigger_sync** still 403 | Run **Sync main to dev/develop** manually (confirm `YES`) instead of chaining from auto-PR. |
-
-### `sync-main-to-dev-develop.yml`
-
-After every push to **`main`** (including squash promotes), resets **`dev/develop`** to match **`main`** exactly. That prevents the next auto-PR from replaying commits that are already on `main` under a squash commit (the usual cause of false merge conflicts). New staging work should land on **`dev/develop`** only after this sync finishes.
-
-**Manual run (Run workflow button):** Actions → **Sync main to dev/develop** → **Run workflow** → set **confirm** to `YES` → Run. The button only appears for workflows on the repo **default branch** (`main`). If you do not see it, merge the latest workflow file to `main` first.
-
-**From auto-PR manual run:** enable **trigger_sync** on **Dev develop auto PR to main** only after `main` already has the promoted commits (otherwise you would wipe unpromoted work on `dev/develop`).
+| `Auto merge is not allowed` | Repo **Settings → General** → enable **Allow auto-merge**; allow squash merge. |
+| `GH_ACTIONS_PR_TOKEN` | Fine-grained PAT: **Contents** (write), **Pull requests** (write). Add as repo secret `GH_ACTIONS_PR_TOKEN`. |
+| Force-push denied | Token needs **Contents: write** on `dev/develop` and `dev/staging`. |
+| Open PR shows conflicts | Close stale **`dev/develop` → `main`** PRs; use **`dev/staging` → `main`** only. Run sync workflows with **confirm** = `YES` if branches drifted. |
 
 ### `mobile-build.yml` (Android job)
 
@@ -120,5 +130,6 @@ Before marking mobile or backend work **complete**:
 1. Work on **`dev/develop`**, run `.\scripts\ci-local.ps1` (or `-SkipAndroidBuild` while iterating).
 2. Fix failures; re-run until green.
 3. Push to **`dev/develop`**; CI runs automatically.
-4. Open or use the auto PR **`dev/develop` → `main`** when ready for production.
-5. After squash merge, **`sync-main-to-dev-develop.yml`** resets **`dev/develop`** to **`main`** — continue new work on **`dev/develop`** from there.
+4. Auto PR **`dev/develop` → `dev/staging`** deploys hosted staging; run QA on staging URLs.
+5. When ready for production: Actions → **Promote staging to main (manual)** → merge the PR in GitHub.
+6. After merge, **`sync-main-to-integration.yml`** resets **`dev/develop`** and **`dev/staging`** to **`main`** — continue on **`dev/develop`**.

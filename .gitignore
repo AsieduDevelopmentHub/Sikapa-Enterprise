@@ -30,7 +30,9 @@ venv/
 !**/.env.staging.example
 /backend/.env
 /backend/.env.production
+/backend/.env.staging
 /frontend/.env.local
+/frontend/.env.staging.local
 
 # Logs & pasted CI output (e.g. workflows.logs)
 *.log

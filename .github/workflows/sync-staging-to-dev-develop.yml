@@ -1,19 +1,17 @@
-# After a squash promote lands on main, realign dev/develop so the next auto-PR
-# does not replay commits that are already on main (avoids recurring merge conflicts).
-name: Sync main to dev/develop
+# After squash-merge dev/develop → dev/staging, realign dev/develop to dev/staging
+# so both branches stay at the same commit level (avoids PR merge conflicts).
+name: Sync staging to dev/develop
 
 on:
   push:
-    branches: [main]
-  # Squash merges via github-actions[bot] do not always fire a follow-up push
-  # workflow; PR close is a reliable backup trigger.
+    branches: [dev/staging]
   pull_request:
     types: [closed]
-    branches: [main]
+    branches: [dev/staging]
   workflow_dispatch:
     inputs:
       confirm:
-        description: "Type YES to reset dev/develop to main (force-with-lease)"
+        description: "Type YES to reset dev/develop to dev/staging (force-with-lease)"
         required: true
         default: ""
 
@@ -21,18 +19,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: sync-main-to-dev-develop
+  group: sync-staging-to-dev-develop
   cancel-in-progress: false
 
 jobs:
   sync:
-    name: Reset dev/develop to main
+    name: Reset dev/develop to dev/staging
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.merged == true &&
-       github.event.pull_request.head.ref == 'dev/develop')
+       github.event.pull_request.head.ref == 'dev/develop' &&
+       github.event.pull_request.base.ref == 'dev/staging')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -41,7 +40,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           if [ "${{ github.event.inputs.confirm }}" != "YES" ]; then
-            echo "Manual sync aborted: set confirm to YES in Run workflow."
+            echo "Manual sync aborted: set confirm to YES."
             exit 1
           fi
 
@@ -51,22 +50,22 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
 
-      - name: Align dev/develop with main
+      - name: Align dev/develop with dev/staging
         env:
           GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
         run: |
           set -euo pipefail
 
-          git fetch origin main dev/develop
+          git fetch origin dev/staging dev/develop
 
-          MAIN_SHA="$(git rev-parse origin/main)"
+          STAGING_SHA="$(git rev-parse origin/dev/staging)"
           DEV_SHA="$(git rev-parse origin/dev/develop)"
 
-          if [ "${MAIN_SHA}" = "${DEV_SHA}" ]; then
-            echo "dev/develop already matches main (${MAIN_SHA})."
+          if [ "${STAGING_SHA}" = "${DEV_SHA}" ]; then
+            echo "dev/develop already matches dev/staging (${STAGING_SHA})."
             exit 0
           fi
 
-          echo "Resetting dev/develop (${DEV_SHA}) to main (${MAIN_SHA})."
-          git checkout -B dev/develop origin/main
+          echo "Resetting dev/develop (${DEV_SHA}) to dev/staging (${STAGING_SHA})."
+          git checkout -B dev/develop origin/dev/staging
           git push origin dev/develop --force-with-lease
