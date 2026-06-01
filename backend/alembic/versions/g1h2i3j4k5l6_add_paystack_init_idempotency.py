@@ -19,38 +19,43 @@ depends_on = None
 def upgrade():
     bind = op.get_bind()
     inspector = inspect(bind)
-    if inspector.has_table("paystack_init_idempotency"):
-        return
-    op.create_table(
-        "paystack_init_idempotency",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("idempotency_key", sa.String(length=128), nullable=False),
-        sa.Column("order_id", sa.Integer(), nullable=False),
-        sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("reference", sa.String(length=128), nullable=False),
-        sa.Column("authorization_url", sa.String(), nullable=False),
-        sa.Column("access_code", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        "ix_paystack_init_idempotency_idempotency_key",
-        "paystack_init_idempotency",
-        ["idempotency_key"],
-        unique=True,
-    )
-    op.create_index(
-        "ix_paystack_init_idempotency_order_id",
-        "paystack_init_idempotency",
-        ["order_id"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_paystack_init_idempotency_user_id",
-        "paystack_init_idempotency",
-        ["user_id"],
-        unique=False,
-    )
+    if not inspector.has_table("paystack_init_idempotency"):
+        op.create_table(
+            "paystack_init_idempotency",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("idempotency_key", sa.String(length=128), nullable=False),
+            sa.Column("order_id", sa.Integer(), nullable=False),
+            sa.Column("user_id", sa.Integer(), nullable=False),
+            sa.Column("reference", sa.String(length=128), nullable=False),
+            sa.Column("authorization_url", sa.String(), nullable=False),
+            sa.Column("access_code", sa.String(), nullable=False),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+            sa.PrimaryKeyConstraint("id"),
+        )
+    idx = {ix["name"] for ix in inspector.get_indexes("paystack_init_idempotency")} if inspector.has_table(
+        "paystack_init_idempotency"
+    ) else set()
+    if "ix_paystack_init_idempotency_idempotency_key" not in idx:
+        op.create_index(
+            "ix_paystack_init_idempotency_idempotency_key",
+            "paystack_init_idempotency",
+            ["idempotency_key"],
+            unique=True,
+        )
+    if "ix_paystack_init_idempotency_order_id" not in idx:
+        op.create_index(
+            "ix_paystack_init_idempotency_order_id",
+            "paystack_init_idempotency",
+            ["order_id"],
+            unique=False,
+        )
+    if "ix_paystack_init_idempotency_user_id" not in idx:
+        op.create_index(
+            "ix_paystack_init_idempotency_user_id",
+            "paystack_init_idempotency",
+            ["user_id"],
+            unique=False,
+        )
 
 
 def downgrade():

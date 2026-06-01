@@ -22,15 +22,19 @@ def upgrade() -> None:
     inspector = inspect(bind)
     if not inspector.has_table("product"):
         return
+    cols = {c["name"] for c in inspector.get_columns("product")}
     idx = {ix["name"] for ix in inspector.get_indexes("product")}
     name = "ix_product_list_active_cat_created"
-    if name not in idx:
-        op.create_index(
-            name,
-            "product",
-            ["is_active", "category", "created_at"],
-            unique=False,
-        )
+    if name in idx:
+        return
+    index_cols = ["is_active", "created_at"]
+    if "category_id" in cols:
+        index_cols.insert(1, "category_id")
+    elif "category" in cols:
+        index_cols.insert(1, "category")
+    else:
+        return
+    op.create_index(name, "product", index_cols, unique=False)
 
 
 def downgrade() -> None:

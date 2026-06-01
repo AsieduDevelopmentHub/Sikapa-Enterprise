@@ -1,8 +1,9 @@
-"""Idempotent creation of ecommerce tables for fresh Postgres / Supabase deploys.
+"""Idempotent helpers for Alembic on fresh Postgres / Supabase deploys.
 
-Used by Alembic revisions (cf3b83e2c22d, h3i4j5k6l7m8, a8b9c0d1e2f3) so `order` exists before
-paystack_transaction and other FK-dependent migrations run.
+Fresh Supabase has only `public` — no Sikapa tables and no `app` schema for RLS helpers.
+Migrations must be idempotent: check table/column/index existence before DDL.
 
+Used by cf3b83e2c22d, h3i4j5k6l7m8, a8b9c0d1e2f3, i4j5…, j5k6…, and guarded revisions.
 Note: lives at app.migration_core_schema (not app.db.*) because app/db.py is a module file.
 """
 from __future__ import annotations
@@ -26,6 +27,50 @@ def add_column_if_missing(table: str, column: sa.Column) -> None:
     bind = op.get_bind()
     if column.name not in _column_names(bind, table):
         op.add_column(table, column)
+
+
+def has_column(bind, table: str, column: str) -> bool:
+    return column in _column_names(bind, table)
+
+
+def index_names(bind, table: str) -> set[str]:
+    if not _has_table(bind, table):
+        return set()
+    return {ix["name"] for ix in sa.inspect(bind).get_indexes(table)}
+
+
+def create_index_if_missing(
+    name: str,
+    table: str,
+    columns: list[str],
+    *,
+    unique: bool = False,
+) -> None:
+    bind = op.get_bind()
+    if not _has_table(bind, table):
+        return
+    if name in index_names(bind, table):
+        return
+    missing = [c for c in columns if not has_column(bind, table, c)]
+    if missing:
+        return
+    op.create_index(name, table, columns, unique=unique)
+
+
+def product_storefront_visible_sql(product_alias: str = "p") -> str:
+    """SQL predicate for active catalog products (safe before deleted_at migration runs)."""
+    return f"""
+    {product_alias}.is_active
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM information_schema.columns c
+        WHERE c.table_schema = 'public'
+          AND c.table_name = 'product'
+          AND c.column_name = 'deleted_at'
+      )
+      OR {product_alias}.deleted_at IS NULL
+    )
+    """.strip()
 
 
 def ensure_app_schema_bootstrap() -> None:

@@ -10,16 +10,31 @@ depends_on = None
 
 
 def upgrade() -> None:
-    from app.migration_core_schema import ensure_app_schema_bootstrap
+    from app.migration_core_schema import ensure_app_schema_bootstrap, product_storefront_visible_sql
 
     ensure_app_schema_bootstrap()
 
     bind = op.get_bind()
     inspector = inspect(bind)
+    visible = product_storefront_visible_sql("p")
+
     if inspector.has_table("review"):
         op.execute("ALTER TABLE review ENABLE ROW LEVEL SECURITY;")
-    if inspector.has_table("reviewmedia"):
-        op.execute("ALTER TABLE reviewmedia ENABLE ROW LEVEL SECURITY;")
+        op.execute("DROP POLICY IF EXISTS p_review_select ON review;")
+        op.execute(
+            f"""
+            CREATE POLICY p_review_select ON review FOR SELECT
+               USING (
+                 app.is_admin()
+                 OR user_id = app.current_uid()
+                 OR EXISTS (
+                   SELECT 1 FROM product p
+                   WHERE p.id = review.product_id
+                     AND {visible}
+                 )
+               );
+            """
+        )
 
     op.execute(
         """
@@ -33,74 +48,63 @@ def upgrade() -> None:
         """
     )
 
-    op.execute("DROP POLICY IF EXISTS p_review_select ON review;")
-    op.execute(
-        """
-        CREATE POLICY p_review_select ON review FOR SELECT
-           USING (
-             app.is_admin()
-             OR user_id = app.current_uid()
-             OR EXISTS (
-               SELECT 1 FROM product p
-               WHERE p.id = review.product_id
-                 AND p.is_active
-                 AND p.deleted_at IS NULL
-             )
-           );
-        """
-    )
-
-    op.execute("DROP POLICY IF EXISTS p_reviewmedia_select ON reviewmedia;")
-    op.execute(
-        """
-        CREATE POLICY p_reviewmedia_select ON reviewmedia FOR SELECT
-           USING (
-             EXISTS (
-               SELECT 1 FROM review r
-               WHERE r.id = reviewmedia.review_id
-               AND (
-                 app.is_admin()
-                 OR r.user_id = app.current_uid()
-                 OR EXISTS (
-                   SELECT 1 FROM product p
-                   WHERE p.id = r.product_id
-                     AND p.is_active
-                     AND p.deleted_at IS NULL
+    if inspector.has_table("reviewmedia"):
+        op.execute("ALTER TABLE reviewmedia ENABLE ROW LEVEL SECURITY;")
+        op.execute("DROP POLICY IF EXISTS p_reviewmedia_select ON reviewmedia;")
+        op.execute(
+            f"""
+            CREATE POLICY p_reviewmedia_select ON reviewmedia FOR SELECT
+               USING (
+                 EXISTS (
+                   SELECT 1 FROM review r
+                   WHERE r.id = reviewmedia.review_id
+                   AND (
+                     app.is_admin()
+                     OR r.user_id = app.current_uid()
+                     OR EXISTS (
+                       SELECT 1 FROM product p
+                       WHERE p.id = r.product_id
+                         AND {visible}
+                     )
+                   )
                  )
-               )
-             )
-           );
-        """
-    )
+               );
+            """
+        )
 
 
 def downgrade() -> None:
-    op.execute("DROP POLICY IF EXISTS p_reviewmedia_select ON reviewmedia;")
-    op.execute(
-        """
-        CREATE POLICY p_reviewmedia_select ON reviewmedia FOR SELECT
-           USING (
-             EXISTS (
-               SELECT 1 FROM review r
-               JOIN product p ON p.id = r.product_id
-               WHERE r.id = reviewmedia.review_id
-               AND (p.is_active OR app.is_admin())
-             )
-           );
-        """
-    )
+    bind = op.get_bind()
+    inspector = inspect(bind)
 
-    op.execute("DROP POLICY IF EXISTS p_review_select ON review;")
-    op.execute(
-        """
-        CREATE POLICY p_review_select ON review FOR SELECT
-           USING (
-             EXISTS (
-               SELECT 1 FROM product p
-               WHERE p.id = review.product_id AND (p.is_active OR app.is_admin())
-             )
-           );
-        """
-    )
+    if inspector.has_table("reviewmedia"):
+        op.execute("DROP POLICY IF EXISTS p_reviewmedia_select ON reviewmedia;")
+        op.execute(
+            """
+            CREATE POLICY p_reviewmedia_select ON reviewmedia FOR SELECT
+               USING (
+                 EXISTS (
+                   SELECT 1 FROM review r
+                   JOIN product p ON p.id = r.product_id
+                   WHERE r.id = reviewmedia.review_id
+                   AND (p.is_active OR app.is_admin())
+                 )
+               );
+            """
+        )
+
+    if inspector.has_table("review"):
+        op.execute("DROP POLICY IF EXISTS p_review_select ON review;")
+        op.execute(
+            """
+            CREATE POLICY p_review_select ON review FOR SELECT
+               USING (
+                 EXISTS (
+                   SELECT 1 FROM product p
+                   WHERE p.id = review.product_id AND (p.is_active OR app.is_admin())
+                 )
+               );
+            """
+        )
 
     op.execute("DROP FUNCTION IF EXISTS app.user_review_exists(integer, integer);")

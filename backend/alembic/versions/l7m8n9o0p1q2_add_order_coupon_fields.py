@@ -31,14 +31,17 @@ def upgrade() -> None:
         )
     if "coupon_id" not in cols:
         op.add_column("order", sa.Column("coupon_id", sa.Integer(), nullable=True))
-        op.create_foreign_key(
-            "fk_order_coupon_id",
-            "order",
-            "coupon",
-            ["coupon_id"],
-            ["id"],
-        )
-        op.create_index("ix_order_coupon_id", "order", ["coupon_id"])
+        if inspector.has_table("coupon"):
+            op.create_foreign_key(
+                "fk_order_coupon_id",
+                "order",
+                "coupon",
+                ["coupon_id"],
+                ["id"],
+            )
+        idx = {ix["name"] for ix in inspector.get_indexes("order")}
+        if "ix_order_coupon_id" not in idx:
+            op.create_index("ix_order_coupon_id", "order", ["coupon_id"])
     if "coupon_code" not in cols:
         op.add_column(
             "order",

@@ -26,6 +26,8 @@ def upgrade() -> None:
         return name in insp.get_table_names()
 
     def has_column(table: str, col: str) -> bool:
+        if not has_table(table):
+            return False
         return any(c["name"] == col for c in insp.get_columns(table))
 
     def has_index(table: str, idx: str) -> bool:

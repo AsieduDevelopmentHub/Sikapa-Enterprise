@@ -17,20 +17,25 @@ depends_on = None
 
 
 def upgrade():
-    # Enable pg_trgm extension for fuzzy search and fast ilike '%term%'
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
-    
-    # Create GIN indexes with gin_trgm_ops
-    # These significantly speed up 'ilike %...%' queries as the catalog grows
+
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if not inspector.has_table("product"):
+        return
+
     op.execute(
         "CREATE INDEX IF NOT EXISTS ix_product_name_trgm ON product USING gin (name gin_trgm_ops)"
     )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_product_description_trgm ON product USING gin (description gin_trgm_ops)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_product_sku_trgm ON product USING gin (sku gin_trgm_ops)"
-    )
+    cols = {c["name"] for c in inspector.get_columns("product")}
+    if "description" in cols:
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_product_description_trgm ON product USING gin (description gin_trgm_ops)"
+        )
+    if "sku" in cols:
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_product_sku_trgm ON product USING gin (sku gin_trgm_ops)"
+        )
 
 
 def downgrade():
