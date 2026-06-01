@@ -6,10 +6,13 @@ Mirror CI on your machine so pushes do not surprise you on GitHub.
 
 | Branch | Role |
 |--------|------|
-| **`dev/develop`** | Staging / integration — commit and push daily work here |
+| **`dev/develop`** | Daily integration — commit and push feature work here |
+| **`dev/staging`** | Hosted **staging** (Render + Vercel) — QA and [nine-type testing](../../docs/testing/pre-go-live-testing.md) |
 | **`main`** | Production — merge from `dev/develop` via PR when ready |
 
-Deprecated integration branches (`frontend`, `backend`, `mobile`) are no longer used. Workflows trigger on **`main`** and **`dev/develop`** only.
+Setup: [docs/deployment/staging-environment.md](../../docs/deployment/staging-environment.md) · `.\scripts\setup-staging.ps1`
+
+CI runs on **`main`**, **`dev/develop`**, and **`dev/staging`**.
 
 Tagged mobile releases (`mobile-v*`) still publish from **`main`** (or any branch the tag points at).
 
@@ -40,7 +43,7 @@ If your venv lives elsewhere:
 
 ### `ci.yml`
 
-Triggers: push/PR to **`main`** or **`dev/develop`**.
+Triggers: push/PR to **`main`**, **`dev/develop`**, or **`dev/staging`**.
 
 | Job | Local equivalent |
 |-----|------------------|
@@ -103,6 +106,12 @@ Uses npm cache (`setup-node`), Next.js incremental cache (`.next/cache`), and `@
 ### `render-keepalive.yml`
 
 Cron runs from the repo **default branch** only (usually `main`). Also runs on push when this workflow file changes on **`main`** or **`dev/develop`**.
+
+Pings `GET /health/ready` first (database readiness), then `/health` and `/` as fallbacks. See [docs/testing/pre-go-live-testing.md](../../docs/testing/pre-go-live-testing.md) (smoke testing).
+
+### `render-keepalive-staging.yml`
+
+Same as production keepalive but uses repository variable **`STAGING_BACKEND_URL`**. Runs on `dev/staging` pushes and every 15 minutes.
 
 ## Agent / developer habit
 

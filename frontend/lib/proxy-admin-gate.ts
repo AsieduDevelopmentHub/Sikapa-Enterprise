@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { decodeJwtPayload, isAccessTokenValid, payloadIsAdmin } from "@/lib/jwt-payload";
+import { isAccessTokenValid, payloadIsAdmin } from "@/lib/jwt-payload";
 import { SESSION_COOKIE } from "@/lib/session-cookie";
+import { verifyAccessTokenPayload } from "@/lib/verify-access-token";
 
 function isAdminUiPath(pathname: string): boolean {
   return (
@@ -14,12 +15,12 @@ function isAdminUiPath(pathname: string): boolean {
 }
 
 /** Server-side admin gate — redirects unauthenticated / non-admin users to login. */
-export function applyAdminAuthGate(request: NextRequest): NextResponse | null {
+export async function applyAdminAuthGate(request: NextRequest): Promise<NextResponse | null> {
   const { pathname } = request.nextUrl;
   if (!isAdminUiPath(pathname)) return null;
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const payload = token ? decodeJwtPayload(token) : null;
+  const payload = token ? await verifyAccessTokenPayload(token) : null;
   const allowed = token && isAccessTokenValid(payload) && payloadIsAdmin(payload);
 
   if (allowed) return null;

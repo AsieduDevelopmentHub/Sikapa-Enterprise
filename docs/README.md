@@ -20,6 +20,8 @@ Start here. Docs use **lowercase paths** and **kebab-case** filenames, grouped b
 | **TLS / local HTTPS** | [../backend/docs/tls/https.md](../backend/docs/tls/https.md) |
 | **Database migrations** | [../backend/docs/migration/migration.md](../backend/docs/migration/migration.md) |
 | **Production deployment checklist** | [deployment/production-deployment.md](./deployment/production-deployment.md) |
+| **Pre-go-live testing (9 types)** | [testing/pre-go-live-testing.md](./testing/pre-go-live-testing.md) |
+| **Staging environment (`dev/staging`)** | [deployment/staging-environment.md](./deployment/staging-environment.md) |
 | **Developer quick reference** | [guides/developer-quickref.md](./guides/developer-quickref.md) |
 | **Mobile app** | [../mobile/README.md](../mobile/README.md) |
 

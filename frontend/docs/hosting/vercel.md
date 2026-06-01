@@ -18,34 +18,49 @@ This document explains how to deploy the frontend to Vercel using the `frontend`
 
 ## Environment variables
 
-Add these environment variables in Vercel:
+### Required (production)
 
-- `NEXT_PUBLIC_API_URL` = `https://your-backend-url.com/api/v1` (must match the FastAPI mount; see `frontend/.env.example`)
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `NEXT_PUBLIC_API_URL` | `https://sikapa-backend.onrender.com/api/v1` | Backend API base (must include `/api/v1`) |
+| `NEXT_PUBLIC_SITE_URL` | `https://your-store.vercel.app` | Canonical URL for sitemap, OG tags, SEO |
+| `SECRET_KEY` | *(same as Render backend)* | Server-only — verifies admin session JWT signatures |
 
-Optional (only if you add client-side integrations — not required for the default storefront):
+> `SECRET_KEY` is **not** prefixed with `NEXT_PUBLIC_` — it never ships to the browser. It must match the backend `SECRET_KEY` exactly.
 
-- `NEXT_PUBLIC_WHATSAPP_*` — contact / support links (see `frontend/.env.example`)
+### Recommended
 
-The web app does **not** use a Supabase JavaScript client; product images may still be served from Supabase Storage URLs returned by the API.
+| Variable | Purpose |
+|----------|---------|
+| `SENTRY_DSN` | Server-side error tracking |
+| `NEXT_PUBLIC_SENTRY_DSN` | Client-side error tracking |
+| `SENTRY_TRACES_SAMPLE_RATE` | Default `0.1` |
+
+### Optional
+
+See `frontend/.env.example` for WhatsApp links, maintenance mode, admin host lock, image CDN hosts, etc.
+
+The web app does **not** use a Supabase JavaScript client; product images are served from URLs returned by the API.
 
 > Do not commit production API keys or secrets to Git.
 
 ## Local and preview behavior
 
-- `npm run dev` should use `http://localhost:8000/api/v1` in `.env.local` (same as `frontend/.env.example`)
-- Preview deployments will use the `NEXT_PUBLIC_API_URL` value configured in Vercel
-- Production deployments will also use the same env var value, or a separate production value
+- `npm run dev` should use `http://localhost:8000/api/v1` in `.env.local`
+- Copy `SECRET_KEY` from `backend/.env` into `frontend/.env.local` for admin gate testing
+- Preview deployments use the env vars configured in Vercel for the Preview environment
 
 ## Recommended workflow
 
 1. Push your frontend branch to GitHub
-2. Connect the repo to Vercel
-3. Confirm `frontend` is the project root
-4. Add `NEXT_PUBLIC_API_URL` and any other public-facing vars
-5. Deploy and verify the site on the Vercel URL
+2. Connect the repo to Vercel with root directory `frontend`
+3. Add required env vars for Production (and Preview if testing staging API)
+4. Deploy and verify `/shop`, `/account`, and admin `/system` (as admin user)
+5. Run a test checkout against staging or production API
 
 ## Notes
 
 - Vercel handles HTTPS automatically
-- Your frontend should call the Render backend through `NEXT_PUBLIC_API_URL`
-- If you change the backend URL, update the Vercel environment variable and redeploy
+- Production builds fail if `NEXT_PUBLIC_API_URL` or `NEXT_PUBLIC_SITE_URL` are missing on Vercel
+- Production CSP headers are set in `next.config.mjs` (includes API + Sentry connect-src)
+- If you change the backend URL, update `NEXT_PUBLIC_API_URL` and redeploy

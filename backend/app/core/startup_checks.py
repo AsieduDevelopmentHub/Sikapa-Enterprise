@@ -10,11 +10,19 @@ _DEFAULT_SECRET = "supersecretkey123"
 _MIN_SECRET_LEN = 32
 
 
+def _environment_name() -> str:
+    return os.getenv("ENVIRONMENT", "").strip().lower()
+
+
 def is_production_environment() -> bool:
-    raw = os.getenv("ENVIRONMENT", "").strip().lower()
+    raw = _environment_name()
     if raw in {"production", "prod", "live"}:
         return True
     return os.getenv("PRODUCTION", "").strip().lower() in {"1", "true", "yes"}
+
+
+def is_staging_environment() -> bool:
+    return _environment_name() == "staging"
 
 
 def _paystack_secret_configured() -> bool:
@@ -100,10 +108,79 @@ def validate_production_config_or_raise() -> None:
             "Production requires UPLOAD_SERVE_LOCAL=false — use Supabase storage for uploads."
         )
 
+    allowed_hosts = os.getenv("ALLOWED_HOSTS", "").strip()
+    if not allowed_hosts:
+        logger.warning(
+            "ALLOWED_HOSTS is unset — TrustedHostMiddleware is disabled. "
+            "Set your Render hostname(s) for Host-header protection."
+        )
+
+
+def validate_staging_config_or_raise() -> None:
+    """Fail fast when ENVIRONMENT=staging but config is unsafe or production-like."""
+    if not is_staging_environment():
+        return
+
+    secret = os.getenv("SECRET_KEY", "").strip()
+    if not secret or secret == _DEFAULT_SECRET or len(secret) < _MIN_SECRET_LEN:
+        raise RuntimeError(
+            "Staging requires SECRET_KEY (>= 32 chars, unique from production). "
+            "Generate: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+        )
+
+    db_url = os.getenv("DATABASE_URL", "").strip()
+    if not db_url.startswith("postgresql"):
+        raise RuntimeError(
+            "Staging requires a dedicated PostgreSQL DATABASE_URL — "
+            "never point staging at the production database."
+        )
+
+    if os.getenv("DEBUG", "false").strip().lower() == "true":
+        raise RuntimeError("DEBUG=true is not allowed on staging (SQL echo may leak PII).")
+
+    totp_key = os.getenv("TOTP_ENCRYPTION_KEY", "").strip()
+    if not totp_key:
+        raise RuntimeError("Staging requires TOTP_ENCRYPTION_KEY (generate a staging-only Fernet key).")
+
+    cors = os.getenv("CORS_ORIGINS", "").strip()
+    if not cors:
+        raise RuntimeError("Staging requires CORS_ORIGINS with your staging Vercel URL(s).")
+
+    frontend = os.getenv("FRONTEND_URL", "").strip()
+    if not frontend or "localhost" in frontend.lower():
+        raise RuntimeError(
+            "Staging requires FRONTEND_URL set to your staging storefront URL "
+            "(Vercel staging project or preview URL)."
+        )
+
+    paystack = os.getenv("PAYSTACK_SECRET_KEY", "").strip()
+    if not paystack or not _paystack_secret_configured():
+        raise RuntimeError(
+            "Staging requires PAYSTACK_SECRET_KEY (Paystack **test** keys: sk_test_…)."
+        )
+    if paystack.startswith("sk_live_"):
+        raise RuntimeError(
+            "Staging must not use Paystack live keys (sk_live_…). Use sk_test_… only."
+        )
+
+    if os.getenv("UPLOAD_SERVE_LOCAL", "true").strip().lower() in {"1", "true", "yes"}:
+        logger.warning(
+            "Staging: UPLOAD_SERVE_LOCAL=true — prefer false + Supabase for parity with production."
+        )
+
+    prod_db_hint = os.getenv("STAGING_FORBIDDEN_DATABASE_URL", "").strip()
+    if prod_db_hint and db_url == prod_db_hint:
+        raise RuntimeError(
+            "Staging DATABASE_URL matches STAGING_FORBIDDEN_DATABASE_URL — "
+            "use a separate staging database."
+        )
+
+    logger.info("Staging environment validation passed (ENVIRONMENT=staging).")
+
 
 def warn_dev_secret() -> None:
     """Log a prominent warning when running with the default JWT secret."""
-    if is_production_environment():
+    if is_production_environment() or is_staging_environment():
         return
     secret = os.getenv("SECRET_KEY", "").strip()
     if not secret or secret == _DEFAULT_SECRET:

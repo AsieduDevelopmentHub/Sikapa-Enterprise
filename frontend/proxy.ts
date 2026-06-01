@@ -77,7 +77,7 @@ function applyAdminRules(request: NextRequest): NextResponse | null {
   return null;
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   if (maintenanceEnabled() && !isAlwaysAllowed(pathname)) {
@@ -111,7 +111,7 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  const adminAuth = applyAdminAuthGate(request);
+  const adminAuth = await applyAdminAuthGate(request);
   if (adminAuth) return adminAuth;
 
   const adminResponse = applyAdminRules(request);

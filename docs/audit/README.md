@@ -1,7 +1,7 @@
 # System Audit — Sikapa Enterprise
 
-**Audit date:** May 2026  
-**Scope:** `frontend/`, `backend/`, `mobile/`, CI/CD, documentation, security
+**Audit date:** May 2026 (re-audited June 1, 2026)  
+**Scope:** `frontend/`, `backend/`, `mobile/`, CI/CD, documentation, security, pre-production readiness
 
 This folder is the actionable follow-up to the full system audit. Use it as a checklist while hardening the platform for production scale.
 
@@ -39,6 +39,7 @@ This folder is the actionable follow-up to the full system audit. Use it as a ch
 | [cross-platform-parity.md](./cross-platform-parity.md) | Web vs mobile feature matrix |
 | [data-structures-algorithms.md](./data-structures-algorithms.md) | DSA implementation checklist |
 | [remediation-roadmap.md](./remediation-roadmap.md) | Phased plan + master checklist (includes Phase 5 DSA) |
+| [../testing/pre-go-live-testing.md](../testing/pre-go-live-testing.md) | Nine-type pre-go-live test program (web) |
 
 ---
 

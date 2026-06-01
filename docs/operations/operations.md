@@ -15,7 +15,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 - Interactive OpenAPI: `http://localhost:8000/docs`
-- Health: `GET http://localhost:8000/health` or `GET http://localhost:8000/health/` (both should return `200` JSON)
+- **Liveness:** `GET http://localhost:8000/health` or `/health/` — process is up
+- **Readiness:** `GET http://localhost:8000/health/ready` — includes database ping (`database: ok`)
 
 ### Frontend (Next.js)
 
@@ -31,8 +32,14 @@ npm run dev
 
 ## Health checks
 
+| Endpoint | Use |
+|----------|-----|
+| `GET /health`, `GET /health/` | **Liveness** — load balancers, cold-start ping from the storefront |
+| `GET /health/ready` | **Readiness** — Render keepalive + deploy verification (503 if DB down) |
+
+- GitHub Actions `render-keepalive.yml` prefers `/health/ready`, then falls back to `/health`.
 - Some probes call `/health` and others `/health/`. The API registers **both** so you should not see `307` redirects for health alone.
-- If you still see `307`, confirm the request path matches what the router expects (trailing slash vs not).
+- Pre-go-live testing: see [testing/pre-go-live-testing.md](../testing/pre-go-live-testing.md).
 
 ---
 
