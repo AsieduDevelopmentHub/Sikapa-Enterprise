@@ -48,6 +48,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
 )
+logger = logging.getLogger(__name__)
 
 _https_enabled = _settings.https_enabled
 _on_render = _settings.render or os.getenv("RENDER", "").strip().lower() in {"true", "1", "yes"}

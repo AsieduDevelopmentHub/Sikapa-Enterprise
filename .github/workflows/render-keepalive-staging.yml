@@ -32,10 +32,10 @@ jobs:
         run: |
           set -e
           if [ -z "${BACKEND_URL}" ]; then
-            echo "STAGING_BACKEND_URL repository variable is not set."
-            echo "Set it in GitHub → Settings → Secrets and variables → Actions → Variables"
+            echo "::warning::STAGING_BACKEND_URL is not set — skipping staging keepalive ping."
+            echo "Set it under Settings → Secrets and variables → Actions → Variables"
             echo "Example: https://sikapa-backend-staging.onrender.com"
-            exit 1
+            exit 0
           fi
           for path in /health/ready /health /; do
             code=$(curl -sS -o /tmp/body -w "%{http_code}" \

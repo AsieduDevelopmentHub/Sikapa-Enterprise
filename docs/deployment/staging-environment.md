@@ -76,24 +76,24 @@ python tools/seed_demo_catalog.py
 
 **Optional safety:** Set `STAGING_FORBIDDEN_DATABASE_URL` to your **production** `DATABASE_URL` so staging refuses to start if someone pastes prod by mistake.
 
-### 5. Vercel — staging frontend
+### 5. Vercel — staging frontend (Preview on `dev/staging`)
 
-**Recommended:** separate Vercel project (cleanest URLs and env isolation).
+**Recommended for this repo:** use your **existing** Vercel project with **Preview** deployments from branch `dev/staging` (no second project required).
 
-1. Vercel → **Add New Project** → same Git repo.
-2. **Root Directory:** `frontend`.
-3. **Production Branch:** `dev/staging` (for this project only).
-4. Set environment variables from `frontend/.env.staging.example`:
+1. Vercel → your storefront project → **Settings → Git** — confirm repo is connected.
+2. Push to **`dev/staging`** — Vercel builds a **Preview** deployment automatically.
+3. **Settings → Environment Variables** — add for **Preview** only (not Production):
 
 | Variable | Staging value |
 |----------|----------------|
-| `NEXT_PUBLIC_API_URL` | `https://<staging-api-host>/api/v1` |
-| `NEXT_PUBLIC_SITE_URL` | `https://<staging-vercel-url>` |
-| `SECRET_KEY` | Same as staging backend `SECRET_KEY` |
+| `NEXT_PUBLIC_API_URL` | `https://sikapa-backend-staging.onrender.com/api/v1` (your Render staging host) |
+| `NEXT_PUBLIC_SITE_URL` | The Preview URL Vercel assigns (e.g. `https://sikapa-enterprise-xxx.vercel.app`) |
+| `SECRET_KEY` | Same as staging backend `SECRET_KEY` on Render |
 
-5. Deploy; save the URL (e.g. `https://sikapa-staging.vercel.app`).
+4. Redeploy the latest Preview after env changes.
+5. Copy the stable Preview URL (or use the branch alias if configured) for `FRONTEND_URL` / `CORS_ORIGINS` on Render.
 
-**Alternative:** single Vercel project with **Preview** env vars for branch `dev/staging` — works but mixes preview PR noise with staging.
+**Optional:** a dedicated Vercel project `sikapa-staging` with **Production Branch** = `dev/staging` gives a fixed URL like `https://sikapa-staging.vercel.app`.
 
 ### 6. Wire backend ↔ frontend
 
