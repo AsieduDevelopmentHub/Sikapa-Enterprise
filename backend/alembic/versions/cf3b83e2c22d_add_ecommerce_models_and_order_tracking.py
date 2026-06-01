@@ -18,11 +18,11 @@ depends_on = None
 
 
 def upgrade():
-    # All required columns and tables already exist in the database
-    # This migration is a no-op since the schema was updated manually
-    pass
+    # Fresh Supabase/Render deploys: create core tables before paystack_transaction FKs.
+    from app.db.core_schema import ensure_core_ecommerce_tables
+
+    ensure_core_ecommerce_tables()
 
 
 def downgrade():
-    # Schema was updated manually, so no downgrade needed
     pass

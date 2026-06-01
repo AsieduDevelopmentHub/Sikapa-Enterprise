@@ -19,6 +19,11 @@ depends_on = None
 
 
 def upgrade():
+    # cf3b83e2c22d was historically a no-op; ensure core tables exist before FKs.
+    from app.db.core_schema import ensure_core_ecommerce_tables
+
+    ensure_core_ecommerce_tables()
+
     bind = op.get_bind()
     inspector = inspect(bind)
 
@@ -37,7 +42,7 @@ def upgrade():
         op.create_index("ix_wishlistitem_user_id", "wishlistitem", ["user_id"], unique=False)
         op.create_index("ix_wishlistitem_product_id", "wishlistitem", ["product_id"], unique=False)
 
-    if not inspector.has_table("paystack_transaction"):
+    if inspector.has_table("order") and not inspector.has_table("paystack_transaction"):
         op.create_table(
             "paystack_transaction",
             sa.Column("id", sa.Integer(), nullable=False),
