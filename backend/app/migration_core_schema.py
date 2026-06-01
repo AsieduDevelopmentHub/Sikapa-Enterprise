@@ -28,6 +28,46 @@ def add_column_if_missing(table: str, column: sa.Column) -> None:
         op.add_column(table, column)
 
 
+def ensure_app_schema_bootstrap() -> None:
+    """Create schema `app` and core RLS helper functions (Supabase has no `app` schema by default)."""
+    op.execute("CREATE SCHEMA IF NOT EXISTS app;")
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION app.current_uid() RETURNS integer AS $$
+        DECLARE
+          v text;
+        BEGIN
+          v := current_setting('app.current_user_id', true);
+          IF v IS NULL OR btrim(v) = '' THEN
+            RETURN NULL;
+          END IF;
+          RETURN v::integer;
+        EXCEPTION
+          WHEN OTHERS THEN
+            RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql STABLE;
+        """
+    )
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION app.is_admin() RETURNS boolean AS $$
+        DECLARE
+          v integer;
+          adm boolean;
+        BEGIN
+          v := app.current_uid();
+          IF v IS NULL THEN
+            RETURN false;
+          END IF;
+          SELECT u.is_admin INTO adm FROM "user" u WHERE u.id = v;
+          RETURN COALESCE(adm, false);
+        END;
+        $$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
+        """
+    )
+
+
 def ensure_core_ecommerce_tables() -> None:
     """Create category, order, orderitem, cartitem, review, etc. if missing."""
     bind = op.get_bind()

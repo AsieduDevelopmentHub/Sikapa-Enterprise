@@ -1,6 +1,7 @@
 """Fix review RLS visibility for authors, admins, and duplicate detection."""
 
 from alembic import op
+from sqlalchemy import inspect
 
 revision = "j5k6l7m8n9o0"
 down_revision = "i4j5k6l7m8n9"
@@ -9,6 +10,17 @@ depends_on = None
 
 
 def upgrade() -> None:
+    from app.migration_core_schema import ensure_app_schema_bootstrap
+
+    ensure_app_schema_bootstrap()
+
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    if inspector.has_table("review"):
+        op.execute("ALTER TABLE review ENABLE ROW LEVEL SECURITY;")
+    if inspector.has_table("reviewmedia"):
+        op.execute("ALTER TABLE reviewmedia ENABLE ROW LEVEL SECURITY;")
+
     op.execute(
         """
         CREATE OR REPLACE FUNCTION app.user_review_exists(p_user_id integer, p_product_id integer)
