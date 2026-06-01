@@ -20,7 +20,11 @@ from dotenv import load_dotenv
 from passlib.context import CryptContext
 from passlib.exc import MissingBackendError, UnknownHashError
 
-from app.core.startup_checks import is_production_environment
+from app.core.startup_checks import (
+    is_production_environment,
+    is_staging_environment,
+    validate_totp_encryption_key_format,
+)
 from app.core.settings import get_settings
 
 load_dotenv()
@@ -52,13 +56,17 @@ _jwt_key = {"kty": "oct", "k": base64.urlsafe_b64encode(SECRET_KEY.encode()).dec
 def _build_fernet() -> Fernet | None:
     raw = os.getenv("TOTP_ENCRYPTION_KEY", "").strip()
     if not raw:
-        if is_production_environment():
+        if is_production_environment() or is_staging_environment():
             raise ValueError(
-                "FATAL: TOTP_ENCRYPTION_KEY must be set in production. "
+                "FATAL: TOTP_ENCRYPTION_KEY must be set in production/staging. "
                 "Generate with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
             )
         logger.warning("⚠️  TOTP_ENCRYPTION_KEY not set — TOTP secrets stored unencrypted (dev only).")
         return None
+    try:
+        validate_totp_encryption_key_format(raw)
+    except RuntimeError as exc:
+        raise ValueError(str(exc)) from exc
     return Fernet(raw.encode())
 
 

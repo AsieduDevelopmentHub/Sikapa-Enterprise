@@ -70,6 +70,8 @@ python tools/seed_demo_catalog.py
 3. Use blueprint file: `backend/render.staging.yaml` (service name `sikapa-backend-staging`).
 4. Set **Branch** to `dev/staging`, **Auto-Deploy** on.
 5. Copy env vars from `backend/.env.staging.example` into the Dashboard (real secrets).
+   - **`TOTP_ENCRYPTION_KEY`** must be a **Fernet** key (44-char url-safe base64), not a random passphrase or copy of `SECRET_KEY`. Generate:  
+     `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 6. Note the URL: `https://sikapa-backend-staging.onrender.com` (your name may differ).
 
 **Health check:** Render → Settings → Health Check Path → `/health/ready`

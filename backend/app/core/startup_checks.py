@@ -25,6 +25,23 @@ def is_staging_environment() -> bool:
     return _environment_name() == "staging"
 
 
+def validate_totp_encryption_key_format(key: str) -> None:
+    """Raise RuntimeError when TOTP_ENCRYPTION_KEY is not a valid Fernet key."""
+    from cryptography.fernet import Fernet
+
+    raw = key.strip()
+    if not raw:
+        return
+    try:
+        Fernet(raw.encode())
+    except (ValueError, TypeError) as exc:
+        raise RuntimeError(
+            "TOTP_ENCRYPTION_KEY must be a Fernet key (44-character url-safe base64). "
+            "Do not use SECRET_KEY or a random passphrase. Generate with: "
+            'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+        ) from exc
+
+
 def _paystack_secret_configured() -> bool:
     raw = os.getenv("PAYSTACK_SECRET_KEY", "").strip()
     if not raw:
@@ -78,6 +95,7 @@ def validate_production_config_or_raise() -> None:
             "Production requires TOTP_ENCRYPTION_KEY. "
             'Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
         )
+    validate_totp_encryption_key_format(totp_key)
 
     cors = os.getenv("CORS_ORIGINS", "").strip()
     if not cors:
@@ -141,6 +159,7 @@ def validate_staging_config_or_raise() -> None:
     totp_key = os.getenv("TOTP_ENCRYPTION_KEY", "").strip()
     if not totp_key:
         raise RuntimeError("Staging requires TOTP_ENCRYPTION_KEY (generate a staging-only Fernet key).")
+    validate_totp_encryption_key_format(totp_key)
 
     cors = os.getenv("CORS_ORIGINS", "").strip()
     if not cors:
