@@ -20,7 +20,7 @@ depends_on = None
 
 def upgrade():
     # cf3b83e2c22d was historically a no-op; ensure core tables exist before FKs.
-    from app.db.core_schema import ensure_core_ecommerce_tables
+    from app.migration_core_schema import ensure_core_ecommerce_tables
 
     ensure_core_ecommerce_tables()
 

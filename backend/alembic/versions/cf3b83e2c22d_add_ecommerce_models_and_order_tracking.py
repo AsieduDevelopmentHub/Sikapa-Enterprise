@@ -19,7 +19,7 @@ depends_on = None
 
 def upgrade():
     # Fresh Supabase/Render deploys: create core tables before paystack_transaction FKs.
-    from app.db.core_schema import ensure_core_ecommerce_tables
+    from app.migration_core_schema import ensure_core_ecommerce_tables
 
     ensure_core_ecommerce_tables()
 

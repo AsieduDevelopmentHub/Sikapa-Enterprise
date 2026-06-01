@@ -1,7 +1,9 @@
 """Idempotent creation of ecommerce tables for fresh Postgres / Supabase deploys.
 
-Used by early migrations (cf3b83e2c22d) and a8b9c0d1e2f3 so `order` exists before
+Used by Alembic revisions (cf3b83e2c22d, h3i4j5k6l7m8, a8b9c0d1e2f3) so `order` exists before
 paystack_transaction and other FK-dependent migrations run.
+
+Note: lives at app.migration_core_schema (not app.db.*) because app/db.py is a module file.
 """
 from __future__ import annotations
 
