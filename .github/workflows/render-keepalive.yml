@@ -16,6 +16,9 @@
 #
 # This file also triggers on push when THIS workflow changes on the default
 # branch, so merging an update gives you an immediate run in the Actions tab.
+#
+# Readiness: prefers GET /health/ready (DB ping). Falls back to /health (liveness)
+# and / if the ready probe is temporarily unavailable during deploy.
 
 name: Render keepalive
 
@@ -51,17 +54,26 @@ jobs:
           BACKEND_URL: https://sikapa-backend.onrender.com
         run: |
           set -e
-          for path in /health /healthz /; do
-            # `-w '%{http_code}'` prints the status so the log is actionable.
+          # Order: readiness (DB) → liveness → root
+          for path in /health/ready /health /health/ /; do
             code=$(curl -sS -o /tmp/body -w "%{http_code}" \
               --connect-timeout 30 \
               --max-time 90 \
               "${BACKEND_URL}${path}" || echo "000")
             echo "${BACKEND_URL}${path} -> ${code}"
             if [ "${code}" = "200" ]; then
+              if [ "${path}" = "/health/ready" ]; then
+                if grep -q '"database"[[:space:]]*:[[:space:]]*"ok"' /tmp/body 2>/dev/null; then
+                  echo "Readiness OK (database connected)"
+                else
+                  echo "Warning: /health/ready returned 200 but body missing database:ok"
+                fi
+              fi
+              head -c 300 /tmp/body || true
+              echo ""
               exit 0
             fi
           done
-          echo "Ping failed for /health, /healthz and /"
+          echo "Ping failed for /health/ready, /health, and /"
           tail -c 500 /tmp/body || true
           exit 1

@@ -1,0 +1,52 @@
+# Pings the STAGING Render backend (branch dev/staging).
+# Set repository variable STAGING_BACKEND_URL in GitHub → Settings → Variables.
+
+name: Render keepalive (staging)
+
+run-name: "Render keepalive staging (${{ github.event_name }})"
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [dev/staging]
+    paths:
+      - ".github/workflows/render-keepalive-staging.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-keepalive-staging
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping staging backend
+        env:
+          BACKEND_URL: ${{ vars.STAGING_BACKEND_URL }}
+        run: |
+          set -e
+          if [ -z "${BACKEND_URL}" ]; then
+            echo "STAGING_BACKEND_URL repository variable is not set."
+            echo "Set it in GitHub → Settings → Secrets and variables → Actions → Variables"
+            echo "Example: https://sikapa-backend-staging.onrender.com"
+            exit 1
+          fi
+          for path in /health/ready /health /; do
+            code=$(curl -sS -o /tmp/body -w "%{http_code}" \
+              --connect-timeout 30 \
+              --max-time 90 \
+              "${BACKEND_URL}${path}" || echo "000")
+            echo "${BACKEND_URL}${path} -> ${code}"
+            if [ "${code}" = "200" ]; then
+              exit 0
+            fi
+          done
+          echo "Staging ping failed"
+          tail -c 500 /tmp/body || true
+          exit 1

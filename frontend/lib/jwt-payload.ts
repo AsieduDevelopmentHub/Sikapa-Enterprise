@@ -1,4 +1,4 @@
-/** Decode JWT payload (no signature verification — proxy routing hint only). */
+/** Decode JWT payload without signature verification (dev fallback only). */
 export type JwtPayload = {
   sub?: string;
   exp?: number;

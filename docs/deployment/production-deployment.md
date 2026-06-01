@@ -15,6 +15,8 @@ This guide covers everything needed to deploy Sikapa to production securely and 
 
 ## Pre-Deployment Checklist
 
+> **Launch scope:** This checklist targets **web go-live** (Vercel storefront + Render API). Mobile store release is deferred.
+
 ### Security
 - [ ] Generate and securely store `SECRET_KEY` (use: `python -c "import secrets; print(secrets.token_urlsafe(32))"`)
 - [ ] Set `ENVIRONMENT=production` in backend
@@ -43,16 +45,35 @@ This guide covers everything needed to deploy Sikapa to production securely and 
 
 ### Frontend
 - [ ] `NEXT_PUBLIC_API_URL` points to production backend (e.g. `https://api.example.com/api/v1`)
+- [ ] `NEXT_PUBLIC_SITE_URL` set to public storefront URL (required on Vercel production builds)
+- [ ] `SECRET_KEY` on Vercel matches backend `SECRET_KEY` (admin session cookie verification)
+- [ ] `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` configured (recommended)
 - [ ] Build optimized (`npm run build`)
 - [ ] ESLint passing with zero warnings
 - [ ] No sensitive data in NEXT_PUBLIC_* variables
 - [ ] All environment variables documented
 
 ### Testing
-- [ ] Load testing completed (simulate expected traffic)
-- [ ] End-to-end tests passing (auth, orders, payments)
-- [ ] Error scenarios tested (500 errors, network failures)
-- [ ] Performance baseline established
+
+Complete all **nine** test types on **staging** before production traffic. See [testing/pre-go-live-testing.md](../testing/pre-go-live-testing.md).
+
+| # | Type | Staging |
+|---|------|---------|
+| 1 | Smoke | [ ] |
+| 2 | Functional | [ ] |
+| 3 | Integration | [ ] |
+| 4 | Regression | [ ] |
+| 5 | Load | [ ] |
+| 6 | Stress | [ ] |
+| 7 | Security | [ ] |
+| 8 | UI | [ ] |
+| 9 | Fuzz | [ ] |
+
+**After production deploy**
+
+- [ ] Smoke: `GET /health/ready` + storefront `/`
+- [ ] Regression: latest CI green on release commit
+- [ ] One checkout verified (Paystack test or live as appropriate)
 
 ---
 

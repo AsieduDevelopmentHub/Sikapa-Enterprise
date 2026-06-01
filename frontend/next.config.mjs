@@ -49,6 +49,32 @@ function apiRemotePattern() {
 
 const apiPattern = apiRemotePattern();
 
+function contentSecurityPolicy() {
+  const connect = ["'self'"];
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (raw) {
+    try {
+      const u = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+      connect.push(`${u.protocol}//${u.host}`);
+    } catch {
+      /* ignore malformed env */
+    }
+  }
+  connect.push("https://*.sentry.io", "https://*.ingest.us.sentry.io", "https://*.ingest.de.sentry.io");
+
+  return [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    `connect-src ${connect.join(" ")}`,
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -62,6 +88,10 @@ const securityHeaders = [
         {
           key: "Strict-Transport-Security",
           value: "max-age=63072000; includeSubDomains; preload",
+        },
+        {
+          key: "Content-Security-Policy",
+          value: contentSecurityPolicy(),
         },
       ]
     : []),

@@ -10,6 +10,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -28,12 +29,13 @@ from slowapi.util import get_remote_address
 from app.core.startup_checks import (
     is_production_environment,
     validate_production_config_or_raise,
+    validate_staging_config_or_raise,
     warn_database_config,
     warn_dev_secret,
 )
 from app.core.cache import cache
 from app.core.observability import init_sentry
-from app.db import create_db_and_tables
+from app.db import create_db_and_tables, engine
 
 # Do not override env vars already set (CI, pytest conftest, Render dashboard).
 load_dotenv(override=False)
@@ -193,6 +195,7 @@ if _upload_serve_local:
 @app.on_event("startup")
 def on_startup() -> None:
     validate_production_config_or_raise()
+    validate_staging_config_or_raise()
     warn_dev_secret()
     warn_database_config()
     if not is_production_environment() and os.getenv(
@@ -269,9 +272,31 @@ def root() -> dict:
 @app.get("/health")
 @app.get("/health/")
 def health_check() -> dict:
+    """Liveness probe — always returns 200 when the process is up."""
     return {
         "status": "healthy",
         "service": "Sikapa Enterprise API",
         "version": "0.1.0",
         "security": "HTTPS/TLS" if _https_enabled else "HTTP",
+    }
+
+
+@app.get("/health/ready")
+def health_ready() -> dict:
+    """Readiness probe — verifies database connectivity."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        logger.warning("health/ready database check failed: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "not_ready", "database": "unavailable"},
+        ) from exc
+
+    return {
+        "status": "ready",
+        "service": "Sikapa Enterprise API",
+        "version": "0.1.0",
+        "database": "ok",
     }

@@ -19,6 +19,22 @@ Always use the provided `.env.example` files as templates and configure real sec
 
 ---
 
+# Staging (`dev/staging`)
+
+Hosted staging uses **separate** infrastructure from production:
+
+| Layer | Template / doc |
+|-------|----------------|
+| Setup guide | [deployment/staging-environment.md](../deployment/staging-environment.md) |
+| Backend env | `backend/.env.staging.example` → Render `sikapa-backend-staging` |
+| Frontend env | `frontend/.env.staging.example` → Vercel staging project |
+| Render blueprint | `backend/render.staging.yaml` |
+| Branch | `dev/staging` (`.\scripts\setup-staging.ps1`) |
+
+`ENVIRONMENT=staging` enables staging startup checks (Postgres required, `sk_test_` Paystack only, OpenAPI stays on).
+
+---
+
 # Backend Environment (`backend/.env`)
 
 The backend service depends on the following environment variables for authentication, database connectivity, CORS configuration, email delivery, and payment integrations.

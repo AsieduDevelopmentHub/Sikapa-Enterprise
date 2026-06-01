@@ -225,14 +225,18 @@ def google_oauth_verify_2fa(
     session: Session = Depends(get_session),
 ):
     """Issue JWTs after Google OAuth when TOTP 2FA is enabled (pending token from /google/callback)."""
-    from jose import JWTError
-
     from app.core.security import decode_oauth_2fa_pending_token
 
+    data = decode_oauth_2fa_pending_token(payload.pending_token)
+    if not data:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Invalid or expired sign-in session. Please try Google sign-in again.",
+        )
+
     try:
-        data = decode_oauth_2fa_pending_token(payload.pending_token)
         uid = int(data.get("sub", 0))
-    except (JWTError, ValueError, TypeError):
+    except (ValueError, TypeError):
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid or expired sign-in session. Please try Google sign-in again.",
