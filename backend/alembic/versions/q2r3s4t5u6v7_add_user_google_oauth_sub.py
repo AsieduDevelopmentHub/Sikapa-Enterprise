@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 revision: str = "q2r3s4t5u6v7"
@@ -18,10 +19,26 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("user", sa.Column("google_sub", sa.String(length=255), nullable=True))
-    op.create_index(op.f("ix_user_google_sub"), "user", ["google_sub"], unique=True)
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    if not inspector.has_table("user"):
+        return
+    cols = {c["name"] for c in inspector.get_columns("user")}
+    if "google_sub" not in cols:
+        op.add_column("user", sa.Column("google_sub", sa.String(length=255), nullable=True))
+    idx = {i["name"] for i in inspector.get_indexes("user")}
+    if "ix_user_google_sub" not in idx:
+        op.create_index(op.f("ix_user_google_sub"), "user", ["google_sub"], unique=True)
 
 
 def downgrade() -> None:
-    op.drop_index(op.f("ix_user_google_sub"), table_name="user")
-    op.drop_column("user", "google_sub")
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    if not inspector.has_table("user"):
+        return
+    cols = {c["name"] for c in inspector.get_columns("user")}
+    idx = {i["name"] for i in inspector.get_indexes("user")}
+    if "ix_user_google_sub" in idx:
+        op.drop_index(op.f("ix_user_google_sub"), table_name="user")
+    if "google_sub" in cols:
+        op.drop_column("user", "google_sub")

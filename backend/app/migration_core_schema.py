@@ -15,6 +15,19 @@ def _has_table(bind, name: str) -> bool:
     return sa.inspect(bind).has_table(name)
 
 
+def _column_names(bind, table: str) -> set[str]:
+    if not _has_table(bind, table):
+        return set()
+    return {c["name"] for c in sa.inspect(bind).get_columns(table)}
+
+
+def add_column_if_missing(table: str, column: sa.Column) -> None:
+    """Add a column only when the table exists and the column is absent."""
+    bind = op.get_bind()
+    if column.name not in _column_names(bind, table):
+        op.add_column(table, column)
+
+
 def ensure_core_ecommerce_tables() -> None:
     """Create category, order, orderitem, cartitem, review, etc. if missing."""
     bind = op.get_bind()

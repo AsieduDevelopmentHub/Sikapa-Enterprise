@@ -28,6 +28,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: dev/staging
           fetch-depth: 0
 
       - name: Create or refresh promotion PR (no auto-merge)
@@ -60,12 +61,14 @@ jobs:
             exit 0
           fi
 
-          gh pr create --base main --head dev/staging \
+          PR_URL=$(gh pr create --base main --head dev/staging \
             --title "chore: promote dev/staging to main (production)" \
             --body "Manual production promotion from hosted staging.
 
 - Merge this PR in GitHub when QA and pre-go-live tests pass on \`dev/staging\`.
+- Confirm Render staging deploy succeeded (Alembic migrations complete) before merging.
 - After merge, \`sync-main-to-integration.yml\` resets \`dev/develop\` and \`dev/staging\` to \`main\`.
-- Do not use \`dev/develop\` → \`main\` PRs; staging is the promotion path."
+- Do not use \`dev/develop\` → \`main\` PRs; staging is the promotion path.")
 
-          echo "PR created. Review and merge manually in GitHub (no auto-merge)."
+          echo "PR created: ${PR_URL}"
+          echo "Review and merge manually in GitHub (no auto-merge)."
