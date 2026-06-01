@@ -5,6 +5,10 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.no_cov_gate
+
 
 def _load_revision_module(stem: str):
     path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / f"{stem}.py"
