@@ -1,7 +1,11 @@
 # Nine-phase runbook (staging go-live)
 
 Maps each test type in [pre-go-live-testing.md](./pre-go-live-testing.md) to **commands you can run today**.  
-Run on **staging** unless noted. Fill your URLs once:
+Run on **staging** unless noted.
+
+**Recorded results (2026-06-02):** [reports/README.md](./reports/README.md)
+
+Fill your URLs once:
 
 | Variable | Example |
 |----------|---------|
@@ -213,4 +217,5 @@ Within 30 minutes:
 
 - [pre-go-live-testing.md](./pre-go-live-testing.md) — full criteria and checklists  
 - [staging-api-runner.md](./staging-api-runner.md) — API runner env vars  
+- [analytics-tracking.md](./analytics-tracking.md) — GA4 consent + ecommerce events  
 - [staging-environment.md](../deployment/staging-environment.md) — env setup  

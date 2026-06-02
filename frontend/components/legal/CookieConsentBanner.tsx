@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-const STORAGE_KEY = "sikapa_cookie_preferences";
-
-type Stored = { essential: true; analytics: boolean; decidedAt: string };
+import { readCookiePreferences, writeCookiePreferences } from "@/lib/analytics/cookie-preferences";
 
 export function CookieConsentBanner({ required }: { required: boolean }) {
   const [visible, setVisible] = useState(false);
@@ -13,11 +10,7 @@ export function CookieConsentBanner({ required }: { required: boolean }) {
   useEffect(() => {
     if (!required) return;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Stored;
-        if (parsed?.decidedAt) return;
-      }
+      if (readCookiePreferences()) return;
     } catch {
       /* ignore */
     }
@@ -27,12 +20,7 @@ export function CookieConsentBanner({ required }: { required: boolean }) {
   if (!required || !visible) return null;
 
   const save = (analytics: boolean) => {
-    const payload: Stored = {
-      essential: true,
-      analytics,
-      decidedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    writeCookiePreferences(analytics);
     setVisible(false);
   };
 

@@ -74,6 +74,7 @@ See [remediation-roadmap.md](./remediation-roadmap.md) for phase checklists.
 - [ ] `NEXT_PUBLIC_SITE_URL` → public storefront URL
 - [ ] `SECRET_KEY` → **same value as backend** (admin session cookie verification)
 - [ ] `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` (optional but recommended)
+- [ ] `NEXT_PUBLIC_GA_MEASUREMENT_ID` (optional; consent-gated — see [analytics-tracking.md](../testing/analytics-tracking.md))
 - [ ] Full checkout test on staging/production with Paystack test/live keys
 
 ### Before flipping traffic

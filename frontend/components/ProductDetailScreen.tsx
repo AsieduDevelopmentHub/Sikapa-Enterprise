@@ -14,6 +14,7 @@ import { StarRating } from "@/components/StarRating";
 import { useCart } from "@/context/CartContext";
 import { useCatalog } from "@/context/CatalogContext";
 import { useRecentlyViewedProducts, trackProductView } from "@/hooks/useRecentlyViewed";
+import { trackViewItem } from "@/lib/analytics/events";
 import { getBackendOrigin } from "@/lib/api/client";
 import { cleanImageUrl } from "@/lib/clean-image-url";
 
@@ -242,6 +243,15 @@ export function ProductDetailScreen({ product: p }: Props) {
       compareAtPrice: undefined,
     };
   }, [p, selectedVariant, effectivePrice]);
+
+  useEffect(() => {
+    trackViewItem({
+      item_id: p.id,
+      item_name: p.name,
+      price: effectivePrice,
+    });
+  }, [p.id, p.name, effectivePrice]);
+
   const hasStockInfo = typeof effectiveStock === "number";
   const isOutOfStock = hasStockInfo && (effectiveStock ?? 0) <= 0;
   const isLowStock =

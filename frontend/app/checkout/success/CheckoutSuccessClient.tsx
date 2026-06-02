@@ -10,6 +10,7 @@ import { ordersDetail, type OrderDetail } from "@/lib/api/orders";
 import { paystackVerify } from "@/lib/api/payments";
 import { formatGhs } from "@/lib/mock-data";
 import { isPaystackPaymentConfirmed } from "@/lib/paystack-status";
+import { trackPurchase } from "@/lib/analytics/events";
 import { notifyOrdersChanged } from "@/lib/session-reset";
 
 export function CheckoutSuccessClient() {
@@ -72,6 +73,26 @@ export function CheckoutSuccessClient() {
       cancelled = true;
     };
   }, [paidRef, accessToken, idValid, load]);
+
+  useEffect(() => {
+    if (status !== "verified" || !detail || !idValid) return;
+    const key = `sikapa-ga-purchase-${orderId}`;
+    if (typeof window !== "undefined" && sessionStorage.getItem(key)) return;
+    if (typeof window !== "undefined") sessionStorage.setItem(key, "1");
+    trackPurchase({
+      transaction_id: String(orderId),
+      value: detail.total_price,
+      coupon: detail.coupon_code,
+      shipping: detail.delivery_fee,
+      tax: detail.tax_amount,
+      items: detail.items.map((line) => ({
+        item_id: String(line.product_id),
+        item_name: line.product_name ?? `Product ${line.product_id}`,
+        price: line.price_at_purchase,
+        quantity: line.quantity,
+      })),
+    });
+  }, [status, detail, idValid, orderId]);
 
   if (authLoading) {
     return (

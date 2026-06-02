@@ -25,12 +25,16 @@ $openApi = "$hostUrl/openapi.json"
 Write-Host "==> Schemathesis on $openApi (staging only)" -ForegroundColor Cyan
 & $py -m pip install schemathesis -q
 
+$st = Join-Path (Split-Path $py -Parent) "schemathesis.exe"
+if (-not (Test-Path $st)) {
+    throw "schemathesis.exe not found in venv after pip install."
+}
+
 Set-Location $Root
-& $py -m schemathesis run $openApi `
-    --base-url=$hostUrl `
+& $st run $openApi `
+    --url=$hostUrl `
     --checks all `
-    --hypothesis-max-examples=$MaxExamples `
-    --exclude-checks=use_after_free
+    --max-examples=$MaxExamples
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Fuzz run reported failures. Review 5xx and leaked stack traces; stop if Paystack/email rate limits trigger." -ForegroundColor Yellow

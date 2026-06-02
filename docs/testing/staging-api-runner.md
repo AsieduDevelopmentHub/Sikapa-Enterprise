@@ -4,7 +4,8 @@ This repo includes a small, repeatable API checklist runner that exercises the *
 
 It’s meant to support the **nine-type testing program** in `docs/testing/pre-go-live-testing.md` by providing a quick, deterministic “API sanity pass” you can run on:
 
-**For load, stress, security, UI, regression, and full fuzz:** see [nine-phase-runbook.md](./nine-phase-runbook.md).
+**For load, stress, security, UI, regression, and full fuzz:** see [nine-phase-runbook.md](./nine-phase-runbook.md).  
+**Report write-ups:** [reports/README.md](./reports/README.md).
 
 - your **local backend**
 - the **staging Render backend**

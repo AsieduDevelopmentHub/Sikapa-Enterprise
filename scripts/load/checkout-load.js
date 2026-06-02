@@ -10,7 +10,10 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
 
-const API_BASE = (__ENV.API_BASE || "http://127.0.0.1:8000/api/v1").replace(/\/$/, "");
+const API_HOST = (__ENV.API_HOST || "").replace(/\/$/, "");
+const API_BASE = (
+  __ENV.API_BASE || (API_HOST ? `${API_HOST}/api/v1` : "http://127.0.0.1:8000/api/v1")
+).replace(/\/$/, "");
 const IDENTIFIER = __ENV.TEST_IDENTIFIER || __ENV.TEST_EMAIL || "";
 const PASSWORD = __ENV.TEST_PASSWORD || "";
 
@@ -36,9 +39,14 @@ export function setup() {
     { headers: { "Content-Type": "application/json" } }
   );
   check(login, { "login 200": (r) => r.status === 200 });
+  if (login.status !== 200) {
+    throw new Error(
+      `Login failed (${login.status}). Set API_HOST/API_BASE to staging and ensure backend is up. Body: ${String(login.body).slice(0, 200)}`
+    );
+  }
   const token = login.json("access_token");
   if (!token) {
-    throw new Error(`Login failed: ${login.status} ${login.body}`);
+    throw new Error(`Login OK but no access_token in response`);
   }
   return { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } };
 }

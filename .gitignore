@@ -49,6 +49,7 @@ backend/staging.logs
 backend/coverage.xml
 .coverage
 htmlcov/
+*.lighthouseci
 
 # Database
 *.sqlite

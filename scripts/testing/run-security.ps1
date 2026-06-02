@@ -25,7 +25,8 @@ $env:TESTING = "true"
 $env:EMAIL_ENABLED = "false"
 $env:PAYSTACK_SECRET_KEY = ""
 
-& $py -m pytest tests/test_admin_permissions.py tests/test_paystack_routes.py tests/test_paystack_services.py tests/test_auth_e2e.py tests/test_rate_limiting.py -v --tb=short
+# Subset only — do not enforce full-suite 50% coverage gate (would false-fail at ~49%).
+& $py -m pytest tests/test_admin_permissions.py tests/test_paystack_routes.py tests/test_paystack_services.py tests/test_auth_e2e.py tests/test_rate_limiting.py -v --tb=short --no-cov
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (-not $SkipAudit) {

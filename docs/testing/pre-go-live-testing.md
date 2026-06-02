@@ -5,7 +5,7 @@
 
 **Related:** [executive-summary.md](../audit/executive-summary.md) · [production-deployment.md](../deployment/production-deployment.md) · [operations/operations.md](../operations/operations.md)
 
-**Runnable commands:** [nine-phase-runbook.md](./nine-phase-runbook.md) · API runner: [staging-api-runner.md](./staging-api-runner.md)
+**Runnable commands:** [nine-phase-runbook.md](./nine-phase-runbook.md) · API runner: [staging-api-runner.md](./staging-api-runner.md) · **Reports:** [reports/README.md](./reports/README.md)
 
 ---
 
@@ -341,10 +341,7 @@ k6 run scripts/load/checkout-load.js   # needs TEST_IDENTIFIER + TEST_PASSWORD
 
 ```bash
 # Schemathesis against staging OpenAPI (install: pip install schemathesis)
-schemathesis run https://STAGING_HOST/openapi.json \
-  --base-url=https://STAGING_HOST \
-  --checks all \
-  --hypothesis-max-examples=50
+.\scripts\testing\run-fuzz.ps1 -ApiHost https://STAGING_HOST -MaxExamples 50
 
 # Optional: httpx fuzz on specific routes with pytest-hypothesis
 ```
