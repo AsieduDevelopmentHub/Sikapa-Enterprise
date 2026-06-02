@@ -166,10 +166,15 @@ def validate_staging_config_or_raise() -> None:
         raise RuntimeError("Staging requires CORS_ORIGINS with your staging Vercel URL(s).")
 
     frontend = os.getenv("FRONTEND_URL", "").strip()
-    if not frontend or "localhost" in frontend.lower():
+    allow_localhost_frontend = (
+        os.getenv("STAGING_ALLOW_LOCALHOST_FRONTEND_URL", "").strip().lower()
+        in {"1", "true", "yes"}
+    )
+    if not frontend or ("localhost" in frontend.lower() and not allow_localhost_frontend):
         raise RuntimeError(
             "Staging requires FRONTEND_URL set to your staging storefront URL "
-            "(Vercel staging project or preview URL)."
+            "(Vercel staging project or preview URL). "
+            "To run locally against staging infra, set STAGING_ALLOW_LOCALHOST_FRONTEND_URL=true."
         )
 
     paystack = os.getenv("PAYSTACK_SECRET_KEY", "").strip()

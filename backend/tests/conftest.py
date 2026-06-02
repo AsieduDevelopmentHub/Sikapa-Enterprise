@@ -16,6 +16,8 @@ os.environ["EMAIL_ENABLED"] = "false"
 os.environ["HTTPS_ENABLED"] = "false"
 os.environ["DEBUG"] = "false"
 os.environ["TESTING"] = "true"
+# Allow httpx ASGI client host (testserver) through TrustedHostMiddleware.
+os.environ["ALLOWED_HOSTS"] = "testserver,localhost,127.0.0.1"
 # Match CI: in-memory rate limits (avoid Redis from backend/.env during tests).
 os.environ["REDIS_URL"] = ""
 os.environ["PAYSTACK_SECRET_KEY"] = ""
