@@ -302,6 +302,8 @@ k6 run scripts/load/smoke-load.js   # create this script when executing phase 5
 | Auth | Login, register, password reset, Google OAuth (if enabled) |
 | Admin | `/system` orders, products, inventory (as admin user) |
 | A11y | Lighthouse on `/`, `/shop`, `/account` (CI gate ≥ 0.9) |
+
+**Note on storefront URLs:** Vercel Preview deployments are sometimes protected behind authentication. If your staging preview is gated, run UI/Lighthouse tests against a publicly accessible host instead (e.g. production storefront `https://sikapa.auralenx.com`) until you configure a dedicated staging storefront URL without protection.
 | Responsive | Mobile + desktop breakpoints on checkout |
 
 **How we run it**
