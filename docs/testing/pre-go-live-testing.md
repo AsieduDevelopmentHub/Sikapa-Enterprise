@@ -5,6 +5,8 @@
 
 **Related:** [executive-summary.md](../audit/executive-summary.md) · [production-deployment.md](../deployment/production-deployment.md) · [operations/operations.md](../operations/operations.md)
 
+**Runnable commands:** [nine-phase-runbook.md](./nine-phase-runbook.md) · API runner: [staging-api-runner.md](./staging-api-runner.md)
+
 ---
 
 ## Prerequisites (staging environment)
@@ -229,7 +231,8 @@ cd backend && pytest tests/test_orders_paystack_flow.py tests/test_auth_e2e.py -
 ```bash
 # Install: https://grafana.com/docs/k6/latest/set-up/install-k6/
 export API_BASE=https://STAGING_HOST/api/v1
-k6 run scripts/load/smoke-load.js   # create this script when executing phase 5
+k6 run scripts/load/smoke-load.js
+k6 run scripts/load/checkout-load.js   # needs TEST_IDENTIFIER + TEST_PASSWORD
 ```
 
 **Pass criteria:** p95 within targets; zero `5xx`; Render CPU/memory acceptable.
