@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { CookiePreferences } from "@/lib/analytics/cookie-preferences";
 import { analyticsConsentGranted } from "@/lib/analytics/cookie-preferences";
@@ -14,33 +14,29 @@ export function StorefrontAnalytics() {
   const searchParams = useSearchParams();
   const lastPath = useRef<string | null>(null);
 
-  const sendPageViewIfAllowed = () => {
+  const pagePath = `${pathname}${searchParams?.toString() ? `?${searchParams}` : ""}`;
+
+  const sendPageViewIfAllowed = useCallback(() => {
     if (!analyticsConsentGranted()) return;
     syncGtagConsentFromPreferences();
-    const path = `${pathname}${searchParams?.toString() ? `?${searchParams}` : ""}`;
-    if (path === lastPath.current) return;
-    trackPageView(path);
-    lastPath.current = path;
-  };
+    if (pagePath === lastPath.current) return;
+    trackPageView(pagePath);
+    lastPath.current = pagePath;
+  }, [pagePath]);
 
   useEffect(() => {
     const onConsent = (ev: Event) => {
       const detail = (ev as CustomEvent<CookiePreferences>).detail;
       updateGtagConsent(Boolean(detail?.analytics));
       if (detail?.analytics) {
-        const path = `${pathname}${searchParams?.toString() ? `?${searchParams}` : ""}`;
-        trackPageView(path);
-        lastPath.current = path;
+        trackPageView(pagePath);
+        lastPath.current = pagePath;
       }
     };
     window.addEventListener("sikapa:cookie-consent", onConsent);
     sendPageViewIfAllowed();
     return () => window.removeEventListener("sikapa:cookie-consent", onConsent);
-  }, [pathname, searchParams]);
-
-  useEffect(() => {
-    sendPageViewIfAllowed();
-  }, [pathname, searchParams]);
+  }, [pagePath, sendPageViewIfAllowed]);
 
   return null;
 }
