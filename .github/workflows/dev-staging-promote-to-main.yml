@@ -33,10 +33,12 @@ jobs:
 
       - name: Create or refresh promotion PR (no auto-merge)
         env:
-          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN != '' && secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
+          GH_ACTIONS_PR_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN }}
           MIN_COMMITS: ${{ github.event.inputs.min_commits || '1' }}
         run: |
           set -euo pipefail
+          if [ -n "${GH_ACTIONS_PR_TOKEN}" ]; then export GH_TOKEN="${GH_ACTIONS_PR_TOKEN}"; fi
 
           git fetch origin main dev/staging --depth=1 >/dev/null 2>&1 || true
           AHEAD=$(git rev-list --count origin/main..origin/dev/staging 2>/dev/null || echo 0)
