@@ -33,7 +33,7 @@ Usually **no protection** (integration branch). Developers rely on **CI Quick** 
 
 1. **Settings → General → Pull requests** — Allow auto-merge, allow squash merge.
 2. **Settings → Actions → General → Workflow permissions** — Read and write (for sync workflows).
-3. Secret **`GH_ACTIONS_PR_TOKEN`** (optional PAT) if the default token cannot open/merge PRs.
+3. Secret **`GH_ACTIONS_PR_TOKEN`** (fine-grained PAT: **Contents** + **Pull requests** write). Required for **squash auto-merge** on `dev/develop` → `dev/staging`; without it the auto-PR job still opens the PR but skips auto-merge (no workflow failure).
 4. Required checks must match **job names** exactly (e.g. `Backend CI`, not only workflow name `CI`).
 
 ## Minute usage (public repo)

@@ -90,5 +90,5 @@ PRs to **`main`** or **`dev/staging`** when `frontend/**` changes.
 | Issue | Fix |
 |-------|-----|
 | Auto-merge blocked | Enable auto-merge + squash; required checks = **CI** jobs (not CI Quick) |
-| `GH_ACTIONS_PR_TOKEN` | PAT: Contents + Pull requests write |
+| `enablePullRequestAutoMerge` / workflow exit 1 | Add **`GH_ACTIONS_PR_TOKEN`** (PAT: Contents + Pull requests write). Default `GITHUB_TOKEN` cannot enable auto-merge. |
 | Private repo minutes | Public repo: unlimited standard minutes; still use Quick on develop to save queue time |
