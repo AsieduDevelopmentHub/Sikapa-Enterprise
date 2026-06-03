@@ -40,7 +40,14 @@ This document explains how to deploy the frontend to Vercel using the `frontend`
 
 See `frontend/.env.example` for WhatsApp links, maintenance mode, admin host lock, image CDN hosts, etc.
 
-The web app does **not** use a Supabase JavaScript client; product images are served from URLs returned by the API.
+The web app does **not** use a Supabase JavaScript client; product images are URLs from the API (Supabase Storage on the backend project).
+
+| Environment | Backend Supabase project | Bucket |
+|-------------|-------------------------|--------|
+| Staging | `mjihnwpqqlkeuloelaye` | `product-images-staging` |
+| Production | `pqfowptaguuxhujvclvr` | `product-images` |
+
+Ensure Render production uses `SUPABASE_STORAGE_BUCKET_NAME=product-images` and `UPLOAD_SERVE_LOCAL=false`. In Supabase → Storage, mark the bucket **public**.
 
 > Do not commit production API keys or secrets to Git.
 

@@ -128,6 +128,12 @@ const nextConfig = {
         hostname: "placehold.co",
         pathname: "/**",
       },
+      /* Supabase Storage (production + staging projects) */
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/**",
+      },
       ...(apiPattern ? [apiPattern] : []),
       /* Local API static files and any other same-origin paths (dev) */
       {
