@@ -5,7 +5,7 @@ name: Lighthouse
 
 on:
   pull_request:
-    branches: [main, dev/develop, dev/staging]
+    branches: [main, dev/staging]
     paths:
       - "frontend/**"
       - ".github/workflows/lighthouse.yml"

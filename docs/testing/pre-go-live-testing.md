@@ -5,6 +5,8 @@
 
 **Related:** [executive-summary.md](../audit/executive-summary.md) · [production-deployment.md](../deployment/production-deployment.md) · [operations/operations.md](../operations/operations.md)
 
+**Runnable commands:** [nine-phase-runbook.md](./nine-phase-runbook.md) · API runner: [staging-api-runner.md](./staging-api-runner.md) · **Reports:** [reports/README.md](./reports/README.md)
+
 ---
 
 ## Prerequisites (staging environment)
@@ -229,7 +231,8 @@ cd backend && pytest tests/test_orders_paystack_flow.py tests/test_auth_e2e.py -
 ```bash
 # Install: https://grafana.com/docs/k6/latest/set-up/install-k6/
 export API_BASE=https://STAGING_HOST/api/v1
-k6 run scripts/load/smoke-load.js   # create this script when executing phase 5
+k6 run scripts/load/smoke-load.js
+k6 run scripts/load/checkout-load.js   # needs TEST_IDENTIFIER + TEST_PASSWORD
 ```
 
 **Pass criteria:** p95 within targets; zero `5xx`; Render CPU/memory acceptable.
@@ -302,6 +305,8 @@ k6 run scripts/load/smoke-load.js   # create this script when executing phase 5
 | Auth | Login, register, password reset, Google OAuth (if enabled) |
 | Admin | `/system` orders, products, inventory (as admin user) |
 | A11y | Lighthouse on `/`, `/shop`, `/account` (CI gate ≥ 0.9) |
+
+**Note on storefront URLs:** Vercel Preview deployments are sometimes protected behind authentication. If your staging preview is gated, run UI/Lighthouse tests against a publicly accessible host instead (e.g. production storefront `https://sikapa.auralenx.com`) until you configure a dedicated staging storefront URL without protection.
 | Responsive | Mobile + desktop breakpoints on checkout |
 
 **How we run it**
@@ -336,10 +341,7 @@ k6 run scripts/load/smoke-load.js   # create this script when executing phase 5
 
 ```bash
 # Schemathesis against staging OpenAPI (install: pip install schemathesis)
-schemathesis run https://STAGING_HOST/openapi.json \
-  --base-url=https://STAGING_HOST \
-  --checks all \
-  --hypothesis-max-examples=50
+.\scripts\testing\run-fuzz.ps1 -ApiHost https://STAGING_HOST -MaxExamples 50
 
 # Optional: httpx fuzz on specific routes with pytest-hypothesis
 ```

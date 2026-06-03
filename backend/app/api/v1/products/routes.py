@@ -23,6 +23,7 @@ from app.api.v1.products.services import (
     get_category_by_id,
 )
 from app.core.search_analytics import log_search
+from app.core.dsa.pagination import MAX_PAGINATION_SKIP
 from app.models import User
 
 router = APIRouter()
@@ -32,7 +33,7 @@ router = APIRouter()
 async def search_products_endpoint(
     request: Request,
     q: str = Query(..., min_length=1, max_length=100),
-    skip: int = Query(0, ge=0),
+    skip: int = Query(0, ge=0, le=MAX_PAGINATION_SKIP),
     limit: int = Query(20, ge=1, le=100),
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_active_user_optional),
@@ -87,7 +88,7 @@ async def list_products(
     min_rating: Optional[float] = Query(None, ge=0, le=5),
     sort_by: str = Query("created_at", pattern="^(name|price|rating|created_at|sales|random)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
-    skip: int = Query(0, ge=0),
+    skip: int = Query(0, ge=0, le=MAX_PAGINATION_SKIP),
     limit: int = Query(20, ge=1, le=100),
     session: Session = Depends(get_session),
 ):

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 import { useAuth } from "@/context/AuthContext";
@@ -25,6 +25,7 @@ import {
 } from "@/lib/ghana-shipping";
 import { formatGhs } from "@/lib/mock-data";
 import { sanitizeMultiline, sanitizePlainText, validateShippingAddress } from "@/lib/validation/input";
+import { trackBeginCheckout } from "@/lib/analytics/events";
 import { notifyOrdersChanged } from "@/lib/session-reset";
 
 type Step = "address" | "shipping" | "review";
@@ -226,6 +227,22 @@ export function CheckoutPageClient() {
     ? Math.round(merchandiseTotal * processingFeeRate * 100) / 10000
     : 0;
   const total = merchandiseTotal + deliveryFee + processingFeeAmount;
+
+  const beginCheckoutTracked = useRef(false);
+  useEffect(() => {
+    if (authLoading || cartSyncing || lines.length === 0 || beginCheckoutTracked.current) return;
+    beginCheckoutTracked.current = true;
+    trackBeginCheckout({
+      value: total,
+      coupon: appliedCoupon?.code ?? null,
+      items: lines.map((l) => ({
+        item_id: l.product.id,
+        item_name: l.product.name,
+        price: l.unitPrice,
+        quantity: l.quantity,
+      })),
+    });
+  }, [authLoading, cartSyncing, lines, total, appliedCoupon?.code]);
 
   useEffect(() => {
     if (!appliedCoupon) return;

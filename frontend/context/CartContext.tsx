@@ -23,6 +23,7 @@ import {
 import { formatGhs, type MockProduct } from "@/lib/mock-data";
 import { useCartStore, type CartLine, type AddToCartOptions } from "@/lib/store/useCartStore";
 import { AUTH_SESSION_CHANGED } from "@/lib/session-reset";
+import { trackAddToCart } from "@/lib/analytics/events";
 
 type PendingAdd = {
   productId: string;
@@ -112,12 +113,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const currentLines = linesRef.current;
       const i = currentLines.findIndex((l) => l.lineKey === key);
       
+      let unitPrice: number;
       if (i >= 0) {
         const next = [...currentLines];
         next[i] = { ...next[i], quantity: next[i].quantity + qty };
+        unitPrice = next[i].unitPrice;
         setLines(next);
       } else {
-        const unitPrice = product.price + (opts.priceDelta ?? 0);
+        unitPrice = product.price + (opts.priceDelta ?? 0);
         setLines([
           {
             product,
@@ -131,6 +134,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
           ...currentLines,
         ]);
       }
+      trackAddToCart(
+        {
+          item_id: productId,
+          item_name: product.name,
+          price: unitPrice,
+          quantity: qty,
+        },
+        unitPrice * qty
+      );
     },
     [getProduct, setLines]
   );

@@ -62,6 +62,8 @@ jobs:
               --title "chore: promote dev/develop to dev/staging" \
               --body "Auto-generated PR: \`dev/develop\` is ${AHEAD} commit(s) ahead of \`dev/staging\`.
 
+**Checks:** full **CI** workflow (backend + frontend + mobile when \`mobile/**\` changed) and **Lighthouse** when \`frontend/**\` changed. Push to \`dev/develop\` only runs **CI Quick**.
+
 After merge, \`sync-staging-to-dev-develop.yml\` realigns \`dev/develop\` with \`dev/staging\` so branches stay on the same level." \
               2>/dev/null || true)
             PR_NUM="${PR_URL##*/}"

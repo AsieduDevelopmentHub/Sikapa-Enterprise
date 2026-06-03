@@ -223,7 +223,6 @@ def initialize_paystack_for_order(
             detail="Order total must be greater than zero",
         )
 
-    reference = build_order_reference(order_id)
     amount_sub = paystack_client.money_to_subunit(order.total_price)
     meta = {
         "order_id": order_id,
@@ -234,91 +233,107 @@ def initialize_paystack_for_order(
         "delivery_fee": float(order.delivery_fee or 0),
     }
 
-    resp = paystack_client.initialize_transaction(
-        email=user_email,
-        amount_subunit=amount_sub,
-        reference=reference,
-        callback_url=callback_url,
-        metadata=meta,
-        currency=_currency(),
-    )
-    if not resp.get("status") or not resp.get("data"):
-        msg = str(resp.get("message", "Paystack initialization failed"))
-        hint = ""
-        if "ip" in msg.lower():
-            hint = (
-                " Your server's outgoing IP is not in Paystack's whitelist. "
-                "Fix: go to https://dashboard.paystack.com/#/settings/developer "
-                "→ 'IP Whitelist' → either add your server's IP or disable the whitelist. "
-                f"(Key mode: {paystack_client.key_mode()})"
-            )
-        logger.error(
-            "Paystack initialization rejected (mode=%s): %s",
-            paystack_client.key_mode(), msg,
+    # Extremely rare, but if a uniqueness constraint is hit (e.g. reference collision),
+    # retry once with a new reference to avoid returning a 400 to the shopper.
+    last_exc: Exception | None = None
+    for attempt in range(3):
+        reference = build_order_reference(order_id)
+        resp = paystack_client.initialize_transaction(
+            email=user_email,
+            amount_subunit=amount_sub,
+            reference=reference,
+            callback_url=callback_url,
+            metadata=meta,
+            currency=_currency(),
         )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=msg + hint,
-        )
-
-    data = resp["data"]
-    order.paystack_reference = reference
-    order.payment_method = "paystack"
-    session.add(order)
-    ref_final = str(data.get("reference", reference))
-    _upsert_paystack_transaction(
-        session,
-        order,
-        ref_final,
-        status="pending",
-        gateway_message=str(resp.get("message", ""))[:2000] or None,
-    )
-
-    if idem:
-        row = PaystackInitIdempotency(
-            idempotency_key=idem,
-            order_id=order_id,
-            user_id=user_id,
-            reference=data.get("reference", reference),
-            authorization_url=data["authorization_url"],
-            access_code=data["access_code"],
-        )
-        session.add(row)
-        try:
-            session.commit()
-        except IntegrityError:
-            session.rollback()
-            existing = session.exec(
-                select(PaystackInitIdempotency).where(
-                    PaystackInitIdempotency.idempotency_key == idem
+        if not resp.get("status") or not resp.get("data"):
+            msg = str(resp.get("message", "Paystack initialization failed"))
+            hint = ""
+            if "ip" in msg.lower():
+                hint = (
+                    " Your server's outgoing IP is not in Paystack's whitelist. "
+                    "Fix: go to https://dashboard.paystack.com/#/settings/developer "
+                    "→ 'IP Whitelist' → either add your server's IP or disable the whitelist. "
+                    f"(Key mode: {paystack_client.key_mode()})"
                 )
-            ).first()
-            if (
-                existing
-                and existing.order_id == order_id
-                and existing.user_id == user_id
-            ):
-                return {
-                    "authorization_url": existing.authorization_url,
-                    "access_code": existing.access_code,
-                    "reference": existing.reference,
-                    "public_key": _public_key(),
-                }
+            logger.error(
+                "Paystack initialization rejected (mode=%s): %s",
+                paystack_client.key_mode(), msg,
+            )
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Idempotency-Key conflict; retry with the same key",
-            ) from None
-    else:
-        session.commit()
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=msg + hint,
+            )
 
-    session.refresh(order)
+        data = resp["data"]
+        order.paystack_reference = reference
+        order.payment_method = "paystack"
+        session.add(order)
+        ref_final = str(data.get("reference", reference))
+        _upsert_paystack_transaction(
+            session,
+            order,
+            ref_final,
+            status="pending",
+            gateway_message=str(resp.get("message", ""))[:2000] or None,
+        )
 
-    return {
-        "authorization_url": data["authorization_url"],
-        "access_code": data["access_code"],
-        "reference": data.get("reference", reference),
-        "public_key": _public_key(),
-    }
+        if idem:
+            row = PaystackInitIdempotency(
+                idempotency_key=idem,
+                order_id=order_id,
+                user_id=user_id,
+                reference=data.get("reference", reference),
+                authorization_url=data["authorization_url"],
+                access_code=data["access_code"],
+            )
+            session.add(row)
+            try:
+                session.commit()
+            except IntegrityError as exc:
+                session.rollback()
+                existing = session.exec(
+                    select(PaystackInitIdempotency).where(
+                        PaystackInitIdempotency.idempotency_key == idem
+                    )
+                ).first()
+                if (
+                    existing
+                    and existing.order_id == order_id
+                    and existing.user_id == user_id
+                ):
+                    return {
+                        "authorization_url": existing.authorization_url,
+                        "access_code": existing.access_code,
+                        "reference": existing.reference,
+                        "public_key": _public_key(),
+                    }
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Idempotency-Key conflict; retry with the same key",
+                ) from None
+        else:
+            try:
+                session.commit()
+            except IntegrityError as exc:
+                session.rollback()
+                last_exc = exc
+                continue
+
+        session.refresh(order)
+        return {
+            "authorization_url": data["authorization_url"],
+            "access_code": data["access_code"],
+            "reference": data.get("reference", reference),
+            "public_key": _public_key(),
+        }
+
+    # If we reach here, we kept hitting uniqueness constraints while persisting local rows.
+    logger.exception("Paystack initialize failed due to integrity error", exc_info=last_exc)
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Payment initialization conflict; please retry",
+    ) from None
 
 
 def _apply_successful_payment(session: Session, order: Order, reference: str) -> Order:

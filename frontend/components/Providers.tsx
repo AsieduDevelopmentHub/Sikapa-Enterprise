@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
+import { StorefrontAnalytics } from "@/components/analytics/StorefrontAnalytics";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NavSidebarPanel } from "@/components/NavSidebarPanel";
 import { AppShell } from "@/components/AppShell";
@@ -50,6 +51,9 @@ export function Providers({
                 <WishlistProvider>
                   <CartProvider>
                     <AppShell>{children}</AppShell>
+                    <Suspense fallback={null}>
+                      <StorefrontAnalytics />
+                    </Suspense>
                     <NavSidebarPanel />
                     <CookieConsentBanner required={showCookieConsent} />
                     <MaintenanceWatcher />
