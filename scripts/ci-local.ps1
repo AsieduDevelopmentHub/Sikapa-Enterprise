@@ -1,14 +1,16 @@
 # Run the same checks as .github/workflows before pushing.
 # Usage:
-#   .\scripts\ci-local.ps1              # backend + mobile (matches main CI jobs)
+#   .\scripts\ci-local.ps1 -Quick              # dev/develop push (ci-quick.yml)
+#   .\scripts\ci-local.ps1 -IncludeFrontend    # full CI frontend (before staging PR)
+#   .\scripts\ci-local.ps1                     # backend + mobile (full CI mobile path)
 #   .\scripts\ci-local.ps1 -BackendOnly
 #   .\scripts\ci-local.ps1 -MobileOnly
-#   .\scripts\ci-local.ps1 -IncludeFrontend
 #   .\scripts\ci-local.ps1 -SkipAndroidBuild   # fast: format, analyze, test only
 #
 # Backend uses backend/venv (activate or let script auto-detect venv\Scripts\python.exe).
 
 param(
+    [switch]$Quick,
     [switch]$BackendOnly,
     [switch]$MobileOnly,
     [switch]$IncludeFrontend,
@@ -51,7 +53,8 @@ function Resolve-BackendPython {
 }
 
 $runBackend = -not $MobileOnly
-$runMobile = -not $BackendOnly
+$runMobile = (-not $BackendOnly) -and (-not $Quick)
+if ($Quick) { $IncludeFrontend = $true }
 $failed = @()
 $BackendPython = $null
 if ($runBackend) {
@@ -61,7 +64,8 @@ if ($runBackend) {
 
 if ($runBackend) {
     try {
-        Invoke-Step "Backend CI (pytest + 50% coverage gate)" {
+        $backendStep = if ($Quick) { "Backend CI Quick (ruff + pytest, no cov)" } else { "Backend CI (pytest + 50% coverage gate)" }
+        Invoke-Step $backendStep {
             Set-Location "$Root\backend"
             $env:DATABASE_URL = "sqlite:///:memory:"
             $env:SECRET_KEY = "ci-secret-key-for-testing-only"
@@ -81,7 +85,11 @@ if ($runBackend) {
             Set-Location $Root
             & $BackendPython scripts/check_api_path_sync.py
             Set-Location "$Root\backend"
-            & $BackendPython -m pytest tests/ -v --tb=short --cov=app --cov-report=xml
+            if ($Quick) {
+                & $BackendPython -m pytest tests/ -q --tb=line --no-cov
+            } else {
+                & $BackendPython -m pytest tests/ -v --tb=short --cov=app --cov-report=xml
+            }
         }
     } catch {
         $failed += "Backend: $_"
@@ -134,9 +142,11 @@ if ($IncludeFrontend) {
         Invoke-Step "Frontend: lint" {
             npm run lint
         }
-        Invoke-Step "Frontend: build" {
-            $env:NEXT_PUBLIC_API_URL = "http://localhost:8000/api/v1"
-            npm run build
+        if (-not $Quick) {
+            Invoke-Step "Frontend: build" {
+                $env:NEXT_PUBLIC_API_URL = "http://localhost:8000/api/v1"
+                npm run build
+            }
         }
         Invoke-Step "Frontend: test" {
             npm test
