@@ -30,6 +30,17 @@ describe("verifyAccessTokenPayload", () => {
     expect(payload?.is_admin).toBe(true);
   });
 
+  it("coerces is_admin from string claims", async () => {
+    vi.stubEnv("SECRET_KEY", "shared-secret");
+    jwtVerify.mockResolvedValue({
+      payload: { sub: "7", type: "access", is_admin: "true", exp: 9999999999 },
+    });
+
+    const { verifyAccessTokenPayload } = await import("@/lib/verify-access-token");
+    const payload = await verifyAccessTokenPayload("signed-token");
+    expect(payload?.is_admin).toBe(true);
+  });
+
   it("falls back to decode when SECRET_KEY is unset", async () => {
     vi.stubEnv("SECRET_KEY", "");
     const { verifyAccessTokenPayload } = await import("@/lib/verify-access-token");
