@@ -5,6 +5,7 @@ import { Providers } from "@/components/Providers";
 import { SkipToContent } from "@/components/SkipToContent";
 import { cookieBannerNeeded } from "@/lib/cookie-consent-server";
 import { buildRootMetadata } from "@/lib/seo";
+import { GoogleAnalyticsHead } from "@/components/analytics/GoogleAnalyticsHead";
 import PWARegister from "@/components/PWARegister";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
@@ -32,6 +33,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const showCookieConsent = await cookieBannerNeeded();
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${cormorant.variable} ${dmSans.variable}`}>
+      <head>
+        <GoogleAnalyticsHead />
+      </head>
       <body>
         <SkipToContent />
         <PWARegister />

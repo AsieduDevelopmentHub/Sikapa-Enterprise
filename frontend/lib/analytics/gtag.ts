@@ -9,8 +9,6 @@ declare global {
 
 export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "";
 
-let initialized = false;
-
 export function isAnalyticsConfigured(): boolean {
   return GA_MEASUREMENT_ID.length > 0;
 }
@@ -19,38 +17,37 @@ export function canTrackAnalytics(): boolean {
   return isAnalyticsConfigured() && analyticsConsentGranted();
 }
 
-/** Load gtag.js once after the user accepts analytics cookies. */
-export function initGtag(): void {
-  if (typeof window === "undefined" || !canTrackAnalytics() || initialized) return;
+function gtagAvailable(): boolean {
+  return typeof window !== "undefined" && typeof window.gtag === "function";
+}
 
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = function gtag(...args: unknown[]) {
-    window.dataLayer?.push(args);
-  };
+/** Consent Mode v2 — call after accept/decline or when restoring saved preference. */
+export function updateGtagConsent(analyticsGranted: boolean): void {
+  if (!isAnalyticsConfigured() || !gtagAvailable()) return;
 
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
-  document.head.appendChild(script);
-
-  window.gtag("js", new Date());
-  window.gtag("config", GA_MEASUREMENT_ID, {
-    send_page_view: false,
-    anonymize_ip: true,
+  window.gtag!("consent", "update", {
+    analytics_storage: analyticsGranted ? "granted" : "denied",
+    ad_storage: analyticsGranted ? "granted" : "denied",
+    ad_user_data: analyticsGranted ? "granted" : "denied",
+    ad_personalization: analyticsGranted ? "granted" : "denied",
   });
+}
 
-  initialized = true;
+/** Apply stored cookie preference to gtag (scripts load from GoogleAnalyticsHead). */
+export function syncGtagConsentFromPreferences(): void {
+  if (!isAnalyticsConfigured() || !gtagAvailable()) return;
+  updateGtagConsent(analyticsConsentGranted());
 }
 
 export function trackPageView(path: string, title?: string): void {
-  if (!canTrackAnalytics() || !window.gtag) return;
-  window.gtag("event", "page_view", {
+  if (!canTrackAnalytics() || !gtagAvailable()) return;
+  window.gtag!("event", "page_view", {
     page_path: path,
     page_title: title ?? document.title,
   });
 }
 
 export function trackEvent(name: string, params?: Record<string, unknown>): void {
-  if (!canTrackAnalytics() || !window.gtag) return;
-  window.gtag("event", name, params ?? {});
+  if (!canTrackAnalytics() || !gtagAvailable()) return;
+  window.gtag!("event", name, params ?? {});
 }

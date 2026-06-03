@@ -1,33 +1,39 @@
 # Storefront analytics (GA4)
 
-Consent-gated Google Analytics 4 for the public storefront. No tracking runs until the visitor accepts **Accept all** on the cookie banner (or has a prior `analytics: true` preference in `localStorage`).
+Property measurement ID: **`G-8HNY0MFRGT`** (production site e.g. `https://sikapa.auralenx.com`).
 
-## Configuration
+The Google tag loads in **`<head>`** on every page (so Google’s install checker can detect it). **Consent Mode v2** defaults to denied; hits and ecommerce events run only after the visitor accepts **Accept all** (or has a saved `analytics: true` preference).
 
-| Variable | Where | Required |
-|----------|-------|----------|
-| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Vercel / `.env.local` | Yes, to send data |
-| Cookie banner | `NEXT_PUBLIC_FORCE_COOKIE_BANNER` or EU geo on Vercel | For consent UI in dev |
+## Vercel (required for detection on live site)
 
-Create a GA4 property in [Google Analytics](https://analytics.google.com/), copy the **Measurement ID** (`G-…`), and set it on Vercel for Production and Preview as needed.
+1. Vercel project → **Settings → Environment Variables**
+2. Add for **Production** (and Preview if you want staging data):
 
-Without `NEXT_PUBLIC_GA_MEASUREMENT_ID`, all `track*` calls are no-ops.
+   | Name | Value |
+   |------|--------|
+   | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | `G-8HNY0MFRGT` |
+
+3. **Redeploy** production (env vars are baked in at build time).
+4. In GA → Admin → Data streams → your web stream → use **Tag Assistant** or “Test installation” again on `https://sikapa.auralenx.com`.
+
+Local: add the same line to `frontend/.env.local`, then `npm run dev` or `npm run build && npm start`.
 
 ## Architecture
 
 ```
-CookieConsentBanner → writeCookiePreferences() → localStorage + sikapa:cookie-consent event
-StorefrontAnalytics → initGtag() + page_view on route change (send_page_view: false)
-Ecommerce hooks     → trackEvent via gtag (add_to_cart, begin_checkout, purchase, view_item)
+GoogleAnalyticsHead (layout <head>) → gtag.js + consent default denied
+CookieConsentBanner → writeCookiePreferences() → consent update + events
+StorefrontAnalytics → consent sync + manual page_view (send_page_view: false)
+Ecommerce hooks → add_to_cart, begin_checkout, purchase, view_item
 ```
 
 | File | Role |
 |------|------|
-| `frontend/lib/analytics/cookie-preferences.ts` | Shared consent storage + custom event |
-| `frontend/lib/analytics/gtag.ts` | Lazy-load gtag.js, `anonymize_ip`, manual `page_view` |
-| `frontend/lib/analytics/events.ts` | GA4 recommended ecommerce events |
-| `frontend/components/analytics/StorefrontAnalytics.tsx` | SPA page views |
-| `frontend/components/Providers.tsx` | Mounts analytics inside `Suspense` |
+| `frontend/components/analytics/GoogleAnalyticsHead.tsx` | GA4 scripts in `<head>` |
+| `frontend/lib/analytics/gtag.ts` | Consent updates + `trackPageView` / `trackEvent` |
+| `frontend/lib/analytics/events.ts` | Ecommerce events |
+| `frontend/components/analytics/StorefrontAnalytics.tsx` | SPA page views after consent |
+| `frontend/app/layout.tsx` | Mounts `GoogleAnalyticsHead` |
 
 ## Event catalog
 
@@ -36,30 +42,27 @@ All events use `currency: "GHS"` where applicable.
 | Event | When | Key params |
 |-------|------|------------|
 | `page_view` | Route change after consent | `page_path`, `page_title` |
-| `view_item` | Product detail load / variant price change | `items[]`, `value` |
-| `add_to_cart` | Successful add from cart context | `items[]`, `value` |
-| `begin_checkout` | Checkout page with cart lines (once per visit) | `items[]`, `value`, `coupon` |
-| `purchase` | Payment verified on success page (once per order) | `transaction_id`, `items[]`, `value`, `shipping`, `tax`, `coupon` |
+| `view_item` | Product detail | `items[]`, `value` |
+| `add_to_cart` | Cart add | `items[]`, `value` |
+| `begin_checkout` | Checkout with lines | `items[]`, `value`, `coupon` |
+| `purchase` | Payment verified on success | `transaction_id`, `items[]`, … |
 
-`purchase` is deduplicated with `sessionStorage` key `sikapa-ga-purchase-{orderId}`.
+## Verification
 
-## Manual verification
-
-1. Set `NEXT_PUBLIC_GA_MEASUREMENT_ID` and `NEXT_PUBLIC_FORCE_COOKIE_BANNER=true` locally.
-2. `npm run dev` → open storefront → **Accept all** on the banner.
-3. In DevTools → Network, confirm `googletagmanager.com/gtag/js` loads.
-4. Use [GA4 DebugView](https://support.google.com/analytics/answer/7201382) or the [Google Analytics Debugger](https://chrome.google.com/webstore/detail/google-analytics-debugger) extension.
-5. Walkthrough: product page → add to cart → checkout → complete test Paystack → success page; confirm `view_item`, `add_to_cart`, `begin_checkout`, `purchase` in DebugView.
-6. Choose **Essential only** on a fresh profile → confirm no gtag requests.
+1. View page source on production — search for `G-8HNY0MFRGT` and `googletagmanager.com/gtag/js`.
+2. DevTools → Network → filter `gtag` — script should load even before accepting cookies.
+3. Accept cookies → DebugView should show `page_view` and ecommerce events.
+4. **Essential only** → no `page_view` / purchase events (consent stays denied).
 
 ## Privacy
 
-- Analytics is optional; essential cookies only path sends nothing to Google.
-- IP anonymization is enabled in gtag config.
-- Privacy copy lives on `/privacy` and the cookie banner.
+- EEA: Consent Mode default **denied** until banner accept.
+- `anonymize_ip: true` in config.
+- Copy on `/privacy` and cookie banner.
 
-## Go-live checklist item
+## Checklist
 
-- [ ] `NEXT_PUBLIC_GA_MEASUREMENT_ID` set on Vercel production
-- [ ] DebugView smoke test after deploy
-- [ ] Confirm cookie banner shows for EU/EEA visitors (or `NEXT_PUBLIC_FORCE_COOKIE_BANNER` in staging)
+- [ ] `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-8HNY0MFRGT` on Vercel Production
+- [ ] Redeploy after setting env
+- [ ] Google tag detection passes on `sikapa.auralenx.com`
+- [ ] DebugView smoke after accept cookies
