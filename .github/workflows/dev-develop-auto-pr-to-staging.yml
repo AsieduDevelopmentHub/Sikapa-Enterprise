@@ -35,7 +35,7 @@ jobs:
 
       - name: Create or update PR and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN != '' && secrets.GH_ACTIONS_PR_TOKEN || github.token }}
           MIN_COMMITS: ${{ github.event.inputs.min_commits || '1' }}
         run: |
           set -euo pipefail
