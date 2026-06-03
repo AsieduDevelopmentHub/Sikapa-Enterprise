@@ -16,21 +16,14 @@ export function cleanImageUrl(
     return "/assets/mockups/mockups.png";
   }
 
-  let cleaned = url
+  const cleaned = url
     .trim()
     .replace(/\?$/, "")
     .replace(/([^:]\/)\/+/g, "$1");
 
-  if (options && cleaned.includes("supabase.co")) {
-    const params = new URLSearchParams();
-    if (options.width) params.append("width", options.width.toString());
-    if (options.height) params.append("height", options.height.toString());
-    if (options.quality) params.append("quality", options.quality.toString());
-    if (options.format) params.append("format", options.format);
-
-    const separator = cleaned.includes("?") ? "&" : "?";
-    cleaned = `${cleaned}${separator}${params.toString()}`;
-  }
+  // Supabase `object/public` URLs do not support Imgix-style query transforms; those
+  // break with 400/404. Use Next/Image `sizes` + remotePatterns instead.
+  void options;
 
   return cleaned;
 }

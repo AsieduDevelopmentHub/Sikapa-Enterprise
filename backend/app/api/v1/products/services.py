@@ -11,6 +11,14 @@ from app.api.v1.products.visibility import storefront_product_visible
 from app.core.cache import cache, TTL_CATEGORIES, TTL_PRODUCT, TTL_PRODUCT_LIST, TTL_SEARCH
 from app.core.dsa.pagination import page_metadata
 from app.core.search_index import get_product_trie
+from app.core.storefront_media import storefront_image_url
+
+
+def _product_storefront_dict(product: Product) -> dict:
+    data = product.model_dump()
+    if data.get("image_url"):
+        data["image_url"] = storefront_image_url(data["image_url"])
+    return data
 
 
 async def get_products_with_filters(
@@ -75,7 +83,7 @@ async def get_products_with_filters(
         "total": total,
         "skip": skip,
         "limit": limit,
-        "items": [p.model_dump() for p in products],
+        "items": [_product_storefront_dict(p) for p in products],
         **page_metadata(total=int(total or 0), skip=skip, limit=limit, items_count=len(products)),
     }
     cache.set(cache_key, result, ttl=TTL_PRODUCT_LIST)
@@ -122,7 +130,7 @@ async def suggest_products(
                 "name": product.name,
                 "slug": product.slug,
                 "price": product.price,
-                "image_url": product.image_url,
+                "image_url": storefront_image_url(product.image_url),
             }
         )
         if len(items) >= limit:
@@ -174,7 +182,7 @@ async def search_products(
         "total": total,
         "skip": skip,
         "limit": limit,
-        "items": [p.model_dump() for p in products],
+        "items": [_product_storefront_dict(p) for p in products],
     }
     cache.set(cache_key, result, ttl=TTL_SEARCH)
     return result
@@ -197,7 +205,7 @@ async def get_product_by_id(session: Session, product_id: int):
             detail="Product not found",
         )
 
-    result = product.model_dump()
+    result = _product_storefront_dict(product)
     cache.set(cache_key, result, ttl=TTL_PRODUCT)
     return result
 
@@ -219,7 +227,7 @@ async def get_product_by_slug(session: Session, slug: str):
             detail="Product not found",
         )
 
-    result = product.model_dump()
+    result = _product_storefront_dict(product)
     cache.set(cache_key, result, ttl=TTL_PRODUCT)
     return result
 
