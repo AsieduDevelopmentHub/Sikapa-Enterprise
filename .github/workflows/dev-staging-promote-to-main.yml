@@ -1,5 +1,4 @@
-# Manual promotion: dev/staging → main (production).
-# Does NOT auto-merge. Use workflow_dispatch to open or refresh a PR only.
+# Manual promotion: dev/staging -> main (production). workflow_dispatch only.
 name: Promote staging to main (manual)
 
 on:
@@ -19,7 +18,7 @@ concurrency:
 
 jobs:
   open-pr:
-    name: Open PR only (dev/staging → main)
+    name: Open PR staging to main
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,24 +27,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: dev/staging
+          ref: "dev/staging"
           fetch-depth: 0
 
       - name: Create or refresh promotion PR (no auto-merge)
         env:
           GH_TOKEN: ${{ github.token }}
           GH_ACTIONS_PR_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN }}
-          MIN_COMMITS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.min_commits || '1' }}
         run: |
           set -euo pipefail
           if [ -n "${GH_ACTIONS_PR_TOKEN}" ]; then export GH_TOKEN="${GH_ACTIONS_PR_TOKEN}"; fi
+
+          MIN_COMMITS="${{ github.event.inputs.min_commits }}"
+          if [ -z "${MIN_COMMITS}" ]; then MIN_COMMITS="1"; fi
 
           git fetch origin main dev/staging --depth=1 >/dev/null 2>&1 || true
           AHEAD=$(git rev-list --count origin/main..origin/dev/staging 2>/dev/null || echo 0)
           echo "dev/staging is ${AHEAD} commit(s) ahead of main (minimum for new PR: ${MIN_COMMITS})."
 
           if [ "${AHEAD}" = "0" ]; then
-            echo "dev/staging is not ahead of main — nothing to promote."
+            echo "dev/staging is not ahead of main - nothing to promote."
             exit 0
           fi
 
@@ -54,7 +55,6 @@ jobs:
 
           if [ -n "${PR_NUM}" ]; then
             echo "Open promotion PR already exists: #${PR_NUM}"
-            gh pr view "${PR_NUM}" --web 2>/dev/null || true
             exit 0
           fi
 
@@ -65,12 +65,7 @@ jobs:
 
           PR_URL=$(gh pr create --base main --head dev/staging \
             --title "chore: promote dev/staging to main (production)" \
-            --body "Manual production promotion from hosted staging.
-
-- Merge this PR in GitHub when QA and pre-go-live tests pass on \`dev/staging\`.
-- Confirm Render staging deploy succeeded (Alembic migrations complete) before merging.
-- After merge, \`sync-main-to-integration.yml\` resets \`dev/develop\` and \`dev/staging\` to \`main\`.
-- Do not use \`dev/develop\` → \`main\` PRs; staging is the promotion path.")
+            --body "Manual production promotion from hosted staging.")
 
           echo "PR created: ${PR_URL}"
           echo "Review and merge manually in GitHub (no auto-merge)."

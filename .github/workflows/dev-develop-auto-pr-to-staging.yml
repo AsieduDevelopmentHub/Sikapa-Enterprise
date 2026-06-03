@@ -1,10 +1,10 @@
-# Auto PR: dev/develop → dev/staging (integration → hosted staging).
-# Opens or updates a PR and enables squash auto-merge when checks pass.
-name: Auto PR dev/develop to staging
+# Auto PR: dev/develop -> dev/staging (integration -> hosted staging).
+name: Auto PR develop to staging
 
 on:
   push:
-    branches: [dev/develop]
+    branches:
+      - "dev/develop"
   workflow_dispatch:
     inputs:
       min_commits:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   auto-pr-staging:
-    name: Auto PR + auto-merge (dev/develop to dev/staging)
+    name: Auto PR and auto-merge
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,24 +30,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: dev/develop
+          ref: "dev/develop"
           fetch-depth: 0
 
       - name: Create or update PR and enable auto-merge
         env:
           GH_TOKEN: ${{ github.token }}
           GH_ACTIONS_PR_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN }}
-          MIN_COMMITS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.min_commits || '1' }}
         run: |
           set -euo pipefail
           if [ -n "${GH_ACTIONS_PR_TOKEN}" ]; then export GH_TOKEN="${GH_ACTIONS_PR_TOKEN}"; fi
+
+          MIN_COMMITS="1"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.min_commits }}" ]; then
+            MIN_COMMITS="${{ github.event.inputs.min_commits }}"
+          fi
 
           git fetch origin dev/staging --depth=1 >/dev/null 2>&1 || true
           AHEAD=$(git rev-list --count origin/dev/staging..HEAD 2>/dev/null || echo 0)
           echo "dev/develop is ${AHEAD} commit(s) ahead of dev/staging (minimum for new PR: ${MIN_COMMITS})."
 
           if [ "${AHEAD}" = "0" ]; then
-            echo "dev/develop is not ahead of dev/staging — skipping auto-PR."
+            echo "dev/develop is not ahead of dev/staging - skipping auto-PR."
             exit 0
           fi
 
@@ -55,18 +59,14 @@ jobs:
             --json number --jq '.[0].number // empty' || true)
 
           if [ -z "${PR_NUM}" ] && [ "${AHEAD}" -lt "${MIN_COMMITS}" ]; then
-            echo "Need at least ${MIN_COMMITS} commit(s) ahead of dev/staging to open a new PR — skipping."
+            echo "Need at least ${MIN_COMMITS} commit(s) ahead of dev/staging to open a new PR - skipping."
             exit 0
           fi
 
           if [ -z "${PR_NUM}" ]; then
             PR_URL=$(gh pr create --base dev/staging --head dev/develop \
               --title "chore: promote dev/develop to dev/staging" \
-              --body "Auto-generated PR: \`dev/develop\` is ${AHEAD} commit(s) ahead of \`dev/staging\`.
-
-**Checks:** full **CI** workflow (backend + frontend + mobile when \`mobile/**\` changed) and **Lighthouse** when \`frontend/**\` changed. Push to \`dev/develop\` only runs **CI Quick**.
-
-After merge, \`sync-staging-to-dev-develop.yml\` realigns \`dev/develop\` with \`dev/staging\` so branches stay on the same level." \
+              --body "Auto-generated PR: dev/develop is ${AHEAD} commit(s) ahead of dev/staging." \
               2>/dev/null || true)
             PR_NUM="${PR_URL##*/}"
             if ! [[ "${PR_NUM}" =~ ^[0-9]+$ ]]; then
@@ -79,11 +79,10 @@ After merge, \`sync-staging-to-dev-develop.yml\` realigns \`dev/develop\` with \
             echo "PR #${PR_NUM}: https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}"
             echo "Enabling auto-merge (squash) after required checks pass..."
             if ! gh pr merge "${PR_NUM}" --auto --squash; then
-              echo "::warning::Auto-merge not enabled. In repo Settings: allow auto-merge + squash merges."
-              echo "::warning::If using GITHUB_TOKEN only, add secret GH_ACTIONS_PR_TOKEN (PAT with pull_requests:write)."
+              echo "::warning::Auto-merge not enabled. Enable in repo Settings or add GH_ACTIONS_PR_TOKEN secret."
               exit 1
             fi
           else
-            echo "::error::Could not create or find PR dev/develop → dev/staging."
+            echo "::error::Could not create or find PR dev/develop -> dev/staging."
             exit 1
           fi
