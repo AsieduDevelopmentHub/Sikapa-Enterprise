@@ -33,7 +33,6 @@ on:
   push:
     branches:
       - main
-      - dev/develop
     paths:
       - ".github/workflows/render-keepalive.yml"
 

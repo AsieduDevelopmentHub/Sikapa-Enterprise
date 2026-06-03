@@ -7,6 +7,9 @@ import base64
 import json
 from typing import Any
 
+# Max OFFSET for public list/search endpoints (prevents DB/driver errors on huge query params).
+MAX_PAGINATION_SKIP = 10_000
+
 
 def clamp_pagination(
     *,

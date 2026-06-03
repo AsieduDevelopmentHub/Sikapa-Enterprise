@@ -9,6 +9,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    from app.migration_core_schema import ensure_app_schema_bootstrap
+
+    ensure_app_schema_bootstrap()
     op.execute(
         """
         CREATE OR REPLACE FUNCTION app.delete_review_media_rows(p_review_id integer)

@@ -16,6 +16,8 @@ os.environ["EMAIL_ENABLED"] = "false"
 os.environ["HTTPS_ENABLED"] = "false"
 os.environ["DEBUG"] = "false"
 os.environ["TESTING"] = "true"
+# Allow httpx ASGI client host (testserver) through TrustedHostMiddleware.
+os.environ["ALLOWED_HOSTS"] = "testserver,localhost,127.0.0.1"
 # Match CI: in-memory rate limits (avoid Redis from backend/.env during tests).
 os.environ["REDIS_URL"] = ""
 os.environ["PAYSTACK_SECRET_KEY"] = ""
@@ -189,3 +191,14 @@ async def authenticated_client(client: AsyncClient, test_user):
     """Create authenticated test client."""
     client.headers.update({"Authorization": f"Bearer {test_user['access_token']}"})
     return client
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip cov-fail-under when only no_cov_gate smoke tests are collected."""
+    if not items or not all(item.get_closest_marker("no_cov_gate") for item in items):
+        return
+    config.option.cov_fail_under = 0
+    cov_plugin = config.pluginmanager.get_plugin("_cov")
+    if cov_plugin is not None:
+        cov_plugin.options.cov_fail_under = 0
+        cov_plugin.fail_under = 0

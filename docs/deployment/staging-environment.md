@@ -8,7 +8,7 @@
 
 | Branch | Role | Deploys to |
 |--------|------|------------|
-| **`dev/develop`** | Daily integration, feature merge target | CI only (no required hosted staging) |
+| **`dev/develop`** | Daily integration, feature merge target | **CI Quick** on push; full **CI** on PR to staging |
 | **`dev/staging`** | Pre-production — nine test types, QA, demos | **Render staging API** + **Vercel staging site** |
 | **`main`** | Production | Render production API + Vercel production site |
 
@@ -70,6 +70,8 @@ python tools/seed_demo_catalog.py
 3. Use blueprint file: `backend/render.staging.yaml` (service name `sikapa-backend-staging`).
 4. Set **Branch** to `dev/staging`, **Auto-Deploy** on.
 5. Copy env vars from `backend/.env.staging.example` into the Dashboard (real secrets).
+   - **`TOTP_ENCRYPTION_KEY`** must be a **Fernet** key (44-char url-safe base64), not a random passphrase or copy of `SECRET_KEY`. Generate:  
+     `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 6. Note the URL: `https://sikapa-backend-staging.onrender.com` (your name may differ).
 
 **Health check:** Render → Settings → Health Check Path → `/health/ready`
@@ -158,7 +160,7 @@ Startup validation: `validate_staging_config_or_raise()` in `app/core/startup_ch
 ## Day-to-day workflow
 
 1. Merge tested work into `dev/develop` and push.
-2. **Auto PR** (`dev-develop-auto-pr-to-staging.yml`): opens **`dev/develop` → `dev/staging`**, squash auto-merge when CI is green.
+2. **Auto PR** (`dev-develop-auto-pr-to-staging.yml`): opens **`dev/develop` → `dev/staging`**, squash auto-merge when **full CI** (on the PR) is green.
 3. **`sync-staging-to-dev-develop.yml`** resets `dev/develop` to match `dev/staging` (same commit level — avoids PR conflicts).
 4. Render + Vercel Preview deploy from `dev/staging`.
 5. Run [nine-type testing](../testing/pre-go-live-testing.md) against staging URLs.
@@ -171,7 +173,13 @@ Do **not** open **`dev/develop` → `main`** PRs; that path causes merge conflic
 
 ## CI
 
-Pushes and PRs to `dev/staging` run the same **CI** and **Lighthouse** (frontend) workflows as `dev/develop` and `main`.
+| Branch / event | Workflows |
+|----------------|-----------|
+| Push `dev/develop` | **CI Quick** (lint + tests; no mobile / no Next build) |
+| PR → `dev/staging` | **CI** (full) + **Lighthouse** when `frontend/**` changes |
+| Push `dev/staging` / `main` | **CI** (full) |
+
+Branch protection (optional): [branch-protection.md](./branch-protection.md).
 
 ---
 
@@ -191,5 +199,6 @@ Pushes and PRs to `dev/staging` run the same **CI** and **Lighthouse** (frontend
 
 - [pre-go-live-testing.md](../testing/pre-go-live-testing.md)
 - [production-deployment.md](./production-deployment.md)
+- [branch-protection.md](./branch-protection.md)
 - [backend/docs/hosting/render.md](../../backend/docs/hosting/render.md)
 - [frontend/docs/hosting/vercel.md](../../frontend/docs/hosting/vercel.md)

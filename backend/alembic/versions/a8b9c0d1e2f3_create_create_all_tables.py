@@ -24,7 +24,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    from app.db.core_schema import ensure_core_ecommerce_tables
+    from app.migration_core_schema import ensure_core_ecommerce_tables
 
     ensure_core_ecommerce_tables()
 

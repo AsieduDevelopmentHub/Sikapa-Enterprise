@@ -26,16 +26,16 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: dev/develop
           fetch-depth: 0
 
       - name: Create or update PR and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.GH_ACTIONS_PR_TOKEN != '' && secrets.GH_ACTIONS_PR_TOKEN || github.token }}
           MIN_COMMITS: ${{ github.event.inputs.min_commits || '1' }}
         run: |
           set -euo pipefail
@@ -62,6 +62,8 @@ jobs:
               --title "chore: promote dev/develop to dev/staging" \
               --body "Auto-generated PR: \`dev/develop\` is ${AHEAD} commit(s) ahead of \`dev/staging\`.
 
+**Checks:** full **CI** workflow (backend + frontend + mobile when \`mobile/**\` changed) and **Lighthouse** when \`frontend/**\` changed. Push to \`dev/develop\` only runs **CI Quick**.
+
 After merge, \`sync-staging-to-dev-develop.yml\` realigns \`dev/develop\` with \`dev/staging\` so branches stay on the same level." \
               2>/dev/null || true)
             PR_NUM="${PR_URL##*/}"
@@ -72,9 +74,14 @@ After merge, \`sync-staging-to-dev-develop.yml\` realigns \`dev/develop\` with \
           fi
 
           if [ -n "${PR_NUM}" ]; then
-            echo "Enabling auto-merge (squash) for PR #${PR_NUM}"
-            gh pr merge "${PR_NUM}" --auto --squash \
-              || echo "Auto-merge unavailable — enable in repo Settings or set GH_ACTIONS_PR_TOKEN."
+            echo "PR #${PR_NUM}: https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}"
+            echo "Enabling auto-merge (squash) after required checks pass..."
+            if ! gh pr merge "${PR_NUM}" --auto --squash; then
+              echo "::warning::Auto-merge not enabled. In repo Settings: allow auto-merge + squash merges."
+              echo "::warning::If using GITHUB_TOKEN only, add secret GH_ACTIONS_PR_TOKEN (PAT with pull_requests:write)."
+              exit 1
+            fi
           else
-            echo "No PR created or found — skipping auto-merge."
+            echo "::error::Could not create or find PR dev/develop → dev/staging."
+            exit 1
           fi

@@ -76,6 +76,16 @@ def ensure_paystack_customer_email(session, user) -> str:
     user.email_verified = True
     user.updated_at = datetime.utcnow()
     session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user.email
+    try:
+        session.commit()
+        session.refresh(user)
+        return user.email
+    except Exception:
+        # If the write fails for any reason (e.g. uniqueness / RLS / transient DB),
+        # still allow checkout to proceed using the generated placeholder without
+        # mutating the user's profile.
+        try:
+            session.rollback()
+        except Exception:
+            pass
+        return generated

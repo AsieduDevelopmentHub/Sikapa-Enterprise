@@ -25,6 +25,23 @@ def is_staging_environment() -> bool:
     return _environment_name() == "staging"
 
 
+def validate_totp_encryption_key_format(key: str) -> None:
+    """Raise RuntimeError when TOTP_ENCRYPTION_KEY is not a valid Fernet key."""
+    from cryptography.fernet import Fernet
+
+    raw = key.strip()
+    if not raw:
+        return
+    try:
+        Fernet(raw.encode())
+    except (ValueError, TypeError) as exc:
+        raise RuntimeError(
+            "TOTP_ENCRYPTION_KEY must be a Fernet key (44-character url-safe base64). "
+            "Do not use SECRET_KEY or a random passphrase. Generate with: "
+            'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+        ) from exc
+
+
 def _paystack_secret_configured() -> bool:
     raw = os.getenv("PAYSTACK_SECRET_KEY", "").strip()
     if not raw:
@@ -78,6 +95,7 @@ def validate_production_config_or_raise() -> None:
             "Production requires TOTP_ENCRYPTION_KEY. "
             'Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
         )
+    validate_totp_encryption_key_format(totp_key)
 
     cors = os.getenv("CORS_ORIGINS", "").strip()
     if not cors:
@@ -141,16 +159,22 @@ def validate_staging_config_or_raise() -> None:
     totp_key = os.getenv("TOTP_ENCRYPTION_KEY", "").strip()
     if not totp_key:
         raise RuntimeError("Staging requires TOTP_ENCRYPTION_KEY (generate a staging-only Fernet key).")
+    validate_totp_encryption_key_format(totp_key)
 
     cors = os.getenv("CORS_ORIGINS", "").strip()
     if not cors:
         raise RuntimeError("Staging requires CORS_ORIGINS with your staging Vercel URL(s).")
 
     frontend = os.getenv("FRONTEND_URL", "").strip()
-    if not frontend or "localhost" in frontend.lower():
+    allow_localhost_frontend = (
+        os.getenv("STAGING_ALLOW_LOCALHOST_FRONTEND_URL", "").strip().lower()
+        in {"1", "true", "yes"}
+    )
+    if not frontend or ("localhost" in frontend.lower() and not allow_localhost_frontend):
         raise RuntimeError(
             "Staging requires FRONTEND_URL set to your staging storefront URL "
-            "(Vercel staging project or preview URL)."
+            "(Vercel staging project or preview URL). "
+            "To run locally against staging infra, set STAGING_ALLOW_LOCALHOST_FRONTEND_URL=true."
         )
 
     paystack = os.getenv("PAYSTACK_SECRET_KEY", "").strip()

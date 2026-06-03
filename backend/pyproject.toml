@@ -79,5 +79,6 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "e2e: End-to-end tests",
-    "slow: Slow running tests"
+    "slow: Slow running tests",
+    "no_cov_gate: smoke tests that skip --cov-fail-under when run in isolation",
 ]
