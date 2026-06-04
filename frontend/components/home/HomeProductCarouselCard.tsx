@@ -1,10 +1,10 @@
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { ProductWishlistButton } from "@/components/product/ProductWishlistButton";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
 import { StarRating } from "@/components/StarRating";
+import { StorefrontImage } from "@/components/StorefrontImage";
 import type { MockProduct } from "@/lib/mock-data";
 import { cleanImageUrl } from "@/lib/clean-image-url";
 
@@ -22,16 +22,15 @@ export function HomeProductCarouselCard({ product: p }: Props) {
         className="sikapa-tap block transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.02)]"
       >
         <div className="relative aspect-square w-full bg-sikapa-gray-soft dark:bg-zinc-800">
-          <Image
+          <StorefrontImage
             key={imageSrc}
-            src={imageSrc}
+            src={p.image}
             alt=""
             fill
             className="object-cover"
             sizes="(max-width:768px) 158px, (max-width:1024px) 180px, 200px"
             loading="lazy"
             decoding="async"
-            unoptimized
           />
         </div>
         <div className="space-y-1.5 p-2.5">
