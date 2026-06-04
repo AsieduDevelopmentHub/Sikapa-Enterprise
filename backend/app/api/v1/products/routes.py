@@ -23,6 +23,7 @@ from app.api.v1.products.services import (
     get_category_by_id,
 )
 from app.core.search_analytics import log_search
+from app.core.storefront_media import storefront_image_url
 from app.core.dsa.pagination import MAX_PAGINATION_SKIP
 from app.models import User
 
@@ -156,7 +157,7 @@ async def list_product_images_public(
         {
             "id": img.id,
             "product_id": img.product_id,
-            "image_url": img.image_url,
+            "image_url": storefront_image_url(img.image_url),
             "alt_text": img.alt_text,
             "is_primary": img.is_primary,
             "sort_order": img.sort_order,
@@ -201,7 +202,7 @@ async def list_product_variants_public(
                 "attributes": attrs,
                 "price_delta": v.price_delta,
                 "in_stock": v.in_stock,
-                "image_url": getattr(v, "image_url", None),
+                "image_url": storefront_image_url(getattr(v, "image_url", None)),
                 "description": getattr(v, "description", None),
             }
         )

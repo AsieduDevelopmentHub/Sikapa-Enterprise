@@ -77,10 +77,14 @@ jobs:
 
           if [ -n "${PR_NUM}" ]; then
             echo "PR #${PR_NUM}: https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}"
+            if [ -z "${GH_ACTIONS_PR_TOKEN}" ]; then
+              echo "::notice::Skipping auto-merge: GITHUB_TOKEN cannot enablePullRequestAutoMerge."
+              echo "Add repo secret GH_ACTIONS_PR_TOKEN (PAT: Contents + Pull requests write) or merge manually after CI."
+              exit 0
+            fi
             echo "Enabling auto-merge (squash) after required checks pass..."
             if ! gh pr merge "${PR_NUM}" --auto --squash; then
-              echo "::warning::Auto-merge not enabled. Enable in repo Settings or add GH_ACTIONS_PR_TOKEN secret."
-              exit 1
+              echo "::warning::Auto-merge not enabled. Check Settings → Pull requests (allow auto-merge) and PAT scopes."
             fi
           else
             echo "::error::Could not create or find PR dev/develop -> dev/staging."
