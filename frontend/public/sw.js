@@ -1,4 +1,4 @@
-const VERSION = "v3";
+const VERSION = "v4";
 const STATIC_CACHE = `sikapa-static-${VERSION}`;
 const RUNTIME_CACHE = `sikapa-runtime-${VERSION}`;
 const API_CACHE = `sikapa-api-${VERSION}`;
@@ -13,6 +13,14 @@ const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 
 function isSameOrigin(url) {
   return url.origin === self.location.origin;
+}
+
+/** Supabase/CDN product photos must bypass the SW — cross-origin fetch here breaks <img> loads. */
+function isRemoteCatalogImage(request, url) {
+  if (isSameOrigin(url)) return false;
+  if (request.destination === "image") return true;
+  if (url.hostname.endsWith(".supabase.co") && url.pathname.includes("/storage/")) return true;
+  return /\.(jpg|jpeg|png|webp|gif|svg|avif)(\?|#|$)/i.test(url.pathname);
 }
 
 function isNextStatic(url) {
@@ -155,6 +163,9 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (!url.protocol.startsWith("http")) return;
 
+  // Never intercept remote catalog/CDN images (Supabase, Unsplash, API hosts).
+  if (isRemoteCatalogImage(request, url)) return;
+
   // 1) Next.js hashed static assets: cache-first (these are immutable).
   if (isSameOrigin(url) && isNextStatic(url)) {
     event.respondWith(
@@ -219,7 +230,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 5) Default: cache-first for anything else on same-origin, but with a short TTL.
+  // 5) Default: same-origin only (never proxy cross-origin — breaks Supabase public URLs).
+  if (!isSameOrigin(url)) return;
+
   event.respondWith(
     (async () => {
       const cached = await matchFresh(STATIC_CACHE, request, ONE_HOUR_MS);
