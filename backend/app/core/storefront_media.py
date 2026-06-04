@@ -58,3 +58,23 @@ def storefront_image_url(url: str | None) -> str | None:
     if not cleaned:
         return None
     return rewrite_legacy_storage_url(cleaned)
+
+
+def apply_storefront_image_to_row(row: dict) -> dict:
+    """Re-normalize image_url on cached or serialized product/category rows."""
+    out = dict(row)
+    if out.get("image_url"):
+        out["image_url"] = storefront_image_url(str(out["image_url"]))
+    return out
+
+
+def apply_storefront_images_to_list_payload(payload: dict) -> dict:
+    """Re-normalize every item.image_url in a paginated products payload."""
+    out = dict(payload)
+    items = out.get("items")
+    if isinstance(items, list):
+        out["items"] = [
+            apply_storefront_image_to_row(item) if isinstance(item, dict) else item
+            for item in items
+        ]
+    return out
