@@ -11,9 +11,12 @@ if (!isDev && isVercel) {
   }
 }
 
-/** When true (default in dev), skip next/image optimization so the browser loads Supabase/CDN URLs directly — avoids 504 when the optimizer cannot reach upstream. Set NEXT_PUBLIC_IMAGE_DEV_UNOPTIMIZED=0 to force optimization in dev. */
-const devImageUnoptimized =
-  isDev && process.env.NEXT_PUBLIC_IMAGE_DEV_UNOPTIMIZED !== "0";
+/**
+ * Load remote catalog images directly (no `/_next/image` proxy).
+ * Default ON in dev and production — avoids cross-browser optimizer/CDN issues.
+ * Set NEXT_PUBLIC_IMAGE_UNOPTIMIZED=0 to enable the Next.js image optimizer.
+ */
+const catalogImagesUnoptimized = process.env.NEXT_PUBLIC_IMAGE_UNOPTIMIZED !== "0";
 
 /**
  * Additional image hosts can be added at deploy time without editing this file via
@@ -109,12 +112,12 @@ const nextConfig = {
   },
   images: {
     /* Allow optimizer to fetch `http://localhost:8000/uploads/...` (resolves to 127.0.0.1 / ::1). Dev-only — do not enable in public production deploys. */
+    ...(catalogImagesUnoptimized ? { unoptimized: true } : {}),
     ...(isDev
       ? {
           dangerouslyAllowLocalIP: true,
           /* Re-optimize local `public/` logos quickly when you overwrite PNGs (avoids stale `/_next/image` cache in dev). */
           minimumCacheTTL: 0,
-          ...(devImageUnoptimized ? { unoptimized: true } : {}),
         }
       : {}),
     remotePatterns: [

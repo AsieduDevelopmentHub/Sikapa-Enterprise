@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { StorefrontImage } from "@/components/StorefrontImage";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useDialog } from "@/context/DialogContext";
@@ -106,7 +106,7 @@ export function CartPageClient() {
                     href={`/product/${line.product.id}`}
                     className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[10px] bg-white ring-1 ring-black/[0.05] dark:bg-zinc-900 dark:ring-white/10"
                   >
-                    <Image src={thumb} alt="" fill className="object-cover" sizes="72px" unoptimized />
+                    <StorefrontImage src={thumb} alt="" fill className="object-cover" sizes="72px" />
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <Link

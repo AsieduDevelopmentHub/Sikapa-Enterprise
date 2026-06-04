@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import type { MockProduct } from "@/lib/mock-data";
@@ -8,6 +7,7 @@ import { FaCart } from "@/components/FaIcons";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
 import { ProductWishlistButton } from "@/components/product/ProductWishlistButton";
 import { StarRating } from "@/components/StarRating";
+import { StorefrontImage } from "@/components/StorefrontImage";
 import { useCart } from "@/context/CartContext";
 import { cleanImageUrl } from "@/lib/clean-image-url";
 
@@ -41,7 +41,7 @@ export function ProductCardGrid({
     <article className="relative overflow-hidden rounded-[10px] border border-black/[0.04] bg-white shadow-[0_1px_8px_rgba(59,42,37,0.05)] ring-1 ring-black/[0.04] transition-shadow hover:shadow-[0_4px_18px_rgba(59,42,37,0.08)] dark:border-white/10 dark:bg-zinc-900 dark:ring-white/10">
       <Link href={`/product/${p.id}`} className="sikapa-tap block">
         <div className="relative aspect-square w-full bg-sikapa-gray-soft dark:bg-zinc-800">
-          <Image
+          <StorefrontImage
             key={imageSrc}
             src={imageSrc}
             alt={p.name}
@@ -51,7 +51,6 @@ export function ProductCardGrid({
             loading={priority ? "eager" : "lazy"}
             decoding="async"
             fetchPriority={priority ? "high" : "auto"}
-            unoptimized
           />
         </div>
         <div className="space-y-1.5 p-2.5 pb-11">

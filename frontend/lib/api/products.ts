@@ -3,6 +3,7 @@ import { CATEGORIES, MOCK_PRODUCTS } from "@/lib/mock-data";
 import { readTokens } from "@/lib/auth-storage";
 import { apiFetchJson, getApiV1Base, getBackendOrigin } from "@/lib/api/client";
 import { V1 } from "@/lib/api/v1-paths";
+import { normalizeStorefrontImageUrl } from "@/lib/clean-image-url";
 
 export type ApiCategoryRow = {
   id: number;
@@ -90,7 +91,7 @@ function absoluteUrlLooksInvalid(trimmed: string): boolean {
 
 export function resolveImageUrl(path: string | null | undefined): string {
   if (!path || !path.trim()) return PLACEHOLDER_IMG;
-  const trimmed = path.trim();
+  const trimmed = normalizeStorefrontImageUrl(path);
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     if (absoluteUrlLooksInvalid(trimmed)) return PLACEHOLDER_IMG;
     return trimmed;

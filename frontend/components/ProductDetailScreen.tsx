@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -11,6 +10,7 @@ import { ProductReviewsSection } from "@/components/product/ProductReviewsSectio
 import { ProductVariantsDisplay } from "@/components/product/ProductVariantsDisplay";
 import { ProductWishlistButton } from "@/components/product/ProductWishlistButton";
 import { StarRating } from "@/components/StarRating";
+import { StorefrontImage } from "@/components/StorefrontImage";
 import { useCart } from "@/context/CartContext";
 import { useCatalog } from "@/context/CatalogContext";
 import { useRecentlyViewedProducts, trackProductView } from "@/hooks/useRecentlyViewed";
@@ -31,9 +31,11 @@ type Props = { product: MockProduct };
 
 function resolveImageSrc(url: string): string {
   if (!url) return url;
-  if (url.startsWith("http") || url.startsWith("data:")) return url;
+  const normalized = cleanImageUrl(url);
+  if (normalized.startsWith("http") || normalized.startsWith("data:")) return normalized;
   const origin = getBackendOrigin();
-  return origin ? `${origin}${url}` : url;
+  const path = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  return origin ? `${origin}${path}` : normalized;
 }
 
 const RELATED_CAP = 10;
@@ -77,14 +79,13 @@ function RelatedProductCard({
       <Link href={`/product/${item.id}`} className="sikapa-tap block">
         <div className="relative aspect-square w-full bg-sikapa-gray-soft dark:bg-zinc-800">
           {!imgLoaded && <div aria-hidden className="h-full w-full animate-pulse bg-sikapa-gray-soft dark:bg-zinc-800" />}
-          <Image
-            src={cleanImageUrl(item.image, { width: 400, format: "webp" })}
+          <StorefrontImage
+            src={item.image}
             alt=""
             fill
             className={`object-cover ${imgLoaded ? "opacity-100" : "opacity-0"}`}
             sizes="(max-width:430px) 46vw, 200px"
             onLoad={() => setImgLoaded(true)}
-            unoptimized
           />
         </div>
         <div className="space-y-1 p-2.5 pb-10">
@@ -387,15 +388,14 @@ export function ProductDetailScreen({ product: p }: Props) {
         >
           <div className="absolute inset-2 z-[1] sm:inset-3">
             <div className="relative h-full w-full">
-              <Image
+              <StorefrontImage
                 key={activeImage}
-                src={cleanImageUrl(activeImage, { width: 800, format: "webp" })}
+                src={activeImage}
                 alt=""
                 fill
                 className="object-contain"
                 sizes="(max-width:430px) 100vw, 400px"
                 priority
-                unoptimized
               />
             </div>
           </div>
@@ -602,7 +602,7 @@ export function ProductDetailScreen({ product: p }: Props) {
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={activeImage}
+            src={cleanImageUrl(activeImage)}
             alt={displayTitle}
             className="relative z-[1] max-h-[min(88vh,820px)] w-auto max-w-[min(94vw,960px)] object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}

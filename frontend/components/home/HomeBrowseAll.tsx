@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { useCatalog } from "@/context/CatalogContext";
-import { cleanImageUrl } from "@/lib/clean-image-url";
+import { StorefrontImage } from "@/components/StorefrontImage";
 
 
 export function HomeBrowseAll() {
@@ -66,13 +65,12 @@ export function HomeBrowseAll() {
                   className="sikapa-tap flex h-full min-h-[228px] w-full flex-col overflow-hidden rounded-[10px] bg-sikapa-cream ring-1 ring-black/[0.06] transition-shadow hover:shadow-md dark:bg-zinc-900 dark:ring-white/10"
                 >
                   <div className="relative aspect-[4/5] w-full shrink-0 bg-zinc-100 dark:bg-zinc-800">
-                    <Image
-                      src={cleanImageUrl(cat.image)}
+                    <StorefrontImage
+                      src={cat.image}
                       alt=""
                       fill
                       className="object-cover"
                       sizes="(max-width:768px) 132px, (max-width:1024px) 25vw, 180px"
-                      unoptimized
                     />
                   </div>
                   <div className="flex min-h-[4.25rem] flex-1 flex-col justify-center px-2 py-2.5 text-center">

@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { StorefrontImage } from "@/components/StorefrontImage";
 import { SkeletonBlock } from "@/components/StorefrontSkeletons";
 import { useAuth } from "@/context/AuthContext";
 import { authUpdateProfile } from "@/lib/api/auth";
@@ -12,7 +12,6 @@ import { useCart } from "@/context/CartContext";
 import { couponsValidate, type CouponValidateResult } from "@/lib/api/coupons";
 import { ordersCreate, ordersShippingOptions, type ShippingOptions } from "@/lib/api/orders";
 import { paystackInitialize } from "@/lib/api/payments";
-import { cleanImageUrl } from "@/lib/clean-image-url";
 
 import {
   DELIVERY_COURIER_OPTIONS,
@@ -759,13 +758,12 @@ export function CheckoutPageClient() {
                   {lines.map((l) => (
                     <li key={l.lineKey} className="flex gap-3 py-3 first:pt-0">
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[10px] bg-sikapa-cream">
-                        <Image
-                          src={cleanImageUrl(l.variantImage || l.product.image)}
+                        <StorefrontImage
+                          src={l.variantImage || l.product.image}
                           alt=""
                           fill
                           sizes="56px"
                           className="object-cover"
-                          unoptimized
                         />
                       </div>
                       <div className="min-w-0 flex-1">
