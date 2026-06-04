@@ -33,6 +33,13 @@ const extraCdnHosts = (process.env.NEXT_PUBLIC_IMAGE_CDN_HOSTS || "")
     pathname: "/**",
   }));
 
+/** Explicit Supabase project hosts (wildcards are not reliable in all Next builds). */
+const supabaseStorageHosts = [
+  "pqfowptaguuxhujvclvr.supabase.co",
+  "mjihnwpqqlkeuloelaye.supabase.co",
+  ...extraCdnHosts.map((p) => p.hostname),
+].filter((h, i, arr) => h && arr.indexOf(h) === i);
+
 function apiRemotePattern() {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (!raw) return null;
@@ -137,6 +144,11 @@ const nextConfig = {
         hostname: "**.supabase.co",
         pathname: "/**",
       },
+      ...supabaseStorageHosts.map((hostname) => ({
+        protocol: "https",
+        hostname,
+        pathname: "/**",
+      })),
       ...(apiPattern ? [apiPattern] : []),
       /* Local API static files and any other same-origin paths (dev) */
       {

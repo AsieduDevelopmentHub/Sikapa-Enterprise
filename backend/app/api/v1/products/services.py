@@ -11,14 +11,15 @@ from app.api.v1.products.visibility import storefront_product_visible
 from app.core.cache import cache, TTL_CATEGORIES, TTL_PRODUCT, TTL_PRODUCT_LIST, TTL_SEARCH
 from app.core.dsa.pagination import page_metadata
 from app.core.search_index import get_product_trie
-from app.core.storefront_media import storefront_image_url
+from app.core.storefront_media import (
+    apply_storefront_image_to_row,
+    apply_storefront_images_to_list_payload,
+    storefront_image_url,
+)
 
 
 def _product_storefront_dict(product: Product) -> dict:
-    data = product.model_dump()
-    if data.get("image_url"):
-        data["image_url"] = storefront_image_url(data["image_url"])
-    return data
+    return apply_storefront_image_to_row(product.model_dump())
 
 
 async def get_products_with_filters(
@@ -36,7 +37,7 @@ async def get_products_with_filters(
     cache_key = f"products:filters:{category_id}:{min_price}:{max_price}:{min_rating}:{sort_by}:{sort_order}:{skip}:{limit}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return apply_storefront_images_to_list_payload(cached)
 
     filters = [storefront_product_visible()]
     if category_id is not None:
@@ -103,7 +104,14 @@ async def suggest_products(
     cache_key = f"products:suggest:{q}:{limit}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        out = dict(cached)
+        items = out.get("items")
+        if isinstance(items, list):
+            out["items"] = [
+                apply_storefront_image_to_row(item) if isinstance(item, dict) else item
+                for item in items
+            ]
+        return out
 
     trie = get_product_trie(session)
     product_ids = trie.search_prefix(q, limit=limit * 2)
@@ -151,7 +159,7 @@ async def search_products(
     cache_key = f"products:search:{search_query}:{skip}:{limit}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return apply_storefront_images_to_list_payload(cached)
 
     search_term = f"%{search_query}%"
     search_words = [w.strip() for w in search_query.split() if len(w.strip()) > 1]
@@ -193,7 +201,7 @@ async def get_product_by_id(session: Session, product_id: int):
     cache_key = f"product:id:{product_id}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return apply_storefront_image_to_row(cached)
 
     product = session.exec(
         select(Product).where(Product.id == product_id)
@@ -215,7 +223,7 @@ async def get_product_by_slug(session: Session, slug: str):
     cache_key = f"product:slug:{slug}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return apply_storefront_image_to_row(cached)
 
     product = session.exec(
         select(Product).where(Product.slug == slug)
@@ -237,13 +245,18 @@ async def get_all_categories(session: Session):
     cache_key = "categories:all"
     cached = cache.get(cache_key)
     if cached is not None:
+        if isinstance(cached, list):
+            return [
+                apply_storefront_image_to_row(c) if isinstance(c, dict) else c
+                for c in cached
+            ]
         return cached
 
     categories = session.exec(
         select(Category).where(Category.is_active == True).order_by(Category.sort_order)
     ).all()
 
-    result = [c.model_dump() for c in categories]
+    result = [apply_storefront_image_to_row(c.model_dump()) for c in categories]
     cache.set(cache_key, result, ttl=TTL_CATEGORIES)
     return result
 
@@ -253,7 +266,7 @@ async def get_category_by_id(session: Session, category_id: int):
     cache_key = f"category:id:{category_id}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return apply_storefront_image_to_row(cached) if isinstance(cached, dict) else cached
 
     category = session.exec(
         select(Category).where(Category.id == category_id)
@@ -265,6 +278,6 @@ async def get_category_by_id(session: Session, category_id: int):
             detail="Category not found",
         )
 
-    result = category.model_dump()
+    result = apply_storefront_image_to_row(category.model_dump())
     cache.set(cache_key, result, ttl=TTL_CATEGORIES)
     return result
