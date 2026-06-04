@@ -47,11 +47,14 @@ export function StorefrontImage({
   const handleError = useCallback<React.ReactEventHandler<HTMLImageElement>>(
     (event) => {
       onError?.(event);
+      const wasRemote =
+        normalized.startsWith("http://") || normalized.startsWith("https://");
+      if (!wasRemote) return;
       setCurrentSrc((prev) =>
         prev === STOREFRONT_IMAGE_PLACEHOLDER ? prev : STOREFRONT_IMAGE_PLACEHOLDER
       );
     },
-    [onError]
+    [onError, normalized]
   );
 
   const resolvedClass = fill
