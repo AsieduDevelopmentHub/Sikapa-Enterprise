@@ -46,8 +46,15 @@ export function AccountScreen({ initialPanel }: { initialPanel?: AccountPanel } 
 
     let cancelled = false;
     void (async () => {
-      await syncSessionCookie(accessToken);
+      const synced = await syncSessionCookie(accessToken);
       if (cancelled) return;
+      if (!synced.ok) {
+        setBanner({ type: "err", text: synced.error });
+        const u = new URL(window.location.href);
+        u.searchParams.delete("from");
+        window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
+        return;
+      }
       router.replace(from);
     })();
 
@@ -71,7 +78,25 @@ export function AccountScreen({ initialPanel }: { initialPanel?: AccountPanel } 
   }
 
   if (user && accessToken) {
-    return <AccountSignedInHub initialPanel={initialPanel} />;
+    return (
+      <>
+        {banner ? (
+          <div className="mx-auto max-w-mobile px-5 pt-8">
+            <p
+              className={`rounded-[10px] px-3 py-2.5 text-small ${
+                banner.type === "ok"
+                  ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-100"
+                  : "bg-red-50 text-red-800 ring-1 ring-red-100 dark:bg-red-950/40 dark:text-red-100"
+              }`}
+              role="alert"
+            >
+              {banner.text}
+            </p>
+          </div>
+        ) : null}
+        <AccountSignedInHub initialPanel={initialPanel} />
+      </>
+    );
   }
 
   async function requestReset(e: React.FormEvent) {
