@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -11,6 +10,7 @@ import { FaCart } from "@/components/FaIcons";
 import { ProductWishlistButton } from "@/components/product/ProductWishlistButton";
 import { ProductPriceLabel } from "@/components/ProductPriceLabel";
 import { StarRating } from "@/components/StarRating";
+import { StorefrontImage } from "@/components/StorefrontImage";
 import { cleanImageUrl } from "@/lib/clean-image-url";
 
 import {
@@ -299,9 +299,9 @@ export function ShopScreen() {
                 className="sikapa-tap flex min-h-[168px] min-w-0 flex-1"
               >
                 <div className="relative w-[40%] min-h-[168px] shrink-0 bg-sikapa-gray-soft dark:bg-zinc-800 sm:w-[38%]">
-                  <Image
+                  <StorefrontImage
                     key={cleanImageUrl(p.image)}
-                    src={cleanImageUrl(p.image)}
+                    src={p.image}
                     alt={p.name}
                     fill
                     className="object-cover"
@@ -309,7 +309,6 @@ export function ShopScreen() {
                     loading={i < 4 ? "eager" : "lazy"}
                     decoding="async"
                     fetchPriority={i < 2 ? "high" : "auto"}
-                    unoptimized
                   />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 px-3 py-3 sm:px-4">
