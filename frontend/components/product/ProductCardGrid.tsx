@@ -33,17 +33,14 @@ export function ProductCardGrid({
   // Compute the resolved URL once per product image — keeps the `<img src>`
   // referentially stable across parent re-renders so the browser doesn't
   // re-request or re-decode the image when sibling state changes.
-  const imageSrc = useMemo(
-    () => cleanImageUrl(p.image, { width: 400, format: "webp" }),
-    [p.image]
-  );
+  const imageSrc = useMemo(() => cleanImageUrl(p.image), [p.image]);
   return (
     <article className="relative overflow-hidden rounded-[10px] border border-black/[0.04] bg-white shadow-[0_1px_8px_rgba(59,42,37,0.05)] ring-1 ring-black/[0.04] transition-shadow hover:shadow-[0_4px_18px_rgba(59,42,37,0.08)] dark:border-white/10 dark:bg-zinc-900 dark:ring-white/10">
       <Link href={`/product/${p.id}`} className="sikapa-tap block">
         <div className="relative aspect-square w-full bg-sikapa-gray-soft dark:bg-zinc-800">
           <StorefrontImage
             key={imageSrc}
-            src={imageSrc}
+            src={p.image}
             alt={p.name}
             fill
             className="object-cover"
