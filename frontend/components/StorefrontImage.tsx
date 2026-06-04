@@ -1,21 +1,42 @@
 "use client";
 
-import Image, { type ImageProps } from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   STOREFRONT_IMAGE_PLACEHOLDER,
   cleanImageUrl,
 } from "@/lib/clean-image-url";
 
-type Props = Omit<ImageProps, "src" | "unoptimized"> & {
+type Props = {
   src?: string | null;
+  alt?: string;
+  className?: string;
+  /** Mimics next/image `fill` — image covers the relative parent. */
+  fill?: boolean;
+  sizes?: string;
+  priority?: boolean;
+  loading?: "eager" | "lazy" | undefined;
+  decoding?: "async" | "auto" | "sync" | undefined;
+  fetchPriority?: "high" | "low" | "auto" | undefined;
+  onLoad?: React.ReactEventHandler<HTMLImageElement>;
+  onError?: React.ReactEventHandler<HTMLImageElement>;
 };
 
 /**
- * Catalog image with normalized Supabase URLs and a placeholder fallback when the
- * browser has a stale/broken URL cached (common after API URL fixes).
+ * Catalog image loader. Uses a native `<img>` for remote URLs so Supabase/API hosts
+ * are not blocked by next/image `remotePatterns` (see OrderProductThumb).
  */
-export function StorefrontImage({ src, alt = "", onError, ...rest }: Props) {
+export function StorefrontImage({
+  src,
+  alt = "",
+  className,
+  fill,
+  priority,
+  loading,
+  decoding = "async",
+  fetchPriority,
+  onLoad,
+  onError,
+}: Props) {
   const normalized = cleanImageUrl(src);
   const [currentSrc, setCurrentSrc] = useState(normalized);
 
@@ -23,19 +44,33 @@ export function StorefrontImage({ src, alt = "", onError, ...rest }: Props) {
     setCurrentSrc(normalized);
   }, [normalized]);
 
+  const handleError = useCallback<React.ReactEventHandler<HTMLImageElement>>(
+    (event) => {
+      onError?.(event);
+      setCurrentSrc((prev) =>
+        prev === STOREFRONT_IMAGE_PLACEHOLDER ? prev : STOREFRONT_IMAGE_PLACEHOLDER
+      );
+    },
+    [onError]
+  );
+
+  const resolvedClass = fill
+    ? `absolute inset-0 h-full w-full ${className ?? "object-cover"}`
+    : className;
+
+  const resolvedLoading = loading ?? (priority ? "eager" : "lazy");
+
   return (
-    <Image
-      {...rest}
-      alt={alt}
+    // eslint-disable-next-line @next/next/no-img-element -- remote catalog hosts vary by env
+    <img
       src={currentSrc}
-      unoptimized
-      referrerPolicy="no-referrer"
-      onError={(event) => {
-        onError?.(event);
-        if (currentSrc !== STOREFRONT_IMAGE_PLACEHOLDER) {
-          setCurrentSrc(STOREFRONT_IMAGE_PLACEHOLDER);
-        }
-      }}
+      alt={alt}
+      className={resolvedClass}
+      loading={resolvedLoading}
+      decoding={decoding}
+      {...(fetchPriority ? { fetchPriority } : {})}
+      onLoad={onLoad}
+      onError={handleError}
     />
   );
 }
