@@ -64,4 +64,4 @@ requests>=2.33.0
 # -----------------------------
 # Observability (optional — init skipped when SENTRY_DSN unset)
 # -----------------------------
-sentry-sdk[fastapi]==2.19.2
+sentry-sdk[fastapi]==2.61.1
