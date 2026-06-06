@@ -31,7 +31,7 @@ sqlmodel==0.0.21
 # Authentication & Security
 # -----------------------------
 authlib==1.6.12
-cryptography==46.0.7
+cryptography==48.0.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 pyotp==2.9.0

@@ -33,7 +33,7 @@ sqlmodel==0.0.21
 # Authentication & Security
 # -----------------------------
 authlib==1.6.12                   # JWT tokens (replaces unmaintained python-jose)
-cryptography==46.0.7              # Required by authlib; also provides Fernet for TOTP encryption
+cryptography==48.0.0              # Required by authlib; also provides Fernet for TOTP encryption
 passlib[bcrypt]==1.7.4            # Password hashing utilities
 bcrypt==4.0.1                     # Pin for passlib 1.7.4 (4.1+ breaks hashing on some Linux runners)
 pyotp==2.9.0                      # TOTP 2FA codes
