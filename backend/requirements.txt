@@ -54,7 +54,7 @@ celery[redis]==5.4.0              # Distributed task queue backed by Redis
 # -----------------------------
 # Document Generation
 # -----------------------------
-reportlab==4.0.9                  # PDF generation for invoices
+reportlab==4.5.1                  # PDF generation for invoices
 
 # -----------------------------
 # HTTP / async DB

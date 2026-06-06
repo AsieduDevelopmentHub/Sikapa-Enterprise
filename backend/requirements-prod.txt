@@ -52,7 +52,7 @@ celery[redis]==5.4.0
 # -----------------------------
 # Document Generation
 # -----------------------------
-reportlab==4.0.9
+reportlab==4.5.1
 
 # -----------------------------
 # HTTP / async DB
